@@ -1,0 +1,28 @@
+cabal-version:            2.2
+name:                     intlc
+version:                  0.1.0
+build-type:               Simple
+
+common common
+  default-language:       Haskell2010
+  default-extensions:
+    NoImplicitPrelude
+    OverloadedStrings
+  ghc-options:
+    -Wall
+  build-depends:
+      base                ^>=4.14
+    , relude              ^>=0.7
+    , text                ^>=1.2
+  mixins:
+      base hiding (Prelude)
+    , relude (Relude as Prelude)
+
+library
+  import:                 common
+  hs-source-dirs:         lib/
+  build-depends:
+      parser-combinators  ^>=1.2
+    , megaparsec          ^>=9.0
+  exposed-modules:
+    Intlc.Parser
