@@ -19,6 +19,13 @@ common common
       base hiding (Prelude)
     , relude (Relude as Prelude)
 
+executable intlc
+  import:                 common
+  hs-source-dirs:         cli/
+  main-is:                Main.hs
+  build-depends:
+      intlc
+
 library
   import:                 common
   hs-source-dirs:         lib/
