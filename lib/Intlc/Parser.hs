@@ -23,8 +23,8 @@ translation = f <$> manyTill token eof
 
 token :: Parser Token
 token = choice
-  [ Interpolation <$> interp
-  , Plaintext     <$> text
+  [ Interpolation . Arg <$> interp
+  , Plaintext           <$> text
   ]
 
 sep :: Parser ()

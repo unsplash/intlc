@@ -8,5 +8,5 @@ translation (Static x)   = "'" <> x <> "'"
 translation (Dynamic xs) = "`" <> foldMap token xs <> "`"
 
 token :: Token -> Text
-token (Plaintext x)     = x
-token (Interpolation x) = "${" <> x <> "}"
+token (Plaintext x)           = x
+token (Interpolation (Arg x)) = "${" <> x <> "}"
