@@ -12,6 +12,7 @@ common common
     -Wall
   build-depends:
       base                ^>=4.14
+    , mtl                 ^>=2.2
     , relude              ^>=0.7
     , text                ^>=1.2
   mixins:
