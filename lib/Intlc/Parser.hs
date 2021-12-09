@@ -16,7 +16,10 @@ parseTranslationFor :: Text -> Text -> ParseOutput
 parseTranslationFor = parse translation . T.unpack
 
 translation :: Parser Translation
-translation = manyTill token eof
+translation = f <$> manyTill token eof
+  where f []            = Static ""
+        f [Plaintext x] = Static x
+        f xs            = Dynamic xs
 
 token :: Parser Token
 token = choice

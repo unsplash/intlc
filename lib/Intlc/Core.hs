@@ -10,6 +10,7 @@ data Token
   | Interpolation Text
   deriving (Show, Eq)
 
-type Translation = [Token]
-
-
+data Translation
+  = Static Text
+  | Dynamic [Token]
+  deriving (Show, Eq)
