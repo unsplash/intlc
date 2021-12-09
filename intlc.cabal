@@ -25,4 +25,5 @@ library
       parser-combinators  ^>=1.2
     , megaparsec          ^>=9.0
   exposed-modules:
+    Intlc.Core
     Intlc.Parser

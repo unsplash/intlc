@@ -2,20 +2,11 @@ module Intlc.Parser where
 
 import qualified Data.Text                  as T
 import           Data.Void                  ()
+import           Intlc.Core
 import           Prelude
 import           Text.Megaparsec            hiding (Token, many, some, token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-
--- | A token is either an interpolation - some sort of identifier for input -
--- or mere plaintext. A collection of tokens make up any translation. A
--- translation without any interpolation will be a single `Plaintext` token.
-data Token
-  = Plaintext Text
-  | Interpolation Text
-  deriving (Show, Eq)
-
-type Translation = [Token]
 
 type ParseOutput = Either (ParseErrorBundle Text Void) Translation
 
