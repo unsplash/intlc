@@ -1,9 +1,10 @@
 module Main where
 
-import           Intlc.Compiler (translation)
-import           Intlc.Parser   (parseTranslationFor)
-import           Prelude
+import           Data.ByteString.Lazy (getContents)
+import           Intlc.Compiler       (dataset)
+import           Intlc.Parser         (parseDataset)
+import           Prelude              hiding (stdin)
 
 main :: IO ()
-main = fin . parseTranslationFor "stdin" =<< getLine
-  where fin = either (die . show) (putTextLn . translation)
+main = fin . parseDataset =<< getContents
+  where fin = either (die . show) (putTextLn . dataset)

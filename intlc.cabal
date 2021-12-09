@@ -12,6 +12,8 @@ common common
     -Wall
   build-depends:
       base                ^>=4.14
+    , bytestring          ^>=0.10
+    , containers          ^>=0.6
     , mtl                 ^>=2.2
     , relude              ^>=0.7
     , text                ^>=1.2
@@ -30,7 +32,8 @@ library
   import:                 common
   hs-source-dirs:         lib/
   build-depends:
-      parser-combinators  ^>=1.2
+      aeson               ^>=2.0
+    , parser-combinators  ^>=1.2
     , megaparsec          ^>=9.0
   exposed-modules:
     Intlc.Compiler

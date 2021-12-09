@@ -1,18 +1,31 @@
 module Intlc.Parser where
 
+import           Data.Aeson                 (decode)
+import           Data.ByteString.Lazy       (ByteString)
+import qualified Data.Map                   as M
 import qualified Data.Text                  as T
 import           Data.Void                  ()
 import           Intlc.Core
-import           Prelude
+import           Prelude                    hiding (ByteString)
 import           Text.Megaparsec            hiding (Token, many, some, token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
-type ParseOutput = Either (ParseErrorBundle Text Void) Translation
+data ParseFailure
+  = FailedJsonParse
+  | FailedTranslationParse ParseErr
+  deriving (Show, Eq)
+
+parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
+parseDataset = parse' <=< decode'
+  where decode' = maybeToRight FailedJsonParse . decode
+        parse' = M.traverseWithKey ((first FailedTranslationParse .) . parseTranslationFor)
+
+type ParseErr = ParseErrorBundle Text Void
 
 type Parser = Parsec Void Text
 
-parseTranslationFor :: Text -> Text -> ParseOutput
+parseTranslationFor :: Text -> Text -> Either ParseErr Translation
 parseTranslationFor = parse translation . T.unpack
 
 translation :: Parser Translation

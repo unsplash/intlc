@@ -1,11 +1,17 @@
 module Intlc.Compiler where
 
 import           Control.Monad.Writer
+import qualified Data.Map             as M
 import qualified Data.Text            as T
 import           Intlc.Core
 import           Prelude
 
 type Compiler = Writer [Arg]
+
+dataset :: Dataset Translation -> Text
+dataset xs = "export default { " <> exports <> " }"
+  where exports = T.intercalate ", " . M.foldlWithKey export mempty $ xs
+        export acc k v = k <> ": " <> translation v : acc
 
 translation :: Translation -> Text
 translation (Static x)   = "'" <> x <> "'"

@@ -17,3 +17,5 @@ data Translation
   = Static Text
   | Dynamic [Token]
   deriving (Show, Eq)
+
+type Dataset = Map Text
