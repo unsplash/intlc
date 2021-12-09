@@ -9,9 +9,9 @@ import           Prelude
 type Compiler = Writer [Arg]
 
 dataset :: Dataset Translation -> Text
-dataset xs = "export default { " <> exports <> " }"
-  where exports = T.intercalate ", " . M.foldlWithKey export mempty $ xs
-        export acc k v = k <> ": " <> translation v : acc
+dataset xs = "export default {" <> newline <> exports <> newline <> "}"
+  where exports = T.intercalate ("," <> newline) . M.foldlWithKey export mempty $ xs
+        export acc k v = indent <> k <> ": " <> translation v : acc
 
 translation :: Translation -> Text
 translation (Static x)   = "'" <> x <> "'"
@@ -27,3 +27,9 @@ lambda xs = "({ " <> val <> " }: { " <> typ <> " }) => "
 token :: Token -> Compiler Text
 token (Plaintext x)     = pure x
 token (Interpolation x) = "${" <> coerce x <> "}" <$ tell (pure x)
+
+indent :: Text
+indent = "  "
+
+newline :: Text
+newline = "\n"
