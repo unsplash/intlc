@@ -46,8 +46,18 @@ token = choice
   , Plaintext . T.singleton <$> L.charLiteral
   ]
 
+callback :: Parser Arg
+callback = do
+  name <- string "<" *> namep <* ">"
+  Arg name <$> children <* string "</" <* string name <* string ">"
+    where namep = T.pack <$> manyTill L.charLiteral (lookAhead $ string ">")
+          children = Just . Callback <$> manyTill token (lookAhead $ string "</")
+
 interp :: Parser Arg
-interp = Arg <$> (string "{" *> name) <*> optional (sep *> number) <* string "}"
+interp = choice
+  [ Arg <$> (string "{" *> name) <*> optional (sep *> num) <* string "}"
+  , callback
+  ]
   where name = T.pack <$> manyTill L.charLiteral (lookAhead $ string "," <|> string "}")
         sep = void $ string ", "
-        number = Number <$ string "number"
+        num = Number <$ string "number"

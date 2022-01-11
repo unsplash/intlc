@@ -18,8 +18,9 @@ translation (Dynamic xs) = lambda args <> "`" <> str <> "`"
   where (str, args) = runWriter $ foldMapM token xs
 
 typedInput :: Maybe ICUType -> Text
-typedInput Nothing       = "string"
-typedInput (Just Number) = "number"
+typedInput Nothing             = "string"
+typedInput (Just Number)       = "number"
+typedInput (Just (Callback _)) = "(x: string) => string"
 
 lambda :: [Arg] -> Text
 lambda xs = "(x: { " <> typ <> " }) => "
@@ -28,6 +29,10 @@ lambda xs = "(x: { " <> typ <> " }) => "
 
 token :: Token -> Compiler Text
 token (Plaintext x)               = pure x
+token (Interpolation x@(Arg n (Just (Callback xs)))) = do
+  tell . pure $ x
+  children <- foldMapM token xs
+  pure $ "${x." <> n <> "(`" <> children <> "`)}"
 token (Interpolation x@(Arg n _)) = "${x." <> n <> "}" <$ tell (pure x)
 
 indent :: Text

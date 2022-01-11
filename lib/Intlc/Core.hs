@@ -2,7 +2,9 @@ module Intlc.Core where
 
 import           Prelude
 
-data ICUType = Number
+data ICUType
+  = Number
+  | Callback [Token]
   deriving (Show, Eq)
 
 data Arg = Arg Text (Maybe ICUType)
