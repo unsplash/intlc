@@ -1,6 +1,6 @@
 # intlc
 
-For the time being the CLI takes a single translation input via stdin. To play with this in dev, run:
+For the time being the CLI takes a single translation JSON via stdin. To play with this in dev, run:
 
 ```
 $ echo '{ "title": "Unsplash", "greeting": "Hello {name}, {age, number}!" }' | cabal run -- intlc
