@@ -54,3 +54,4 @@ test-suite test-intlc
       hspec-discover:hspec-discover
   other-modules:
     Intlc.EndToEndSpec
+    Intlc.ParserSpec
