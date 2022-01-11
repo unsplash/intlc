@@ -42,7 +42,7 @@ translation = f . reconcile <$> manyTill token eof
 
 token :: Parser Token
 token = choice
-  [ Interpolation           <$> interp
+  [ Interpolation           <$> try interp
   , Plaintext . T.singleton <$> L.charLiteral
   ]
 
