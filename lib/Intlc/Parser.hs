@@ -47,6 +47,4 @@ token = choice
   ]
 
 interp :: Parser Text
-interp = T.pack <$> (sep *> manyTill L.charLiteral sep)
-  where sep :: Parser ()
-        sep = void $ string "%%"
+interp = T.pack <$> (string "{" *> manyTill L.charLiteral (string "}"))
