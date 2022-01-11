@@ -18,14 +18,13 @@ translation (Dynamic xs) = lambda args <> "`" <> str <> "`"
   where (str, args) = runWriter $ foldMapM token xs
 
 lambda :: [Arg] -> Text
-lambda xs = "({ " <> val <> " }: { " <> typ <> " }) => "
-  where val = T.intercalate ", " xs'
-        typ = T.intercalate "; " (xs' <&> (<> ": string"))
+lambda xs = "(x: { " <> typ <> " }) => "
+  where typ = T.intercalate "; " (xs' <&> (<> ": string"))
         xs' = coerce xs
 
 token :: Token -> Compiler Text
 token (Plaintext x)     = pure x
-token (Interpolation x) = "${" <> coerce x <> "}" <$ tell (pure x)
+token (Interpolation x) = "${x." <> coerce x <> "}" <$ tell (pure x)
 
 indent :: Text
 indent = "  "

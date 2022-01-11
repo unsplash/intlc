@@ -14,4 +14,4 @@ spec :: Spec
 spec = describe "end-to-end" $ do
   it "example message" $ do
         "{ \"title\": \"Unsplash\", \"greeting\": \"Hello, {forename} {surname}!\" }"
-    =*= "export default {\n  greeting: ({ forename, surname }: { forename: string; surname: string }) => `Hello, ${forename} ${surname}!`,\n  title: 'Unsplash',\n}"
+    =*= "export default {\n  greeting: (x: { forename: string; surname: string }) => `Hello, ${x.forename} ${x.surname}!`,\n  title: 'Unsplash',\n}"
