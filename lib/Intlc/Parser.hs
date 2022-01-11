@@ -28,23 +28,25 @@ type Parser = Parsec Void Text
 parseTranslationFor :: Text -> Text -> Either ParseErr Translation
 parseTranslationFor = parse translation . T.unpack
 
+-- | Plaintext is parsed as individual chars. Here we'll merge any siblings.
+reconcile :: [Token] -> [Token]
+reconcile []                               = []
+reconcile (Plaintext x : Plaintext y : zs) = reconcile $ Plaintext (x <> y) : zs
+reconcile (x:ys)                           = x : reconcile ys
+
 translation :: Parser Translation
-translation = f <$> manyTill token eof
+translation = f . reconcile <$> manyTill token eof
   where f []            = Static ""
         f [Plaintext x] = Static x
         f xs            = Dynamic xs
 
 token :: Parser Token
 token = choice
-  [ Interpolation . Arg <$> interp
-  , Plaintext           <$> text
+  [ Interpolation . Arg     <$> interp
+  , Plaintext . T.singleton <$> L.charLiteral
   ]
-
-sep :: Parser ()
-sep = void $ string "%%"
-
-text :: Parser Text
-text = T.pack <$> manyTill L.charLiteral (lookAhead $ sep <|> eof)
 
 interp :: Parser Text
 interp = T.pack <$> (sep *> manyTill L.charLiteral sep)
+  where sep :: Parser ()
+        sep = void $ string "%%"
