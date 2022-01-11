@@ -13,5 +13,5 @@ x =*= y = f x `shouldBe` Right y
 spec :: Spec
 spec = describe "end-to-end" $ do
   it "example message" $ do
-        "{ \"title\": \"Unsplash\", \"greeting\": \"Hello, {forename} {surname}!\" }"
-    =*= "export default {\n  greeting: (x: { forename: string; surname: string }) => `Hello, ${x.forename} ${x.surname}!`,\n  title: 'Unsplash',\n}"
+        "{ \"title\": \"Unsplash\", \"greeting\": \"Hello {name}, {age, number}!\" }"
+    =*= "export default {\n  greeting: (x: { name: string; age: number }) => `Hello ${x.name}, ${x.age}!`,\n  title: 'Unsplash',\n}"

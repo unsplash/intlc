@@ -42,9 +42,12 @@ translation = f . reconcile <$> manyTill token eof
 
 token :: Parser Token
 token = choice
-  [ Interpolation . Arg     <$> interp
+  [ Interpolation           <$> interp
   , Plaintext . T.singleton <$> L.charLiteral
   ]
 
-interp :: Parser Text
-interp = T.pack <$> (string "{" *> manyTill L.charLiteral (string "}"))
+interp :: Parser Arg
+interp = Arg <$> (string "{" *> name) <*> optional (sep *> number) <* string "}"
+  where name = T.pack <$> manyTill L.charLiteral (lookAhead $ string "," <|> string "}")
+        sep = void $ string ", "
+        number = Number <$ string "number"

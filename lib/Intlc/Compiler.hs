@@ -17,14 +17,18 @@ translation (Static x)   = "'" <> x <> "'"
 translation (Dynamic xs) = lambda args <> "`" <> str <> "`"
   where (str, args) = runWriter $ foldMapM token xs
 
+typedInput :: Maybe ICUType -> Text
+typedInput Nothing       = "string"
+typedInput (Just Number) = "number"
+
 lambda :: [Arg] -> Text
 lambda xs = "(x: { " <> typ <> " }) => "
-  where typ = T.intercalate "; " (xs' <&> (<> ": string"))
-        xs' = coerce xs
+  where typ = T.intercalate "; " (prop <$> xs)
+        prop (Arg n mt) = n <> ": " <> typedInput mt
 
 token :: Token -> Compiler Text
-token (Plaintext x)     = pure x
-token (Interpolation x) = "${x." <> coerce x <> "}" <$ tell (pure x)
+token (Plaintext x)               = pure x
+token (Interpolation x@(Arg n _)) = "${x." <> n <> "}" <$ tell (pure x)
 
 indent :: Text
 indent = "  "

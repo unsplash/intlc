@@ -2,7 +2,10 @@ module Intlc.Core where
 
 import           Prelude
 
-newtype Arg = Arg Text
+data ICUType = Number
+  deriving (Show, Eq)
+
+data Arg = Arg Text (Maybe ICUType)
   deriving (Show, Eq)
 
 -- | A token is either an interpolation - some sort of identifier for input -
