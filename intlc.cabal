@@ -47,9 +47,7 @@ test-suite test-intlc
   type:                    exitcode-stdio-1.0
   build-depends:
       intlc
-    , hedgehog             ^>=1.0
     , hspec                ^>=2.7
-    , hspec-hedgehog       ^>=0.0.1
     , hspec-megaparsec     ^>=2.2
     , megaparsec           ^>=9.0
   build-tool-depends:
