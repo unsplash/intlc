@@ -37,6 +37,7 @@ library
     , megaparsec          ^>=9.0
   exposed-modules:
     Intlc.Compiler
+    Intlc.Compiler.Backend.TypeScript
     Intlc.Core
     Intlc.Parser
 
