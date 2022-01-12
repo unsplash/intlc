@@ -1,7 +1,8 @@
 module Intlc.Core where
 
-import           Data.Aeson (FromJSON (..), withObject, withText, (.:), (.:?), (.!=))
-import qualified Data.Text  as T
+import           Data.Aeson       (FromJSON (..), withObject, withText, (.!=),
+                                   (.:), (.:?))
+import qualified Data.Text        as T
 import           Prelude
 
 data ICUType
