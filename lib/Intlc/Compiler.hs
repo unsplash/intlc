@@ -8,13 +8,13 @@ import           Prelude
 
 type Compiler = Writer [Arg]
 
-dataset :: Dataset Translation -> Text
+dataset :: Dataset Message -> Text
 dataset = M.foldMapWithKey export
-  where export k v = "export const " <> k <> " = " <> translation v <> newline
+  where export k v = "export const " <> k <> " = " <> msg v <> newline
 
-translation :: Translation -> Text
-translation (Static x)   = "'" <> x <> "'"
-translation (Dynamic xs) = lambda args <> "`" <> str <> "`"
+msg :: Message -> Text
+msg (Static x)   = "'" <> x <> "'"
+msg (Dynamic xs) = lambda args <> "`" <> str <> "`"
   where (str, args) = runWriter $ foldMapM token xs
 
 typedInput :: Maybe ICUType -> Text

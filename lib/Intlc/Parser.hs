@@ -13,20 +13,20 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 data ParseFailure
   = FailedJsonParse
-  | FailedTranslationParse ParseErr
+  | FailedMessageParse ParseErr
   deriving (Show, Eq)
 
-parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
+parseDataset :: ByteString -> Either ParseFailure (Dataset Message)
 parseDataset = parse' <=< decode'
   where decode' = maybeToRight FailedJsonParse . decode
-        parse' = M.traverseWithKey ((first FailedTranslationParse .) . parseTranslationFor)
+        parse' = M.traverseWithKey ((first FailedMessageParse .) . parseMsgFor)
 
 type ParseErr = ParseErrorBundle Text Void
 
 type Parser = Parsec Void Text
 
-parseTranslationFor :: Text -> Text -> Either ParseErr Translation
-parseTranslationFor = parse translation . T.unpack
+parseMsgFor :: Text -> Text -> Either ParseErr Message
+parseMsgFor = parse msg . T.unpack
 
 -- | Plaintext is parsed as individual chars. Here we'll merge any siblings.
 reconcile :: [Token] -> [Token]
@@ -34,8 +34,8 @@ reconcile []                               = []
 reconcile (Plaintext x : Plaintext y : zs) = reconcile $ Plaintext (x <> y) : zs
 reconcile (x:ys)                           = x : reconcile ys
 
-translation :: Parser Translation
-translation = f . reconcile <$> manyTill token eof
+msg :: Parser Message
+msg = f . reconcile <$> manyTill token eof
   where f []            = Static ""
         f [Plaintext x] = Static x
         f xs            = Dynamic xs

@@ -12,13 +12,13 @@ parse' = flip parse "test"
 
 spec :: Spec
 spec = describe "parser" $ do
-  describe "translation" $ do
+  describe "message" $ do
     it "tolerates unclosed braces" $ do
-      parse' translation "a {b} c { d" `shouldParse`
+      parse' msg "a {b} c { d" `shouldParse`
         Dynamic [Plaintext "a ", Interpolation (Arg "b" Nothing), Plaintext " c { d"]
 
     it "tolerates unclosed/unopened tags" $ do
-      parse' translation "a <hello> c </there> d" `shouldParse`
+      parse' msg "a <hello> c </there> d" `shouldParse`
         Static "a <hello> c </there> d"
 
   describe "interpolation" $ do
