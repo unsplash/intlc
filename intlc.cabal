@@ -44,6 +44,8 @@ library
 
 test-suite test-intlc
   import:                  common
+  default-extensions:
+    QuasiQuotes
   hs-source-dirs:          test/
   main-is:                 Spec.hs
   type:                    exitcode-stdio-1.0
@@ -52,6 +54,7 @@ test-suite test-intlc
     , hspec                ^>=2.7
     , hspec-megaparsec     ^>=2.2
     , megaparsec           ^>=9.0
+    , raw-strings-qq       ^>=1.1
   build-tool-depends:
       hspec-discover:hspec-discover
   other-modules:
