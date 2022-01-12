@@ -8,9 +8,9 @@ import           Prelude
 
 type Compiler = Writer [Arg]
 
-dataset :: Dataset Message -> Text
+dataset :: Dataset Translation -> Text
 dataset = M.foldMapWithKey export
-  where export k v = "export const " <> k <> " = " <> msg v <> newline
+  where export k (Translation v _) = "export const " <> k <> " = " <> msg v <> newline
 
 msg :: Message -> Text
 msg (Static x)   = "'" <> x <> "'"

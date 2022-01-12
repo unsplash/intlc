@@ -16,17 +16,18 @@ data ParseFailure
   | FailedMessageParse ParseErr
   deriving (Show, Eq)
 
-parseDataset :: ByteString -> Either ParseFailure (Dataset Message)
+parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
 parseDataset = parse' <=< decode'
   where decode' = maybeToRight FailedJsonParse . decode
-        parse' = M.traverseWithKey ((first FailedMessageParse .) . parseMsgFor)
+        parse' = M.traverseWithKey ((first FailedMessageParse .) . parseTranslationFor)
+
+parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
+parseTranslationFor name (UnparsedTranslation umsg be) =
+  flip Translation be <$> parse msg (T.unpack name) umsg
 
 type ParseErr = ParseErrorBundle Text Void
 
 type Parser = Parsec Void Text
-
-parseMsgFor :: Text -> Text -> Either ParseErr Message
-parseMsgFor = parse msg . T.unpack
 
 -- | Plaintext is parsed as individual chars. Here we'll merge any siblings.
 reconcile :: [Token] -> [Token]
