@@ -7,8 +7,11 @@ import           Intlc.Core
 import           Prelude
 
 dataset :: Dataset Translation -> Text
-dataset = M.foldMapWithKey translation
+dataset = M.foldMapWithKey (((<> newline) .) . translation)
 
 translation :: Text -> Translation -> Text
 translation k (Translation v TypeScript)      = TS.export k v
 translation k (Translation v TypeScriptReact) = TSX.export k v
+
+newline :: Text
+newline = "\n"
