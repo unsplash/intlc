@@ -29,10 +29,12 @@ data Message
 
 data Backend
   = TypeScript
+  | TypeScriptReact
 
 instance FromJSON Backend where
   parseJSON = withText "Backend" decode
     where decode "ts"  = pure TypeScript
+          decode "tsx" = pure TypeScriptReact
           decode x     = fail $ "Unknown backend: " <> T.unpack x
 
 data UnparsedTranslation = UnparsedTranslation

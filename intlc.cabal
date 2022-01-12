@@ -38,6 +38,7 @@ library
   exposed-modules:
     Intlc.Compiler
     Intlc.Compiler.Backend.TypeScript
+    Intlc.Compiler.Backend.TypeScriptReact
     Intlc.Core
     Intlc.Parser
 
