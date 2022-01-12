@@ -9,8 +9,8 @@ import           Prelude
 type Compiler = Writer [Arg]
 
 dataset :: Dataset Translation -> Text
-dataset xs = "export default {" <> newline <> M.foldMapWithKey export xs <> "}"
-  where export k v = indent <> k <> ": " <> translation v <> "," <> newline
+dataset = M.foldMapWithKey export
+  where export k v = "export const " <> k <> " = " <> translation v <> newline
 
 translation :: Translation -> Text
 translation (Static x)   = "'" <> x <> "'"
@@ -34,9 +34,6 @@ token (Interpolation x@(Arg n (Just (Callback xs)))) = do
   children <- foldMapM token xs
   pure $ "${x." <> n <> "(`" <> children <> "`)}"
 token (Interpolation x@(Arg n _)) = "${x." <> n <> "}" <$ tell (pure x)
-
-indent :: Text
-indent = "  "
 
 newline :: Text
 newline = "\n"

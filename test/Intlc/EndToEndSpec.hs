@@ -14,4 +14,4 @@ spec :: Spec
 spec = describe "end-to-end" $ do
   it "example message" $ do
         "{ \"title\": \"Unsplash\", \"greeting\": \"Hello <bold>{name}</bold>, {age, number}!\" }"
-    =*= "export default {\n  greeting: (x: { bold: (x: string) => string; name: string; age: number }) => `Hello ${x.bold(`${x.name}`)}, ${x.age}!`,\n  title: 'Unsplash',\n}"
+    =*= "export const greeting = (x: { bold: (x: string) => string; name: string; age: number }) => `Hello ${x.bold(`${x.name}`)}, ${x.age}!`\nexport const title = 'Unsplash'\n"
