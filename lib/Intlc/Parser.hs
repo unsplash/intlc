@@ -1,20 +1,32 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Intlc.Parser where
 
-import           Data.Aeson                 (decode)
-import           Data.ByteString.Lazy       (ByteString)
-import qualified Data.Map                   as M
-import qualified Data.Text                  as T
-import           Data.Void                  ()
+import           Data.Aeson                    (decode)
+import           Data.ByteString.Lazy          (ByteString)
+import qualified Data.Map                      as M
+import qualified Data.Text                     as T
+import           Data.Void                     ()
 import           Intlc.Core
-import           Prelude                    hiding (ByteString)
-import           Text.Megaparsec            hiding (Token, many, some, token)
+import           Prelude                       hiding (ByteString)
+import           Text.Megaparsec               hiding (Token, many, some, token)
 import           Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer as L
+import qualified Text.Megaparsec.Char.Lexer    as L
+import           Text.Megaparsec.Error.Builder
 
 data ParseFailure
   = FailedJsonParse
   | FailedMessageParse ParseErr
   deriving (Show, Eq)
+
+data MessageParseErr
+  = NoClosingCallbackTag Text
+  | BadClosingCallbackTag Text Text
+  deriving (Show, Eq, Ord)
+
+instance ShowErrorComponent MessageParseErr where
+  showErrorComponent (NoClosingCallbackTag x)    = "Callback tag <" <> T.unpack x <> "> not closed"
+  showErrorComponent (BadClosingCallbackTag x y) = "Callback tag <" <> T.unpack x <> "> not closed, instead found </" <> T.unpack y <> ">"
 
 printErr :: ParseFailure -> String
 printErr FailedJsonParse        = "Failed to parse JSON"
@@ -29,9 +41,9 @@ parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translatio
 parseTranslationFor name (UnparsedTranslation umsg be) =
   flip Translation be <$> parse msg (T.unpack name) umsg
 
-type ParseErr = ParseErrorBundle Text Void
+type ParseErr = ParseErrorBundle Text MessageParseErr
 
-type Parser = Parsec Void Text
+type Parser = Parsec MessageParseErr Text
 
 -- | Plaintext is parsed as individual chars. Here we'll merge any siblings.
 reconcile :: [Token] -> [Token]
@@ -47,20 +59,26 @@ msg = f . reconcile <$> manyTill token eof
 
 token :: Parser Token
 token = choice
-  [ Interpolation           <$> try interp
+  [ Interpolation           <$> interp
   , Plaintext . T.singleton <$> L.charLiteral
   ]
 
 callback :: Parser Arg
 callback = do
-  name <- string "<" *> namep <* ">"
-  Arg name <$> children <* string "</" <* string name <* string ">"
+  oname <- string "<" *> namep <* ">"
+  mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> namep <* string ">")
+  case mrest of
+    Left _  -> e 1 (NoClosingCallbackTag oname)
+    Right (ch, pos, cname) -> if oname == cname
+       then pure (Arg oname ch)
+       else e pos (BadClosingCallbackTag oname cname)
     where namep = T.pack <$> manyTill L.charLiteral (lookAhead $ string ">")
           children = Just . Callback <$> manyTill token (lookAhead $ string "</")
+          e pos = parseError . errFancy pos . fancy . ErrorCustom
 
 interp :: Parser Arg
 interp = choice
-  [ Arg <$> (string "{" *> name) <*> optional (sep *> num) <* string "}"
+  [ try $ Arg <$> (string "{" *> name) <*> optional (sep *> num) <* string "}"
   , callback
   ]
   where name = T.pack <$> manyTill L.charLiteral (lookAhead $ string "," <|> string "}")
