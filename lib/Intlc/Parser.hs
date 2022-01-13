@@ -16,6 +16,10 @@ data ParseFailure
   | FailedMessageParse ParseErr
   deriving (Show, Eq)
 
+printErr :: ParseFailure -> String
+printErr FailedJsonParse        = "Failed to parse JSON"
+printErr (FailedMessageParse e) = errorBundlePretty e
+
 parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
 parseDataset = parse' <=< decode'
   where decode' = maybeToRight FailedJsonParse . decode
