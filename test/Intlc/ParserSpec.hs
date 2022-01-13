@@ -18,7 +18,14 @@ spec = describe "parser" $ do
       parse' msg "a {b} c { d" `shouldParse`
         Dynamic [Plaintext "a ", Interpolation (Arg "b" Nothing), Plaintext " c { d"]
 
+    it "tolerates empty braces" $ do
+      parse' msg "a {b} c {} d {e, number}" `shouldParse`
+        Dynamic [Plaintext "a ", Interpolation (Arg "b" Nothing), Plaintext " c {} d ", Interpolation (Arg "e" (Just Number))]
+
   describe "interpolation" $ do
+    it "interpolates appropriately" $ do
+      parse' interp "{x}" `shouldParse` Arg "x" Nothing
+
     it "validates closing tag name" $ do
       parse' interp "<hello></hello>" `shouldParse` Arg "hello" (Just $ Callback [])
       parse' interp `shouldFailOn` "<hello></there>"

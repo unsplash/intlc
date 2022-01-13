@@ -81,6 +81,6 @@ interp = choice
   [ try $ Arg <$> (string "{" *> name) <*> optional (sep *> num) <* string "}"
   , callback
   ]
-  where name = T.pack <$> manyTill L.charLiteral (lookAhead $ string "," <|> string "}")
+  where name = T.pack <$> (notFollowedBy (string "}") *> someTill L.charLiteral (lookAhead $ string "," <|> string "}"))
         sep = void $ string ", "
         num = Number <$ string "number"
