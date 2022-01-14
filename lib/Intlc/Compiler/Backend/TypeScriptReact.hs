@@ -18,7 +18,7 @@ msg (Dynamic xs) = args interps `lambda` fragment ret
 
 argType :: Maybe ICUType -> Text
 argType = maybe uni (typ uni)
-  where uni = "ReactNode"
+  where uni = "ReactElement"
 
 args :: [Arg] -> [(Text, Text)]
 args xs = pure (argName, obj (arg <$> xs))
