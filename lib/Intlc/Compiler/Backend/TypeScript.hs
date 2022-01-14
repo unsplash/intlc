@@ -15,7 +15,7 @@ msg (Static x)   = str x
 msg (Dynamic xs) = args interps `lambda` templateLits ret
   where (ret, interps) = runWriter $ foldMapM token xs
 
-argType :: Maybe ICUType -> Text
+argType :: ICUType -> Text
 argType = typ "string"
 
 args :: [Arg] -> [(Text, Text)]
@@ -24,7 +24,7 @@ args xs = pure (argName, obj (arg <$> xs))
 
 token :: Token -> Compiler Text
 token (Plaintext x)               = pure x
-token (Interpolation x@(Arg n (Just (Callback xs)))) = do
+token (Interpolation x@(Arg n (Callback xs))) = do
   tell . pure $ x
   children <- foldMapM token xs
   pure $ templateInterp (argName `prop` n <> apply (templateLits children))

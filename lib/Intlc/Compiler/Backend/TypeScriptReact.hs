@@ -16,7 +16,7 @@ msg (Static x)   = str x
 msg (Dynamic xs) = args interps `lambda` fragment ret
   where (ret, interps) = runWriter $ foldMapM token xs
 
-argType :: Maybe ICUType -> Text
+argType :: ICUType -> Text
 argType = typ "ReactElement"
 
 args :: [Arg] -> [(Text, Text)]
@@ -25,7 +25,7 @@ args xs = pure (argName, obj (arg <$> xs))
 
 token :: Token -> Compiler Text
 token (Plaintext x)                                  = pure x
-token (Interpolation x@(Arg n (Just (Callback xs)))) = do
+token (Interpolation x@(Arg n (Callback xs))) = do
   tell . pure $ x
   children <- foldMapM token xs
   pure . interpolate $ argName `prop` n <> apply (fragment children)

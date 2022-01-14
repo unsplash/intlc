@@ -73,12 +73,12 @@ callback = do
        then pure (Arg oname ch)
        else e pos (BadClosingCallbackTag oname cname)
     where namep = T.pack <$> manyTill L.charLiteral (lookAhead $ string ">")
-          children = Just . Callback <$> manyTill token (lookAhead $ string "</")
+          children = Callback <$> manyTill token (lookAhead $ string "</")
           e pos = parseError . errFancy pos . fancy . ErrorCustom
 
 interp :: Parser Arg
 interp = choice
-  [ try $ Arg <$> (string "{" *> name) <*> optional (sep *> num) <* string "}"
+  [ try $ Arg <$> (string "{" *> name) <*> option String (sep *> num) <* string "}"
   , callback
   ]
   where name = T.pack <$> (notFollowedBy (string "}") *> someTill L.charLiteral (lookAhead $ string "," <|> string "}"))

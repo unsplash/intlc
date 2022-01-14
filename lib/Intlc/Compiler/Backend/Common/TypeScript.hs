@@ -8,10 +8,10 @@ import           Prelude
 argName :: Text
 argName = JS.argName
 
-typ :: Text -> Maybe ICUType -> Text
-typ _ Nothing             = "string"
-typ _ (Just Number)       = "number"
-typ x (Just (Callback _)) = pure (argName, x) `lambda` x
+typ :: Text -> ICUType -> Text
+typ _ String       = "string"
+typ _ Number       = "number"
+typ x (Callback _) = pure (argName, x) `lambda` x
 
 namedExport :: Text -> Text -> Text
 namedExport = JS.namedExport

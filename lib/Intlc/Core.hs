@@ -6,11 +6,12 @@ import qualified Data.Text        as T
 import           Prelude
 
 data ICUType
-  = Number
+  = String
+  | Number
   | Callback [Token]
   deriving (Show, Eq)
 
-data Arg = Arg Text (Maybe ICUType)
+data Arg = Arg Text ICUType
   deriving (Show, Eq)
 
 -- | A token is either an interpolation - some sort of identifier for input -
