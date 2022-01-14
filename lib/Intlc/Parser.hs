@@ -86,7 +86,7 @@ interp = choice
   , callback
   ]
   where sep = string ", "
-        name = T.pack <$> (notFollowedBy (string "}") *> someTill L.charLiteral (lookAhead $ sep <|> string "}"))
+        name = T.pack <$> some letterChar
         body n = option String $ sep *> choice
           [ Number <$ string "number"
           , uncurry Plural <$> (string "plural" *> sep *> pluralCases n)

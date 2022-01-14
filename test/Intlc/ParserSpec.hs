@@ -26,6 +26,10 @@ spec = describe "parser" $ do
     it "interpolates appropriately" $ do
       parse' interp "{x}" `shouldParse` Arg "x" String
 
+    it "only accepts alphanumeric identifiers" $ do
+      parse' interp "{XyZ}" `shouldParse` Arg "XyZ" String
+      parse' interp `shouldFailOn` "{x y}"
+
     it "validates closing tag name" $ do
       parse' interp "<hello></hello>" `shouldParse` Arg "hello" (Callback [])
       parse' interp `shouldFailOn` "<hello></there>"
