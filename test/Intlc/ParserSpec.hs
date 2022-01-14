@@ -36,3 +36,14 @@ spec = describe "parser" $ do
 
       parse' callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
       parse' callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
+
+  describe "plural" $ do
+    it "requires at least one number match" $ do
+      parse' (pluralCases "any") `shouldFailOn` "other {foo}"
+
+    it "requires a wildcard" $ do
+      parse' (pluralCases "any") `shouldFailOn` "=0 {foo} =42 {bar}"
+
+    it "parses, number matches, wildcard, and interpolation token" $ do
+      parse' (pluralCases "xyz") "=0 {foo} =42 {bar} other {baz #}" `shouldParse`
+        (PluralCase "0" [Plaintext "foo"] :| [PluralCase "42" [Plaintext "bar"]], PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])

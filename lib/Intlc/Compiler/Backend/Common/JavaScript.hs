@@ -29,3 +29,15 @@ apply x = "(" <> x <> ")"
 
 prop :: Text -> Text -> Text
 o `prop` p = o <> "." <> p
+
+iife :: Text -> Text -> Text -> Text
+iife n b a = "(" <> n <> " => { " <> b <> " })(" <> a <> ")"
+
+switch :: Text -> Text -> Text
+switch n cs = "switch (" <> n <> ") { " <> cs <> " }"
+
+shortSwitchCase :: Text -> Text -> Text
+shortSwitchCase c r = "case " <> c <> ": return " <> r <> ";"
+
+shortSwitchDefault :: Text -> Text
+shortSwitchDefault r = "default: return " <> r <> ";"

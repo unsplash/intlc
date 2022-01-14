@@ -2,16 +2,18 @@
 
 module Intlc.Parser where
 
-import           Data.Aeson                    (decode)
-import           Data.ByteString.Lazy          (ByteString)
-import qualified Data.Map                      as M
-import qualified Data.Text                     as T
-import           Data.Void                     ()
+import qualified Control.Applicative.Combinators.NonEmpty as NE
+import           Data.Aeson                               (decode)
+import           Data.ByteString.Lazy                     (ByteString)
+import qualified Data.Map                                 as M
+import qualified Data.Text                                as T
+import           Data.Void                                ()
 import           Intlc.Core
-import           Prelude                       hiding (ByteString)
-import           Text.Megaparsec               hiding (Token, many, some, token)
+import           Prelude                                  hiding (ByteString)
+import           Text.Megaparsec                          hiding (Token, many,
+                                                           some, token)
 import           Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer    as L
+import qualified Text.Megaparsec.Char.Lexer               as L
 import           Text.Megaparsec.Error.Builder
 
 data ParseFailure
@@ -78,9 +80,23 @@ callback = do
 
 interp :: Parser Arg
 interp = choice
-  [ try $ Arg <$> (string "{" *> name) <*> option String (sep *> num) <* string "}"
+  [ try $ do
+      n <- string "{" *> name
+      Arg n <$> body n <* string "}"
   , callback
   ]
-  where name = T.pack <$> (notFollowedBy (string "}") *> someTill L.charLiteral (lookAhead $ string "," <|> string "}"))
-        sep = void $ string ", "
-        num = Number <$ string "number"
+  where sep = string ", "
+        name = T.pack <$> (notFollowedBy (string "}") *> someTill L.charLiteral (lookAhead $ sep <|> string "}"))
+        body n = option String $ sep *> choice
+          [ Number <$ string "number"
+          , uncurry Plural <$> (string "plural" *> sep *> pluralCases n)
+          ]
+
+pluralCases :: Text -> Parser (NonEmpty PluralCase, PluralWildcard)
+pluralCases name = (,) <$> plurals <*> wildcard
+  where body = reconcile <$> (string "{" *> manyTill token' (string "}"))
+          -- Plural cases support interpolating the number in context with `#`.
+          where token' = (Interpolation (Arg name Number) <$ string "#") <|> token
+        plurals = NE.someTill (PluralCase <$> numId <*> body <* string " ") (lookAhead $ string "o")
+          where numId = T.pack <$> (string "=" *> some numberChar <* string " ")
+        wildcard = PluralWildcard <$> (string "other " *> body)

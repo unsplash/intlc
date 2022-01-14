@@ -8,7 +8,16 @@ import           Prelude
 data ICUType
   = String
   | Number
+  | Plural (NonEmpty PluralCase) PluralWildcard
   | Callback [Token]
+  deriving (Show, Eq)
+
+-- `Text` here is our count. It's represented as a string so that we can dump
+-- it back out without thinking about converting numeric types across languages.
+data PluralCase = PluralCase Text [Token]
+  deriving (Show, Eq)
+
+newtype PluralWildcard = PluralWildcard [Token]
   deriving (Show, Eq)
 
 data Arg = Arg Text ICUType

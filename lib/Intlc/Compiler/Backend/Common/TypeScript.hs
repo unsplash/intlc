@@ -11,6 +11,7 @@ argName = JS.argName
 typ :: Text -> ICUType -> Text
 typ _ String       = "string"
 typ _ Number       = "number"
+typ _ (Plural _ _) = "number"
 typ x (Callback _) = pure (argName, x) `lambda` x
 
 namedExport :: Text -> Text -> Text
@@ -38,3 +39,15 @@ prop = JS.prop
 obj :: [(Text, Text)] -> Text
 obj xs = "{ " <> T.intercalate "; " (uncurry prop' <$> xs) <> " }"
   where prop' n t = n <> ": " <> t
+
+iife :: Text -> Text -> Text -> Text
+iife = JS.iife
+
+switch :: Text -> Text -> Text
+switch = JS.switch
+
+shortSwitchCase :: Text -> Text -> Text
+shortSwitchCase = JS.shortSwitchCase
+
+shortSwitchDefault :: Text -> Text
+shortSwitchDefault = JS.shortSwitchDefault

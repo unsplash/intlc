@@ -23,9 +23,15 @@ args xs = pure (argName, obj (arg <$> xs))
   where arg (Arg n mt) = (n, argType mt)
 
 token :: Token -> Compiler Text
-token (Plaintext x)               = pure x
+token (Plaintext x)                           = pure x
+token (Interpolation x@(Arg n (Plural cs w))) = do
+  tell . pure $ x
+  cases <- (<>) <$> foldMapM (fmap (<> " ") . case') cs <*> def w
+  pure . templateInterp $ iife "n" (switch "n" cases) (argName `prop` n)
+    where case' (PluralCase v rs) = shortSwitchCase v . templateLits <$> foldMapM token rs
+          def (PluralWildcard rs) = shortSwitchDefault . templateLits <$> foldMapM token rs
 token (Interpolation x@(Arg n (Callback xs))) = do
   tell . pure $ x
   children <- foldMapM token xs
   pure $ templateInterp (argName `prop` n <> apply (templateLits children))
-token (Interpolation x@(Arg n _)) = templateInterp (argName `prop` n) <$ tell (pure x)
+token (Interpolation x@(Arg n _))             = templateInterp (argName `prop` n) <$ tell (pure x)
