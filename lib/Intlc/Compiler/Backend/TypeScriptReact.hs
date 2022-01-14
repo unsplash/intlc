@@ -17,8 +17,7 @@ msg (Dynamic xs) = args interps `lambda` fragment ret
   where (ret, interps) = runWriter $ foldMapM token xs
 
 argType :: Maybe ICUType -> Text
-argType = maybe uni (typ uni)
-  where uni = "ReactElement"
+argType = typ "ReactElement"
 
 args :: [Arg] -> [(Text, Text)]
 args xs = pure (argName, obj (arg <$> xs))

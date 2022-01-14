@@ -23,4 +23,4 @@ spec = describe "end-to-end" $ do
 
   it "TypeScriptReact backend" $ do
     [r|{ "f": { "message": "{x} <z>{y, number}</z>", "backend": "tsx" } }|]
-      =*= "export const f = (x: { x: ReactElement; z: (x: ReactElement) => ReactElement; y: number }) => <>{x.x} {x.z(<>{x.y}</>)}</>"
+      =*= "export const f = (x: { x: string; z: (x: ReactElement) => ReactElement; y: number }) => <>{x.x} {x.z(<>{x.y}</>)}</>"

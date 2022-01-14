@@ -1,16 +1,17 @@
 module Intlc.Compiler.Backend.Common.TypeScript where
 
+import qualified Data.Text                                as T
+import qualified Intlc.Compiler.Backend.Common.JavaScript as JS
 import           Intlc.Core
 import           Prelude
-import qualified Intlc.Compiler.Backend.Common.JavaScript as JS
-import qualified Data.Text as T
 
 argName :: Text
 argName = JS.argName
 
-typ :: Text -> ICUType -> Text
-typ _ Number       = "number"
-typ x (Callback _) = pure (argName, x) `lambda` x
+typ :: Text -> Maybe ICUType -> Text
+typ _ Nothing             = "string"
+typ _ (Just Number)       = "number"
+typ x (Just (Callback _)) = pure (argName, x) `lambda` x
 
 namedExport :: Text -> Text -> Text
 namedExport = JS.namedExport

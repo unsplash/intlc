@@ -16,8 +16,7 @@ msg (Dynamic xs) = args interps `lambda` templateLits ret
   where (ret, interps) = runWriter $ foldMapM token xs
 
 argType :: Maybe ICUType -> Text
-argType = maybe uni (typ uni)
-  where uni = "string"
+argType = typ "string"
 
 args :: [Arg] -> [(Text, Text)]
 args xs = pure (argName, obj (arg <$> xs))
