@@ -12,11 +12,8 @@ import           Prelude
 dataset :: Dataset Translation -> Text
 dataset = M.foldrWithKey f mempty
   where f k v ""  = translation k v
-        f k v acc = acc <> newline <> translation k v
+        f k v acc = acc <> "\n" <> translation k v
 
 translation :: Text -> Translation -> Text
 translation k (Translation v TypeScript)      = TS.export k v
 translation k (Translation v TypeScriptReact) = TSX.export k v
-
-newline :: Text
-newline = "\n"
