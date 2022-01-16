@@ -9,7 +9,7 @@ import           Prelude
 -- preserved biased to the left.
 validateArgs :: [Arg] -> Either (NonEmpty Text) [Arg]
 validateArgs xs = dedupe xs <$ validate xs
-  where validate = toEither . foldr checkCompat ([], [])
+  where validate = toEither . foldr checkCompat ([], []) . reverse
           where checkCompat x@(Arg _ xt) (es, seen) = find (eqName x) seen & \case
                   Nothing -> (es, x : seen)
                   Just y@(Arg _ yt)  -> if sameUnderlyingType xt yt then (es, seen) else (typeMismatchErr x y : es, seen)
