@@ -24,6 +24,7 @@ friendlyInputType :: ICUType -> Text
 friendlyInputType String      = "string"
 friendlyInputType Date {}     = "date"
 friendlyInputType Number      = "number"
+friendlyInputType Select {}   = "string"
 friendlyInputType Plural {}   = "number"
 friendlyInputType Callback {} = "tag"
 
