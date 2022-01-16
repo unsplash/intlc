@@ -15,7 +15,7 @@ import           Data.Void                                ()
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude                                  hiding (ByteString)
-import           Text.Megaparsec                          hiding (Token, many,
+import           Text.Megaparsec                          hiding (Stream, Token, many,
                                                            some, token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer               as L
@@ -53,7 +53,7 @@ type ParseErr = ParseErrorBundle Text MessageParseErr
 type Parser = Parsec MessageParseErr Text
 
 -- | Plaintext is parsed as individual chars. Here we'll merge any siblings.
-reconcile :: [Token] -> [Token]
+reconcile :: Stream -> Stream
 reconcile []                               = []
 reconcile (Plaintext x : Plaintext y : zs) = reconcile $ Plaintext (x <> y) : zs
 reconcile (x:ys)                           = x : reconcile ys
