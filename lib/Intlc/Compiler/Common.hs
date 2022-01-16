@@ -12,11 +12,11 @@ validateArgs xs = dedupe xs <$ validate xs
   where validate = toEither . foldr checkCompat ([], [])
           where checkCompat x@(Arg _ xt) (es, seen) = find (eqName x) seen & \case
                   Nothing -> (es, x : seen)
-                  Just y@(Arg _ yt)  -> if sameUnderlyingType xt yt then (es, seen) else (friendlyErr x y : es, seen)
+                  Just y@(Arg _ yt)  -> if sameUnderlyingType xt yt then (es, seen) else (typeMismatchErr x y : es, seen)
                 toEither (e:es, _) = Left (e :| es)
                 toEither _         = Right ()
-                friendlyErr x y = "Incompatible interpolation types. Found " <> fmtArg y <> ", expected " <> fmtArg x
-                fmtArg (Arg x y) = x <> ":" <> friendlyInputType y
+                typeMismatchErr (Arg n xt) (Arg _ yt) =
+                  "Incompatible interpolation types for `" <> n <> "`. Found " <> friendlyInputType xt <> ", expected " <> friendlyInputType yt
         dedupe = nubBy eqName
         eqName (Arg x _) (Arg y _) = x == y
 
