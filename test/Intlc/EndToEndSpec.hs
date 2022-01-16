@@ -17,6 +17,10 @@ spec = describe "end-to-end" $ do
     [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]
       =*= "export const title = 'Unsplash'\nexport const greeting = (x: { bold: (x: string) => string; name: string; age: number }) => `Hello ${x.bold(`${x.name}`)}, ${x.age}!`"
 
+  it "parses and discards descriptions" $ do
+    [r|{ "brand": { "message": "Unsplash", "description": "The company name" } }|]
+      =*= "export const brand = 'Unsplash'"
+
   it "compiles plurals" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]
       =*= "export const prop = (x: { age: number; name: string }) => `Age: ${(n => { switch (n) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring ${x.age}`; } })(x.age)}`"
