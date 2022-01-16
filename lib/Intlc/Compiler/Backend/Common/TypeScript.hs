@@ -10,9 +10,10 @@ argName = JS.argName
 
 typ :: Text -> ICUType -> Text
 typ _ String      = "string"
-typ _ Date {}     = "Date"
 typ _ Number      = "number"
+typ _ Date {}     = "Date"
 typ _ Plural {}   = "number"
+typ _ Select {}   = "string"
 typ x Callback {} = pure (argName, x) `lambda` x
 
 namedExport :: Text -> Text -> Text

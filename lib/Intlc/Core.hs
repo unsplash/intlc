@@ -10,6 +10,8 @@ data ICUType
   | Number
   | Date DateFmt
   | Plural (NonEmpty PluralCase) PluralWildcard
+  -- We diverge from icu4j by not requiring a wildcard case.
+  | Select (NonEmpty SelectCase) (Maybe SelectWildcard)
   | Callback [Token]
   deriving (Show, Eq)
 
@@ -18,6 +20,12 @@ data DateFmt
   | Medium
   | Long
   | Full
+  deriving (Show, Eq)
+
+data SelectCase = SelectCase Text [Token]
+  deriving (Show, Eq)
+
+newtype SelectWildcard = SelectWildcard [Token]
   deriving (Show, Eq)
 
 -- `Text` here is our count. It's represented as a string so that we can dump

@@ -29,15 +29,21 @@ args xs = pure (argName, obj (arg <$> xs))
 token :: Token -> Compiler Text
 token (Plaintext x)               = pure x
 token (Interpolation x@(Arg n t)) = tell (pure x) *> case t of
-  String      -> pure std
-  Number      -> pure std
-  Date fmt    -> pure $ templateInterp (fmtDate fmt n)
-  Plural cs w -> do
+  String       -> pure std
+  Number       -> pure std
+  Date fmt     -> pure $ templateInterp (fmtDate fmt n)
+  Plural cs w  -> do
     cases <- (<>) <$> foldMapM (fmap (<> " ") . case') cs <*> def w
     pure . templateInterp $ iife "n" (switch "n" cases) (argName `prop` n)
     where case' (PluralCase v rs) = shortSwitchCase v . templateLits <$> foldMapM token rs
           def (PluralWildcard rs) = shortSwitchDefault . templateLits <$> foldMapM token rs
-  Callback xs -> do
+  Select cs mw -> do
+    cases <- (<>) <$> foldMapM (fmap (<> " ") . case') cs <*> def mw
+    pure . templateInterp $ iife "y" (switch "y" cases) (argName `prop` n)
+    where case' (SelectCase v rs) = shortSwitchCase (str v) . templateLits <$> foldMapM token rs
+          def (Just (SelectWildcard rs)) = shortSwitchDefault . templateLits <$> foldMapM token rs
+          def Nothing                    = pure ""
+  Callback xs  -> do
     children <- foldMapM token xs
     pure $ templateInterp (argName `prop` n <> apply (templateLits children))
   where std = templateInterp (argName `prop` n)

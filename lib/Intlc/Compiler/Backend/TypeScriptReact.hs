@@ -38,6 +38,12 @@ token (Interpolation x@(Arg n t)) = tell (pure x) *> case t of
     pure . interpolate $ iife "n" (switch "n" cases) (argName `prop` n)
     where case' (PluralCase v rs) = shortSwitchCase v . fragment <$> foldMapM token rs
           def (PluralWildcard rs) = shortSwitchDefault . fragment <$> foldMapM token rs
+  Select cs mw -> do
+    cases <- (<>) <$> foldMapM (fmap (<> " ") . case') cs <*> def mw
+    pure . interpolate $ iife "y" (switch "y" cases) (argName `prop` n)
+    where case' (SelectCase v rs) = shortSwitchCase (str v) . fragment <$> foldMapM token rs
+          def (Just (SelectWildcard rs)) = shortSwitchDefault . fragment <$> foldMapM token rs
+          def Nothing                    = pure ""
   Callback xs -> do
     children <- foldMapM token xs
     pure . interpolate $ argName `prop` n <> apply (fragment children)

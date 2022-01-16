@@ -91,6 +91,7 @@ interp = choice
           [ Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateFmt)
           , uncurry Plural <$> (string "plural" *> sep *> pluralCases n)
+          , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
 
 dateFmt :: Parser DateFmt
@@ -100,6 +101,14 @@ dateFmt = choice
   , Long   <$ string "long"
   , Full   <$ string "full"
   ]
+
+selectCases :: Parser (NonEmpty SelectCase, Maybe SelectWildcard)
+selectCases = (,) <$> cases <*> optional wildcard
+  where cases = NE.someTill (SelectCase <$> (name <* string " ") <*> (body <* string " ")) (lookAhead $ string wildcardName)
+        wildcard = SelectWildcard <$> (string wildcardName *> string " " *> body)
+        name = mfilter (/= wildcardName) (T.pack <$> some letterChar)
+        body = reconcile <$> (string "{" *> manyTill token (string "}"))
+        wildcardName = "other"
 
 pluralCases :: Text -> Parser (NonEmpty PluralCase, PluralWildcard)
 pluralCases name = (,) <$> plurals <*> wildcard
