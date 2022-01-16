@@ -31,7 +31,7 @@ token (Plaintext x)               = pure x
 token (Interpolation x@(Arg n t)) = tell (pure x) *> case t of
   String      -> pure std
   Number      -> pure std
-  Date fmt    -> templateInterp (fmtDate fmt n) <$ tell (pure x)
+  Date fmt    -> pure $ templateInterp (fmtDate fmt n)
   Plural cs w -> do
     cases <- (<>) <$> foldMapM (fmap (<> " ") . case') cs <*> def w
     pure . templateInterp $ iife "n" (switch "n" cases) (argName `prop` n)
