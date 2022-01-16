@@ -9,6 +9,7 @@ common common
     LambdaCase
     NoImplicitPrelude
     OverloadedStrings
+    TupleSections
   ghc-options:
     -Wall
   build-depends:

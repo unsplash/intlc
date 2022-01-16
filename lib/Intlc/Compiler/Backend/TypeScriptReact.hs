@@ -9,19 +9,28 @@ import           Prelude
 
 type Compiler = Writer [Arg]
 
-export :: Text -> Message -> Either (NonEmpty Text) Text
-export k v = namedExport k <$> msg v
+type TypedArgs = [(Text, Text)]
 
-msg :: Message -> Either (NonEmpty Text) Text
-msg (Static x)   = pure $ str x
+rootType :: Text
+rootType = "ReactElement"
+
+export :: Text -> Message -> Either (NonEmpty Text) Text
+export k v = do
+  (as, r) <- msg v
+  pure $ namedExport (k <> ": " <> type' as) r
+    where type' [] = rootType
+          type' xs = lambdaType xs rootType
+
+msg :: Message -> Either (NonEmpty Text) (TypedArgs, Text)
+msg (Static x)   = pure (mempty, str x)
 msg (Dynamic xs) = do
-  interps <- minterps
-  pure $ args interps `lambda` fragment ret
+  args' <- args <$> minterps
+  pure . (args',) $ (fst <$> args') `lambda` fragment ret
     where (ret, interpsRaw) = runWriter $ foldMapM token xs
           minterps = validateArgs interpsRaw
 
 argType :: ICUType -> Text
-argType = typ "ReactElement"
+argType = typ rootType
 
 args :: [Arg] -> [(Text, Text)]
 args xs = pure (argName, obj (arg <$> xs))

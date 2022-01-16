@@ -19,11 +19,9 @@ templateLits x = "`" <> x <> "`"
 templateInterp :: Text -> Text
 templateInterp x = "${" <> x <> "}"
 
--- Always supply surrounding parentheses for free TypeScript support (because
--- TypeScript always requires parentheses around typed arguments, unlike untyped
--- unary JavaScript functions).
 lambda :: [Text] -> Text -> Text
-lambda is o = "(" <> T.intercalate ", " is <> ") => " <> o
+lambda [i] o = i <> " => " <> o
+lambda is  o = "(" <> T.intercalate ", " is <> ") => " <> o
 
 apply :: Text -> Text
 apply x = "(" <> x <> ")"

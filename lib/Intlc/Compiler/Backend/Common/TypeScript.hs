@@ -14,7 +14,7 @@ typ _ Number      = "number"
 typ _ Date {}     = "Date"
 typ _ Plural {}   = "number"
 typ _ Select {}   = "string"
-typ x Callback {} = pure (argName, x) `lambda` x
+typ x Callback {} = [(argName, x)] `lambdaType` x
 
 namedExport :: Text -> Text -> Text
 namedExport = JS.namedExport
@@ -28,9 +28,12 @@ templateLits = JS.templateLits
 templateInterp :: Text -> Text
 templateInterp = JS.templateInterp
 
-lambda :: [(Text, Text)] -> Text -> Text
-lambda = JS.lambda . fmap (uncurry typedArg)
-  where typedArg n t = n <> ": " <> t
+lambda :: [Text] -> Text -> Text
+lambda = JS.lambda
+
+lambdaType :: [(Text, Text)] -> Text -> Text
+lambdaType as r = "(" <> as' <> ") => " <> r
+  where as' = T.intercalate "; " . fmap (\(k, v) -> k <> ": " <> v) $ as
 
 apply :: Text -> Text
 apply = JS.apply
