@@ -46,6 +46,7 @@ library
     Intlc.Compiler.Backend.TypeScriptReact
     Intlc.Compiler.Common
     Intlc.Core
+    Intlc.ICU
     Intlc.Parser
 
 test-suite test-intlc

@@ -2,13 +2,13 @@ module Intlc.Compiler.Backend.Common.TypeScript where
 
 import qualified Data.Text                                as T
 import qualified Intlc.Compiler.Backend.Common.JavaScript as JS
-import           Intlc.Core
+import           Intlc.ICU
 import           Prelude
 
 argName :: Text
 argName = JS.argName
 
-typ :: Text -> ICUType -> Text
+typ :: Text -> Intlc.ICU.Type -> Text
 typ _ String      = "string"
 typ _ Number      = "number"
 typ _ Date {}     = "Date"

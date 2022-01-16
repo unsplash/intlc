@@ -1,8 +1,8 @@
 module Intlc.Compiler.Common where
 
-import           Data.List  (nubBy)
-import           Intlc.Core
-import           Prelude
+import           Data.List (nubBy)
+import           Intlc.ICU
+import           Prelude   hiding (Type)
 
 -- | Validates and dedupes `Arg`s. Duplicates are allowed and will be removed,
 -- different types are incompatible and will be flagged as an error. Order is
@@ -20,7 +20,7 @@ validateArgs xs = dedupe xs <$ validate xs
         dedupe = nubBy eqName
         eqName (Arg x _) (Arg y _) = x == y
 
-friendlyInputType :: ICUType -> Text
+friendlyInputType :: Type -> Text
 friendlyInputType String      = "string"
 friendlyInputType Date {}     = "date"
 friendlyInputType Number      = "number"
@@ -28,5 +28,5 @@ friendlyInputType Select {}   = "string"
 friendlyInputType Plural {}   = "number"
 friendlyInputType Callback {} = "tag"
 
-sameUnderlyingType :: ICUType -> ICUType -> Bool
+sameUnderlyingType :: Type -> Type -> Bool
 sameUnderlyingType = (==) `on` friendlyInputType

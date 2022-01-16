@@ -1,7 +1,7 @@
 module Intlc.Compiler.Backend.Common.JavaScript where
 
-import qualified Data.Text  as T
-import           Intlc.Core
+import qualified Data.Text as T
+import           Intlc.ICU
 import           Prelude
 
 argName :: Text

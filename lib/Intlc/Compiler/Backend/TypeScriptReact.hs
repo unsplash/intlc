@@ -4,7 +4,7 @@ import           Control.Monad.Writer
 import           Intlc.Compiler.Backend.Common.JSX
 import           Intlc.Compiler.Backend.Common.TypeScript
 import           Intlc.Compiler.Common
-import           Intlc.Core
+import           Intlc.ICU
 import           Prelude
 
 type Compiler = Writer [Arg]
@@ -29,7 +29,7 @@ msg (Dynamic xs) = do
     where (ret, interpsRaw) = runWriter $ foldMapM token xs
           minterps = validateArgs interpsRaw
 
-argType :: ICUType -> Text
+argType :: Intlc.ICU.Type -> Text
 argType = typ rootType
 
 args :: [Arg] -> [(Text, Text)]

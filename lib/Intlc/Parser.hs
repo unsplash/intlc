@@ -13,6 +13,7 @@ import qualified Data.Map                                 as M
 import qualified Data.Text                                as T
 import           Data.Void                                ()
 import           Intlc.Core
+import           Intlc.ICU
 import           Prelude                                  hiding (ByteString)
 import           Text.Megaparsec                          hiding (Token, many,
                                                            some, token)
