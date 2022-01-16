@@ -9,7 +9,7 @@ import           Text.RawString.QQ    (r)
 
 (=*=) :: ByteString -> Text -> IO ()
 x =*= y = f x `shouldBe` Right y
-  where f = fmap dataset . parseDataset
+  where f = dataset <=< first (pure . show) . parseDataset
 
 spec :: Spec
 spec = describe "end-to-end" $ do
@@ -18,10 +18,10 @@ spec = describe "end-to-end" $ do
       =*= "export const title = 'Unsplash'\nexport const greeting = (x: { bold: (x: string) => string; name: string; age: number }) => `Hello ${x.bold(`${x.name}`)}, ${x.age}!`"
 
   it "compiles plurals" $ do
-    [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring}}", "backend": "ts" } }|]
-      =*= "export const prop = (x: { age: number; name: string }) => `Age: ${(n => { switch (n) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring`; } })(x.age)}`"
-    [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring}}", "backend": "tsx" } }|]
-      =*= "export const prop = (x: { age: number; name: string }) => <>Age: {(n => { switch (n) { case 0: return <>newborn called {x.name}</>; case 42: return <>magical</>; default: return <>boring</>; } })(x.age)}</>"
+    [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]
+      =*= "export const prop = (x: { age: number; name: string }) => `Age: ${(n => { switch (n) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring ${x.age}`; } })(x.age)}`"
+    [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "tsx" } }|]
+      =*= "export const prop = (x: { age: number; name: string }) => <>Age: {(n => { switch (n) { case 0: return <>newborn called {x.name}</>; case 42: return <>magical</>; default: return <>boring {x.age}</>; } })(x.age)}</>"
 
   it "TypeScript backend" $ do
     [r|{ "f": { "message": "{x} <z>{y, number}</z>", "backend": "ts" } }|]

@@ -3,18 +3,22 @@ module Intlc.Compiler.Backend.TypeScriptReact where
 import           Control.Monad.Writer
 import           Intlc.Compiler.Backend.Common.JSX
 import           Intlc.Compiler.Backend.Common.TypeScript
+import           Intlc.Compiler.Common
 import           Intlc.Core
 import           Prelude
 
 type Compiler = Writer [Arg]
 
-export :: Text -> Message -> Text
-export k v = namedExport k (msg v)
+export :: Text -> Message -> Either (NonEmpty Text) Text
+export k v = namedExport k <$> msg v
 
-msg :: Message -> Text
-msg (Static x)   = str x
-msg (Dynamic xs) = args interps `lambda` fragment ret
-  where (ret, interps) = runWriter $ foldMapM token xs
+msg :: Message -> Either (NonEmpty Text) Text
+msg (Static x)   = pure $ str x
+msg (Dynamic xs) = do
+  interps <- minterps
+  pure $ args interps `lambda` fragment ret
+    where (ret, interpsRaw) = runWriter $ foldMapM token xs
+          minterps = validateArgs interpsRaw
 
 argType :: ICUType -> Text
 argType = typ "ReactElement"
