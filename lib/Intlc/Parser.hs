@@ -75,7 +75,7 @@ callback = do
        then pure (Arg oname ch)
        else e pos (BadClosingCallbackTag oname cname)
     where namep = T.pack <$> manyTill L.charLiteral (lookAhead $ string ">")
-          children = Callback <$> manyTill token (lookAhead $ string "</")
+          children = Callback . reconcile <$> manyTill token (lookAhead $ string "</")
           e pos = parseError . errFancy pos . fancy . ErrorCustom
 
 interp :: Parser Arg
