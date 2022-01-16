@@ -1,3 +1,7 @@
+-- This module follows the following whitespace rules:
+--   * Consume all whitespace after tokens where possible.
+--   * Therefore, assume no whitespace before tokens.
+
 {-# LANGUAGE FlexibleContexts #-}
 
 module Intlc.Parser where
@@ -85,7 +89,7 @@ interp = choice
       Arg n <$> body n <* string "}"
   , callback
   ]
-  where sep = string ", "
+  where sep = string "," <* hspace1
         name = T.pack <$> some letterChar
         body n = option String $ sep *> choice
           [ Number <$ string "number"
@@ -104,8 +108,8 @@ dateFmt = choice
 
 selectCases :: Parser (NonEmpty SelectCase, Maybe SelectWildcard)
 selectCases = (,) <$> cases <*> optional wildcard
-  where cases = NE.someTill (SelectCase <$> (name <* string " ") <*> (body <* string " ")) (lookAhead $ string wildcardName)
-        wildcard = SelectWildcard <$> (string wildcardName *> string " " *> body)
+  where cases = NE.someTill (SelectCase <$> (name <* hspace1) <*> (body <* hspace1)) (lookAhead $ string wildcardName)
+        wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> body)
         name = mfilter (/= wildcardName) (T.pack <$> some letterChar)
         body = reconcile <$> (string "{" *> manyTill token (string "}"))
         wildcardName = "other"
@@ -115,6 +119,6 @@ pluralCases name = (,) <$> plurals <*> wildcard
   where body = reconcile <$> (string "{" *> manyTill token' (string "}"))
           -- Plural cases support interpolating the number in context with `#`.
           where token' = (Interpolation (Arg name Number) <$ string "#") <|> token
-        plurals = NE.someTill (PluralCase <$> numId <*> body <* string " ") (lookAhead $ string "o")
-          where numId = T.pack <$> (string "=" *> some numberChar <* string " ")
-        wildcard = PluralWildcard <$> (string "other " *> body)
+        plurals = NE.someTill (PluralCase <$> numId <*> body <* hspace1) (lookAhead $ string "o")
+          where numId = T.pack <$> (string "=" *> some numberChar <* hspace1)
+        wildcard = PluralWildcard <$> (string "other" *> hspace1 *> body)
