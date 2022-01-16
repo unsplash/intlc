@@ -120,6 +120,15 @@ pluralCases name = (,) <$> plurals <*> wildcard
   where body = reconcile <$> (string "{" *> manyTill token' (string "}"))
           -- Plural cases support interpolating the number in context with `#`.
           where token' = (Interpolation (Arg name Number) <$ string "#") <|> token
-        plurals = NE.someTill (PluralCase <$> numId <*> body <* hspace1) (lookAhead $ string "o")
-          where numId = T.pack <$> (string "=" *> some numberChar <* hspace1)
+        plurals = NE.someTill (PluralCase <$> numId <* hspace1 <*> body <* hspace1) (lookAhead $ string "other")
+          where numId = choice
+                  [ T.pack <$> (string "=" *> some numberChar)
+                  -- For the English human-friendly alternative syntax, see:
+                  -- https://cldr.unicode.org/index/cldr-spec/plural-rules
+                  , string "zero" $> "0"
+                  , string "one"  $> "1"
+                  , string "two"  $> "2"
+                  , string "few"  $> "3"
+                  , string "many" $> "4"
+                  ]
         wildcard = PluralWildcard <$> (string "other" *> hspace1 *> body)

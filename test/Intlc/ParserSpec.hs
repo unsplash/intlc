@@ -51,3 +51,7 @@ spec = describe "parser" $ do
     it "parses, number matches, wildcard, and interpolation token" $ do
       parse' (pluralCases "xyz") "=0 {foo} =42 {bar} other {baz #}" `shouldParse`
         (PluralCase "0" [Plaintext "foo"] :| [PluralCase "42" [Plaintext "bar"]], PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])
+
+    it "supports both literal number and written English cases" $ do
+      parse' (pluralCases "xyz") "=0 {foo} one {bar} other {baz #}" `shouldParse`
+        (PluralCase "0" [Plaintext "foo"] :| [PluralCase "1" [Plaintext "bar"]], PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])
