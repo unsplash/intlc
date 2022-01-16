@@ -89,8 +89,17 @@ interp = choice
         name = T.pack <$> some letterChar
         body n = option String $ sep *> choice
           [ Number <$ string "number"
+          , Date <$> (string "date" *> sep *> dateFmt)
           , uncurry Plural <$> (string "plural" *> sep *> pluralCases n)
           ]
+
+dateFmt :: Parser DateFmt
+dateFmt = choice
+  [ Short  <$ string "short"
+  , Medium <$ string "medium"
+  , Long   <$ string "long"
+  , Full   <$ string "full"
+  ]
 
 pluralCases :: Text -> Parser (NonEmpty PluralCase, PluralWildcard)
 pluralCases name = (,) <$> plurals <*> wildcard

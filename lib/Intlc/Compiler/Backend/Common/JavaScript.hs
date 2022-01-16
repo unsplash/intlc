@@ -1,7 +1,8 @@
 module Intlc.Compiler.Backend.Common.JavaScript where
 
-import Prelude
-import qualified Data.Text as T
+import qualified Data.Text  as T
+import           Intlc.Core
+import           Prelude
 
 argName :: Text
 argName = "x"
@@ -27,6 +28,9 @@ lambda is o = "(" <> T.intercalate ", " is <> ") => " <> o
 apply :: Text -> Text
 apply x = "(" <> x <> ")"
 
+applyMany :: [Text] -> Text
+applyMany = apply . T.intercalate ", "
+
 prop :: Text -> Text -> Text
 o `prop` p = o <> "." <> p
 
@@ -41,3 +45,10 @@ shortSwitchCase c r = "case " <> c <> ": return " <> r <> ";"
 
 shortSwitchDefault :: Text -> Text
 shortSwitchDefault r = "default: return " <> r <> ";"
+
+fmtDate :: DateFmt -> Text -> Text
+fmtDate d x = x `prop` "toLocaleString" <> applyMany [str "en-US", "{ dateStyle: " <> str (style d) <> " }"]
+  where style Short  = "short"
+        style Medium = "medium"
+        style Long   = "long"
+        style Full   = "full"

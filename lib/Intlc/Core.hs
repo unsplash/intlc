@@ -8,8 +8,16 @@ import           Prelude
 data ICUType
   = String
   | Number
+  | Date DateFmt
   | Plural (NonEmpty PluralCase) PluralWildcard
   | Callback [Token]
+  deriving (Show, Eq)
+
+data DateFmt
+  = Short
+  | Medium
+  | Long
+  | Full
   deriving (Show, Eq)
 
 -- `Text` here is our count. It's represented as a string so that we can dump

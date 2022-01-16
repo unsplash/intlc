@@ -9,10 +9,11 @@ argName :: Text
 argName = JS.argName
 
 typ :: Text -> ICUType -> Text
-typ _ String       = "string"
-typ _ Number       = "number"
-typ _ (Plural _ _) = "number"
-typ x (Callback _) = pure (argName, x) `lambda` x
+typ _ String      = "string"
+typ _ Date {}     = "Date"
+typ _ Number      = "number"
+typ _ Plural {}   = "number"
+typ x Callback {} = pure (argName, x) `lambda` x
 
 namedExport :: Text -> Text -> Text
 namedExport = JS.namedExport
@@ -51,3 +52,6 @@ shortSwitchCase = JS.shortSwitchCase
 
 shortSwitchDefault :: Text -> Text
 shortSwitchDefault = JS.shortSwitchDefault
+
+fmtDate :: DateFmt -> Text -> Text
+fmtDate = JS.fmtDate

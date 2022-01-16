@@ -28,6 +28,7 @@ args xs = pure (argName, obj (arg <$> xs))
 
 token :: Token -> Compiler Text
 token (Plaintext x)                           = pure x
+token (Interpolation x@(Arg n (Date fmt)))    = templateInterp (fmtDate fmt n) <$ tell (pure x)
 token (Interpolation x@(Arg n (Plural cs w))) = do
   tell . pure $ x
   cases <- (<>) <$> foldMapM (fmap (<> " ") . case') cs <*> def w

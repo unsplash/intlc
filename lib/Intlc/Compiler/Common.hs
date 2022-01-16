@@ -22,6 +22,7 @@ validateArgs xs = dedupe xs <$ validate xs
 
 friendlyInputType :: ICUType -> Text
 friendlyInputType String      = "string"
+friendlyInputType Date {}     = "date"
 friendlyInputType Number      = "number"
 friendlyInputType Plural {}   = "number"
 friendlyInputType Callback {} = "tag"
