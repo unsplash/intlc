@@ -109,9 +109,9 @@ dateFmt = choice
 
 selectCases :: Parser (NonEmpty SelectCase, Maybe SelectWildcard)
 selectCases = (,) <$> cases <*> optional wildcard
-  where cases = NE.someTill (SelectCase <$> (name <* hspace1) <*> (body <* hspace1)) (lookAhead $ string wildcardName)
+  where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> body) hspace1
         wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> body)
-        name = mfilter (/= wildcardName) (T.pack <$> some letterChar)
+        name = try $ mfilter (/= wildcardName) (T.pack <$> some letterChar)
         body = reconcile <$> (string "{" *> manyTill token (string "}"))
         wildcardName = "other"
 
