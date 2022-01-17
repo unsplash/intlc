@@ -27,6 +27,10 @@ spec = describe "end-to-end" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "tsx" } }|]
       =*= "export const prop: (x: { age: number; name: string }) => ReactElement = x => <>Age: {(() => { switch (x.age) { case 0: return <>newborn called {x.name}</>; case 42: return <>magical</>; default: return <>boring {x.age}</>; } })()}</>"
 
+  it "compiles select" $ do
+    [r|{ "f": { "message": "{x, select, a {hi} b {yo}}", "backend": "ts" } }|]
+      =*= "export const f: (x: { x: string }) => string = x => `${(() => { switch (x.x) { case 'a': return `hi`; case 'b': return `yo`; } })()}`"
+
   it "TypeScript backend" $ do
     [r|{ "f": { "message": "{x} <z>{y, number}</z> {y, number}", "backend": "ts" } }|]
       =*= "export const f: (x: { x: string; z: (x: string) => string; y: number }) => string = x => `${x.x} ${x.z(`${x.y}`)} ${x.y}`"
