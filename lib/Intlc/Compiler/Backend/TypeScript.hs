@@ -45,6 +45,7 @@ data Uni
 
 data In
   = TUniIn Uni
+  | TStrLitUnion [Text]
   | TNum
   | TDate
   -- An endomorphism on `Out`. Omitted as an argument to enforce that it's the
@@ -68,7 +69,12 @@ fromArg (ICU.Arg n ICU.String)         = pure (n, TUniIn TStr)
 fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
 fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)
 fromArg (ICU.Arg n (ICU.Plural cs w))  = (n, TNum) : (fromPluralCase =<< toList cs) <> fromPluralWildcard w
-fromArg (ICU.Arg n (ICU.Select cs mw)) = (n, TUniIn TStr) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
+fromArg (ICU.Arg n (ICU.Select cs mw)) = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
+  -- When there's no wildcard case we can compile to a union of string literals.
+  where t = case mw of
+              Just _  -> TUniIn TStr
+              Nothing -> TStrLitUnion . toList $ caseLit <$> cs
+        caseLit (ICU.SelectCase x _) = x
 fromArg (ICU.Arg n (ICU.Callback xs))  = (n, TEndo) : (fromToken =<< xs)
 
 fromPluralCase :: ICU.PluralCase -> Args
@@ -107,10 +113,12 @@ uni :: Uni -> Compiler Text
 uni TStr = pure "string"
 
 in' :: In -> Compiler Text
-in' (TUniIn x) = uni x
-in' TNum       = pure "number"
-in' TDate      = pure "Date"
-in' TEndo      = endo
+in' (TUniIn x)        = uni x
+in' (TStrLitUnion xs) = pure . T.intercalate " | " $ qts <$> xs
+  where qts x = "'" <> x <> "'"
+in' TNum              = pure "number"
+in' TDate             = pure "Date"
+in' TEndo             = endo
 
 out :: Out -> Compiler Text
 out (TUniOut x) = uni x
