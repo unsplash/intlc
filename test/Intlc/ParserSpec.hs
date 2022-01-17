@@ -1,6 +1,6 @@
 module Intlc.ParserSpec (spec) where
 
-import           Intlc.Core
+import           Intlc.ICU
 import           Intlc.Parser
 import           Prelude               hiding (ByteString)
 import           Test.Hspec

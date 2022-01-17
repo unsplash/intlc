@@ -39,15 +39,13 @@ library
     , megaparsec          ^>=9.0
   exposed-modules:
     Intlc.Compiler
-    Intlc.Compiler.Backend.Common.JSX
-    Intlc.Compiler.Backend.Common.JavaScript
-    Intlc.Compiler.Backend.Common.TypeScript
+    Intlc.Compiler.Backend.JavaScript
     Intlc.Compiler.Backend.TypeScript
-    Intlc.Compiler.Backend.TypeScriptReact
     Intlc.Compiler.Common
     Intlc.Core
     Intlc.ICU
     Intlc.Parser
+    Utils
 
 test-suite test-intlc
   import:                  common

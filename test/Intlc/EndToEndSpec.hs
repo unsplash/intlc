@@ -23,13 +23,13 @@ spec = describe "end-to-end" $ do
 
   it "compiles plurals" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]
-      =*= "export const prop: (x: { age: number; name: string }) => string = x => `Age: ${(n => { switch (n) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring ${x.age}`; } })(x.age)}`"
+      =*= "export const prop: (x: { age: number; name: string }) => string = x => `Age: ${(() => { switch (x.age) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring ${x.age}`; } })()}`"
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "tsx" } }|]
-      =*= "export const prop: (x: { age: number; name: string }) => ReactElement = x => <>Age: {(n => { switch (n) { case 0: return <>newborn called {x.name}</>; case 42: return <>magical</>; default: return <>boring {x.age}</>; } })(x.age)}</>"
+      =*= "export const prop: (x: { age: number; name: string }) => ReactElement = x => <>Age: {(() => { switch (x.age) { case 0: return <>newborn called {x.name}</>; case 42: return <>magical</>; default: return <>boring {x.age}</>; } })()}</>"
 
   it "TypeScript backend" $ do
-    [r|{ "f": { "message": "{x} <z>{y, number}</z>", "backend": "ts" } }|]
-      =*= "export const f: (x: { x: string; z: (x: string) => string; y: number }) => string = x => `${x.x} ${x.z(`${x.y}`)}`"
+    [r|{ "f": { "message": "{x} <z>{y, number}</z> {y, number}", "backend": "ts" } }|]
+      =*= "export const f: (x: { x: string; z: (x: string) => string; y: number }) => string = x => `${x.x} ${x.z(`${x.y}`)} ${x.y}`"
 
   it "TypeScriptReact backend" $ do
     [r|{ "f": { "message": "{x} <z>{y, number}</z>", "backend": "tsx" } }|]

@@ -1,9 +1,11 @@
 module Intlc.Compiler where
 
-import qualified Data.Map                               as M
-import qualified Intlc.Compiler.Backend.TypeScript      as TS
-import qualified Intlc.Compiler.Backend.TypeScriptReact as TSX
+import qualified Data.Map                          as M
+import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..))
+import qualified Intlc.Compiler.Backend.TypeScript as TS
+import           Intlc.Compiler.Common             (validateArgs)
 import           Intlc.Core
+import qualified Intlc.ICU                         as ICU
 import           Prelude
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
@@ -23,5 +25,12 @@ dataset = M.foldrWithKey ((merge .) . translation) (Right mempty)
         merge (Right _) es@(Left _) = es
 
 translation :: Text -> Translation -> Either (NonEmpty Text) Text
-translation k (Translation v TypeScript)      = TS.export k v
-translation k (Translation v TypeScriptReact) = TSX.export k v
+translation k (Translation v be) = validateArgs (args v) $> case be of
+  TypeScript      -> TS.compileNamedExport TemplateLit k v
+  TypeScriptReact -> TS.compileNamedExport JSX         k v
+
+args :: ICU.Message -> [ICU.Arg]
+args ICU.Static {}    = []
+args (ICU.Dynamic xs) = token `mapMaybe` xs
+  where token ICU.Plaintext {}      = Nothing
+        token (ICU.Interpolation x) = Just x
