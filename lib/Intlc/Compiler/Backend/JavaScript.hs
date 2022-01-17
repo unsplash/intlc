@@ -88,7 +88,7 @@ fromPluralWildcard :: ICU.PluralWildcard -> Wildcard
 fromPluralWildcard (ICU.PluralWildcard xs) = Wildcard (fromToken <$> xs)
 
 fromSelectCase :: ICU.SelectCase -> Branch
-fromSelectCase (ICU.SelectCase x ys) = Branch x (fromToken <$> ys)
+fromSelectCase (ICU.SelectCase x ys) = Branch ("'" <> x <> "'") (fromToken <$> ys)
 
 fromSelectWildcard :: ICU.SelectWildcard -> Wildcard
 fromSelectWildcard (ICU.SelectWildcard xs) = Wildcard (fromToken <$> xs)
