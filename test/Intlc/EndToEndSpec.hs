@@ -30,6 +30,8 @@ spec = describe "end-to-end" $ do
   it "compiles select" $ do
     [r|{ "f": { "message": "{x, select, a {hi} b {yo}}", "backend": "ts" } }|]
       =*= "export const f: (x: { x: string }) => string = x => `${(() => { switch (x.x) { case 'a': return `hi`; case 'b': return `yo`; } })()}`"
+    [r|{ "f": { "message": "{x, select, a {hi} b {yo} other {ciao}}", "backend": "ts" } }|]
+      =*= "export const f: (x: { x: string }) => string = x => `${(() => { switch (x.x) { case 'a': return `hi`; case 'b': return `yo`; default: return `ciao`; } })()}`"
 
   it "TypeScript backend" $ do
     [r|{ "f": { "message": "{x} <z>{y, number}</z> {y, number}", "backend": "ts" } }|]
