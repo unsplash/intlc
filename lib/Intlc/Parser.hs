@@ -58,6 +58,9 @@ reconcile []                               = []
 reconcile (Plaintext x : Plaintext y : zs) = reconcile $ Plaintext (x <> y) : zs
 reconcile (x:ys)                           = x : reconcile ys
 
+ident :: Parser Text
+ident = T.pack <$> some letterChar
+
 msg :: Parser Message
 msg = f . reconcile <$> manyTill token eof
   where f []            = Static ""
@@ -72,26 +75,24 @@ token = choice
 
 callback :: Parser Arg
 callback = do
-  oname <- string "<" *> namep <* ">"
-  mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> namep <* string ">")
+  oname <- string "<" *> ident <* ">"
+  mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
     Left _  -> e 1 (NoClosingCallbackTag oname)
     Right (ch, pos, cname) -> if oname == cname
        then pure (Arg oname ch)
        else e pos (BadClosingCallbackTag oname cname)
-    where namep = T.pack <$> some letterChar
-          children = Callback . reconcile <$> manyTill token (lookAhead $ string "</")
+    where children = Callback . reconcile <$> manyTill token (lookAhead $ string "</")
           e pos = parseError . errFancy pos . fancy . ErrorCustom
 
 interp :: Parser Arg
 interp = choice
   [ try $ do
-      n <- string "{" *> name
+      n <- string "{" *> ident
       Arg n <$> body n <* string "}"
   , callback
   ]
   where sep = string "," <* hspace1
-        name = T.pack <$> some letterChar
         body n = option String $ sep *> choice
           [ Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateFmt)
@@ -111,7 +112,7 @@ selectCases :: Parser (NonEmpty SelectCase, Maybe SelectWildcard)
 selectCases = (,) <$> cases <*> optional wildcard
   where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> body) hspace1
         wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> body)
-        name = try $ mfilter (/= wildcardName) (T.pack <$> some letterChar)
+        name = try $ mfilter (/= wildcardName) ident
         body = reconcile <$> (string "{" *> manyTill token (string "}"))
         wildcardName = "other"
 
