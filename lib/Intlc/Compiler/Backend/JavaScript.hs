@@ -152,7 +152,7 @@ exprs = foldMapM expr
 expr :: Expr -> Compiler Text
 expr (TPrint x)    = pure x
 expr (TStr x)      = interp (prop x)
-expr (TNum x)      = interp (prop x)
+expr (TNum x)      = interp $ "new Intl.NumberFormat('en-US').format(" <> prop x <> ")"
 expr (TDate x fmt) = interp =<< date x fmt
 expr (TApply x ys) = interp =<< apply x ys
 expr (TMatch x)    = interp =<< match x
