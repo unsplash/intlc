@@ -42,16 +42,16 @@ spec = describe "parser" $ do
       parse' callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
 
   describe "plural" $ do
-    it "requires at least one number match" $ do
+    it "requires at least one non-wildcard case" $ do
       parse' (pluralCases "any") `shouldFailOn` "other {foo}"
+      parse' (pluralCases "any") `shouldSucceedOn` "=0 {foo} other {bar}"
+      parse' (pluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
 
-    it "requires a wildcard" $ do
-      parse' (pluralCases "any") `shouldFailOn` "=0 {foo} =42 {bar}"
+    it "requires a wildcard if there are any rule cases" $ do
+      parse' (pluralCases "any") `shouldFailOn`    "=0 {foo} one {bar}"
+      parse' (pluralCases "any") `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse' (pluralCases "any") `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
-    it "parses, number matches, wildcard, and interpolation token" $ do
-      parse' (pluralCases "xyz") "=0 {foo} =42 {bar} other {baz #}" `shouldParse`
-        (PluralCase "0" [Plaintext "foo"] :| [PluralCase "42" [Plaintext "bar"]], PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])
-
-    it "supports both literal number and written English cases" $ do
-      parse' (pluralCases "xyz") "=0 {foo} one {bar} other {baz #}" `shouldParse`
-        (PluralCase "0" [Plaintext "foo"] :| [PluralCase "1" [Plaintext "bar"]], PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])
+    it "parses literal and plural cases, wildcard, and interpolation token" $ do
+      parse' (pluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
+        MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])

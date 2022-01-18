@@ -1,10 +1,10 @@
 module Intlc.Compiler.Backend.JavaScript (Pieces (..), InterpStrat (..), compileStmt, compileStmtPieces) where
 
 import qualified Intlc.ICU as ICU
-import           Prelude   hiding (Type)
+import           Prelude   hiding (Type, fromList)
 import           Utils     ((<>^))
 
--- Offers cheap extensibility fuAIRTtr TypeScript over rendering statements.
+-- Offers cheap extensibility with TypeScript over rendering statements.
 data Pieces
   = ConstantPieces
   | LambdaPieces
@@ -58,7 +58,14 @@ data Expr
   | TNum Ref
   | TDate Ref ICU.DateFmt
   | TApply Ref [Expr]
-  | TMatch Ref (NonEmpty Branch) (Maybe Wildcard)
+  | TMatch MatchOn
+
+type MatchOn = (Text, Match)
+
+data Match
+  = LitMatch (NonEmpty Branch)
+  | NonLitMatch (NonEmpty Branch) Wildcard
+  | RecMatch (NonEmpty Branch) MatchOn
 
 newtype Ref = Ref Text
 
@@ -74,15 +81,33 @@ fromToken (ICU.Plaintext x)     = TPrint x
 fromToken (ICU.Interpolation x) = fromArg x
 
 fromArg :: ICU.Arg -> Expr
-fromArg (ICU.Arg n ICU.String)         = TStr (Ref n)
-fromArg (ICU.Arg n ICU.Number)         = TNum (Ref n)
-fromArg (ICU.Arg n (ICU.Date x))       = TDate (Ref n) x
-fromArg (ICU.Arg n (ICU.Plural cs w))  = TMatch (Ref n) (fromPluralCase <$> cs) (Just $ fromPluralWildcard w)
-fromArg (ICU.Arg n (ICU.Select cs mw)) = TMatch (Ref n) (fromSelectCase <$> cs) (fromSelectWildcard <$> mw)
-fromArg (ICU.Arg n (ICU.Callback xs))  = TApply (Ref n) (fromToken <$> xs)
+fromArg (ICU.Arg n ICU.String)               = TStr   (Ref n)
+fromArg (ICU.Arg n ICU.Number)               = TNum   (Ref n)
+fromArg (ICU.Arg n (ICU.Date x))             = TDate  (Ref n) x
+fromArg (ICU.Arg n (ICU.Plural cs))          = TMatch (fromPlural (Ref n) cs)
+fromArg (ICU.Arg n (ICU.Select cs (Just w))) = TMatch (prop (Ref n), NonLitMatch (fromSelectCase <$> cs) (fromSelectWildcard w))
+fromArg (ICU.Arg n (ICU.Select cs Nothing))  = TMatch (prop (Ref n), LitMatch (fromSelectCase <$> cs))
+fromArg (ICU.Arg n (ICU.Callback xs))        = TApply (Ref n) (fromToken <$> xs)
 
-fromPluralCase :: ICU.PluralCase -> Branch
-fromPluralCase (ICU.PluralCase x ys) = Branch x (fromToken <$> ys)
+fromPlural :: Ref -> ICU.Plural -> MatchOn
+fromPlural r (ICU.LitPlural lcs Nothing)  = (prop r, LitMatch    (fromExactPluralCase <$> lcs))
+fromPlural r (ICU.LitPlural lcs (Just w)) = (prop r, NonLitMatch (fromExactPluralCase <$> lcs) (fromPluralWildcard w))
+fromPlural r (ICU.RulePlural rcs w)       = (prop r, NonLitMatch (fromRulePluralCase <$> rcs)  (fromPluralWildcard w))
+fromPlural r (ICU.MixedPlural lcs rcs w)  = (prop r, RecMatch    (fromExactPluralCase <$> lcs) nested)
+  where nested = (ruleCond, NonLitMatch (fromRulePluralCase <$> rcs) (fromPluralWildcard w))
+        ruleCond = "new Intl.PluralRules('en-US').select(" <> prop r <> ")"
+
+fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> Branch
+fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n (fromToken <$> xs)
+
+fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> Branch
+fromRulePluralCase (ICU.PluralCase r xs) = flip Branch (fromToken <$> xs) . qts $ case r of
+   ICU.Zero -> "zero"
+   ICU.One  -> "one"
+   ICU.Two  -> "two"
+   ICU.Few  -> "few"
+   ICU.Many -> "many"
+  where qts x = "'" <> x <> "'"
 
 fromPluralWildcard :: ICU.PluralWildcard -> Wildcard
 fromPluralWildcard (ICU.PluralWildcard xs) = Wildcard (fromToken <$> xs)
@@ -125,28 +150,31 @@ exprs :: [Expr] -> Compiler Text
 exprs = foldMapM expr
 
 expr :: Expr -> Compiler Text
-expr (TPrint x)       = pure x
-expr (TStr x)         = interp (prop x)
-expr (TNum x)         = interp (prop x)
-expr (TDate x fmt)    = interp =<< date x fmt
-expr (TApply x ys)    = interp =<< apply x ys
-expr (TMatch x ys mz) = interp =<< match x ys mz
+expr (TPrint x)    = pure x
+expr (TStr x)      = interp (prop x)
+expr (TNum x)      = interp (prop x)
+expr (TDate x fmt) = interp =<< date x fmt
+expr (TApply x ys) = interp =<< apply x ys
+expr (TMatch x)    = interp =<< match x
 
 apply :: Ref -> [Expr] -> Compiler Text
 apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
 
-match :: Ref -> NonEmpty Branch -> Maybe Wildcard -> Compiler Text
-match n bs mw = do
-  bs' <- toList <$> mapM branch bs
-  mw' <- traverse wildcard mw
-  let allBs = unwords $ bs' <> foldMap pure mw'
-  pure $ "(() => { switch (" <> prop n <> ") { " <> allBs <> " } })()"
-
-branch :: Branch -> Compiler Text
-branch (Branch m xs) = pure ("case " <> m <> ": return ") <>^ (wrap =<< exprs xs) <>^ pure ";"
-
-wildcard :: Wildcard -> Compiler Text
-wildcard (Wildcard xs) = pure "default: return " <>^ (wrap =<< exprs xs) <>^ pure ";"
+match :: MatchOn -> Compiler Text
+match = fmap iife . go
+  where go (n, m) = case m of
+          LitMatch bs      -> switch n <$> branches bs
+          NonLitMatch bs w -> switch n <$> wildBranches bs w
+          RecMatch bs m'   -> switch n <$> recBranches bs (go m')
+        iife x = "(() => { " <> x <> " })()"
+        switch x ys = "switch (" <> x <> ") { " <> ys <> " }"
+        branches xs = concatBranches . toList <$> mapM branch xs
+          where branch (Branch x ys) = pure ("case " <> x <> ": return ") <>^ (wrap =<< exprs ys) <>^ pure ";"
+                concatBranches = unwords
+        wildBranches xs w = (<>) <$> branches xs <*> ((" " <>) <$> wildcard w)
+          where wildcard (Wildcard xs') = pure "default: return " <>^ (wrap =<< exprs xs') <>^ pure ";"
+        recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
+          where nest x = "default: { " <> x <> " }"
 
 date :: Ref -> ICU.DateFmt -> Compiler Text
 date n d = pure $ prop n <> ".toLocaleString('en-US', { dateStyle: '" <> style d <> "' }" <> ")"

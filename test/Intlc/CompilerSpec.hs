@@ -15,4 +15,4 @@ spec = describe "compiler" $ do
       numErrs [Arg "x" Number, Arg "y" String, Arg "x" String, Arg "z" Number, Arg "z" String] `shouldBe` 2
 
     it "considers the underlying type when deducing incompatibility" $ do
-      numErrs [Arg "x" Number, Arg "x" (Plural (pure $ PluralCase "42" []) (PluralWildcard []))] `shouldBe` 0
+      numErrs [Arg "x" Number, Arg "x" (Plural (LitPlural (pure $ PluralCase (PluralExact "42") []) Nothing))] `shouldBe` 0
