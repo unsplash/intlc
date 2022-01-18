@@ -28,7 +28,9 @@ spec = describe "parser" $ do
 
     it "only accepts alphanumeric identifiers" $ do
       parse' interp "{XyZ}" `shouldParse` Arg "XyZ" String
+      parse' interp "<XyZ></XyZ>" `shouldParse` Arg "XyZ" (Callback [])
       parse' interp `shouldFailOn` "{x y}"
+      parse' interp `shouldFailOn` "<x y></x y>"
 
     it "validates closing tag name" $ do
       parse' interp "<hello></hello>" `shouldParse` Arg "hello" (Callback [])

@@ -79,7 +79,7 @@ callback = do
     Right (ch, pos, cname) -> if oname == cname
        then pure (Arg oname ch)
        else e pos (BadClosingCallbackTag oname cname)
-    where namep = T.pack <$> manyTill L.charLiteral (lookAhead $ string ">")
+    where namep = T.pack <$> some letterChar
           children = Callback . reconcile <$> manyTill token (lookAhead $ string "</")
           e pos = parseError . errFancy pos . fancy . ErrorCustom
 
