@@ -2,6 +2,7 @@ name: Check
 on: [push]
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -14,5 +15,4 @@ jobs:
         with:
           path: ${{ steps.setup-haskell.outputs.cabal-store }}
           key: hashFiles('cabal.project.freeze')
-      - name: Build
-        run: cabal build
+      - run: cabal build
