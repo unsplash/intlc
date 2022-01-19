@@ -195,7 +195,7 @@ match = fmap iife . go
 date :: Ref -> ICU.DateFmt -> Compiler Text
 date n d = do
   (Locale l) <- asks locale
-  pure $ prop n <> ".toLocaleString('" <> l <> "', { dateStyle: '" <> style d <> "' }" <> ")"
+  pure $ "new Intl.DateTimeFormat('" <> l <> "', { dateStyle: '" <> style d <> "' }).format(" <> prop n <> ")"
   where style ICU.Short  = "short"
         style ICU.Medium = "medium"
         style ICU.Long   = "long"
