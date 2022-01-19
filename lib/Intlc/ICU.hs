@@ -29,6 +29,7 @@ data Type
   = String
   | Number
   | Date DateTimeFmt
+  | Time DateTimeFmt
   | Plural Plural
   | Select (NonEmpty SelectCase) (Maybe SelectWildcard)
   | Callback Stream

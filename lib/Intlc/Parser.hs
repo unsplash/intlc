@@ -94,6 +94,7 @@ interp = choice
         body n = option String $ sep *> choice
           [ Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
+          , Time <$> (string "time" *> sep *> dateTimeFmt)
           , Plural <$> (string "plural" *> sep *> pluralCases n)
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]

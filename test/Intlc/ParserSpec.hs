@@ -43,6 +43,11 @@ spec = describe "parser" $ do
         parse' interp "{x, date, short}" `shouldParse` Arg "x" (Date Short)
         parse' interp `shouldFailOn` "{x, date, miniature}"
 
+    describe "time" $ do
+      it "disallows bad formats" $ do
+        parse' interp "{x, time, short}" `shouldParse` Arg "x" (Time Short)
+        parse' interp `shouldFailOn` "{x, time, miniature}"
+
   describe "callback" $ do
     it "parses nested" $ do
       parse' callback "<f><g>x{y}z</g></f>" `shouldParse`

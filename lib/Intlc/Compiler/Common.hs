@@ -20,6 +20,7 @@ eqName (Arg x _) (Arg y _) = x == y
 friendlyInputType :: Type -> Text
 friendlyInputType String      = "string"
 friendlyInputType Date {}     = "date"
+friendlyInputType Time {}     = "date"
 friendlyInputType Number      = "number"
 friendlyInputType Select {}   = "string"
 friendlyInputType Plural {}   = "number"

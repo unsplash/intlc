@@ -72,6 +72,7 @@ data Expr
   | TStr Ref
   | TNum Ref
   | TDate Ref ICU.DateTimeFmt
+  | TTime Ref ICU.DateTimeFmt
   | TApply Ref [Expr]
   | TMatch MatchOn
 
@@ -99,6 +100,7 @@ fromArg :: ICU.Arg -> ASTCompiler Expr
 fromArg (ICU.Arg n ICU.String)               = pure $ TStr   (Ref n)
 fromArg (ICU.Arg n ICU.Number)               = pure $ TNum   (Ref n)
 fromArg (ICU.Arg n (ICU.Date x))             = pure $ TDate  (Ref n) x
+fromArg (ICU.Arg n (ICU.Time x))             = pure $ TTime  (Ref n) x
 fromArg (ICU.Arg n (ICU.Plural cs))          = TMatch <$> fromPlural (Ref n) cs
 fromArg (ICU.Arg n (ICU.Select cs (Just w))) = ((TMatch . (prop (Ref n),)) .) . NonLitMatch <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
 fromArg (ICU.Arg n (ICU.Select cs Nothing))  = TMatch . (prop (Ref n),) . LitMatch <$> (fromSelectCase `mapM` cs)
@@ -170,6 +172,7 @@ expr (TNum x)      = do
   (Locale l) <- asks locale
   interpc $ "new Intl.NumberFormat('" <> l <> "').format(" <> prop x <> ")"
 expr (TDate x fmt) = interpc =<< date x fmt
+expr (TTime x fmt) = interpc =<< time x fmt
 expr (TApply x ys) = interpc =<< apply x ys
 expr (TMatch x)    = interpc =<< match x
 
@@ -195,8 +198,15 @@ match = fmap iife . go
 date :: Ref -> ICU.DateTimeFmt -> Compiler Text
 date n d = do
   (Locale l) <- asks locale
-  pure $ "new Intl.DateTimeFormat('" <> l <> "', { dateStyle: '" <> style d <> "' }).format(" <> prop n <> ")"
-  where style ICU.Short  = "short"
-        style ICU.Medium = "medium"
-        style ICU.Long   = "long"
-        style ICU.Full   = "full"
+  pure $ "new Intl.DateTimeFormat('" <> l <> "', { dateStyle: '" <> dateTimeFmt d <> "' }).format(" <> prop n <> ")"
+
+time :: Ref -> ICU.DateTimeFmt -> Compiler Text
+time n d = do
+  (Locale l) <- asks locale
+  pure $ "new Intl.DateTimeFormat('" <> l <> "', { timeStyle: '" <> dateTimeFmt d <> "' }).format(" <> prop n <> ")"
+
+dateTimeFmt :: ICU.DateTimeFmt -> Text
+dateTimeFmt ICU.Short  = "short"
+dateTimeFmt ICU.Medium = "medium"
+dateTimeFmt ICU.Long   = "long"
+dateTimeFmt  ICU.Full   = "full"

@@ -70,6 +70,7 @@ fromArg :: ICU.Arg -> Args
 fromArg (ICU.Arg n ICU.String)                             = pure (n, TUniIn TStr)
 fromArg (ICU.Arg n ICU.Number)                             = pure (n, TNum)
 fromArg (ICU.Arg n ICU.Date {})                            = pure (n, TDate)
+fromArg (ICU.Arg n ICU.Time {})                            = pure (n, TDate)
 fromArg (ICU.Arg n (ICU.Plural (ICU.LitPlural ls mw)))     = (n, t) : (fromExactPluralCase =<< toList ls) <> foldMap fromPluralWildcard mw
   -- When there's no wildcard case we can compile to a union of number literals.
   where t = case mw of
