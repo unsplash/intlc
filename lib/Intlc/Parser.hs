@@ -95,7 +95,7 @@ interp = choice
           [ Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
-          , Plural <$> (string "plural" *> sep *> pluralCases n)
+          , Plural <$> (string "plural" *> sep *> cardinalPluralCases n)
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
 
@@ -115,26 +115,41 @@ selectCases = (,) <$> cases <*> optional wildcard
         body = reconcile <$> (string "{" *> manyTill token (string "}"))
         wildcardName = "other"
 
-pluralCases :: Text -> Parser Plural
-pluralCases name = (fmap Cardinal . tryClassify =<<) $ (,) <$> plurals <*> optional wildcard
-  where body = reconcile <$> (string "{" *> manyTill token' (string "}"))
-          -- Plural cases support interpolating the number in context with `#`.
-          where token' = Interpolation (Arg name Number) <$ string "#" <|> token
-        plurals = flip NE.sepEndBy1 hspace1 $ choice
-          [ (ParsedExact .) . PluralCase <$> numId <* hspace1 <*> body
-          , (ParsedRule .)  . PluralCase <$> rule  <* hspace1 <*> body
-          ]
-          where numId = PluralExact . T.pack <$> (string "=" *> some numberChar)
-                rule = choice
-                  [ Zero <$ string "zero"
-                  , One  <$ string "one"
-                  , Two  <$ string "two"
-                  , Few  <$ string "few"
-                  , Many <$ string "many"
-                  ]
-        wildcard = PluralWildcard <$> (wildcardMatch *> hspace1 *> body)
-        wildcardMatch = string "other"
-        tryClassify = maybe empty pure . classifyCardinal
+cardinalPluralCases :: Text -> Parser Plural
+cardinalPluralCases n = fmap Cardinal . tryClassify =<< p
+    where tryClassify = maybe empty pure . uncurry classifyCardinal
+          p = (,) <$> disorderedPluralCases n <*> optional (pluralWildcard n)
+
+-- Need to lift parsed plural cases into this type to make the list homogeneous.
+data ParsedPluralCase
+  = ParsedExact (PluralCase PluralExact)
+  | ParsedRule (PluralCase PluralRule)
+
+disorderedPluralCases :: Text -> Parser (NonEmpty ParsedPluralCase)
+disorderedPluralCases n = flip NE.sepEndBy1 hspace1 $ choice
+  [ (ParsedExact .) . PluralCase <$> pluralExact <* hspace1 <*> pluralBody n
+  , (ParsedRule .)  . PluralCase <$> pluralRule  <* hspace1 <*> pluralBody n
+  ]
+
+pluralExact :: Parser PluralExact
+pluralExact = PluralExact . T.pack <$> (string "=" *> some numberChar)
+
+pluralRule :: Parser PluralRule
+pluralRule = choice
+  [ Zero <$ string "zero"
+  , One  <$ string "one"
+  , Two  <$ string "two"
+  , Few  <$ string "few"
+  , Many <$ string "many"
+  ]
+
+pluralWildcard :: Text -> Parser PluralWildcard
+pluralWildcard n = PluralWildcard <$> (string "other" *> hspace1 *> pluralBody n)
+
+pluralBody :: Text -> Parser Stream
+pluralBody n = reconcile <$> (string "{" *> manyTill pluralToken (string "}"))
+  -- Plural cases support interpolating the number/argument in context with `#`.
+  where pluralToken = Interpolation (Arg n Number) <$ string "#" <|> token
 
 -- | To simplify parsing cases we validate after-the-fact here. This achieves
 -- two purposes. Firstly it enables us to fail the parse if the cases are not
@@ -147,8 +162,8 @@ pluralCases name = (fmap Cardinal . tryClassify =<<) $ (,) <$> plurals <*> optio
 -- one {} two {} other {}   -- Rule
 --  =0 {} one {} other {}   -- Mixed
 --
-classifyCardinal :: Foldable f => (f ParsedPluralCase, Maybe PluralWildcard) -> Maybe CardinalPlural
-classifyCardinal (xs, mw) =
+classifyCardinal :: Foldable f => f ParsedPluralCase -> Maybe PluralWildcard -> Maybe CardinalPlural
+classifyCardinal xs mw =
   case (organise xs, mw) of
     ((Just ls, Nothing), mw')     -> Just (LitPlural   ls mw')
     ((Nothing, Just rs), Just w)  -> Just (RulePlural  rs w)
@@ -161,8 +176,3 @@ classifyCardinal (xs, mw) =
         organise = bimap nonEmpty nonEmpty . foldr f mempty
         f (ParsedExact x) = first (x:)
         f (ParsedRule x)  = second (x:)
-
--- Need to lift parsed cases into this type to make the list homogeneous.
-data ParsedPluralCase
-  = ParsedExact (PluralCase PluralExact)
-  | ParsedRule (PluralCase PluralRule)

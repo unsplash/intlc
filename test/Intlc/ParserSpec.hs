@@ -65,24 +65,24 @@ spec = describe "parser" $ do
 
   describe "plural" $ do
     it "disallows wildcard not at the end" $ do
-      parse' (pluralCases "any") `shouldSucceedOn` "=1 {foo} other {bar}"
-      parse' (pluralCases "any") `shouldFailOn` "other {bar} =1 {foo}"
+      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=1 {foo} other {bar}"
+      parse' (cardinalPluralCases "any") `shouldFailOn` "other {bar} =1 {foo}"
 
     it "tolerates empty cases" $ do
-      parse' (pluralCases "any") `shouldSucceedOn` "=1 {} other {}"
+      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=1 {} other {}"
 
     it "requires at least one non-wildcard case" $ do
-      parse' (pluralCases "any") `shouldFailOn` "other {foo}"
-      parse' (pluralCases "any") `shouldSucceedOn` "=0 {foo} other {bar}"
-      parse' (pluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
+      parse' (cardinalPluralCases "any") `shouldFailOn` "other {foo}"
+      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=0 {foo} other {bar}"
+      parse' (cardinalPluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
 
     it "requires a wildcard if there are any rule cases" $ do
-      parse' (pluralCases "any") `shouldFailOn`    "=0 {foo} one {bar}"
-      parse' (pluralCases "any") `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
-      parse' (pluralCases "any") `shouldSucceedOn` "=0 {foo} =1 {bar}"
+      parse' (cardinalPluralCases "any") `shouldFailOn`    "=0 {foo} one {bar}"
+      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parse' (pluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parse' (cardinalPluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "select" $ do
