@@ -42,20 +42,33 @@ data DateTimeFmt
   | Full
   deriving (Show, Eq)
 
--- | Plurals can be split into four usages:
+data Plural
+  = Cardinal CardinalPlural
+  | Ordinal OrdinalPlural
+  deriving (Show, Eq)
+
+-- | Cardinal plurals can be split into four usages:
 --
 --   1. Literal number cases without a wildcard.
 --   2. Literal number cases with a wildcard.
 --   3. Rule cases with a wildcard.
 --   3. Mixed cases with a wildcard.
 --
--- Per the aforementioned usages, any plural with at least one rule case must
--- have a wildcard, and plurals without any rule cases can optionally supply
--- a wildcard.
-data Plural
+-- Per the aforementioned usages, any cardinal plural with at least one rule
+-- case must have a wildcard, and cardinal plurals without any rule cases can
+-- optionally supply a wildcard.
+data CardinalPlural
   = LitPlural (NonEmpty (PluralCase PluralExact)) (Maybe PluralWildcard)
   | RulePlural (NonEmpty (PluralCase PluralRule)) PluralWildcard
   | MixedPlural (NonEmpty (PluralCase PluralExact)) (NonEmpty (PluralCase PluralRule)) PluralWildcard
+  deriving (Show, Eq)
+
+-- | Ordinal plurals require at least one rule case and therefore also a
+-- wildcard. An ordinal plural without a rule case would make the use of this
+-- construct redundant, and in such cases the consumer should instead use a
+-- cardinal plural.
+data OrdinalPlural
+  = OrdinalPlural [PluralCase PluralExact] (NonEmpty (PluralCase PluralRule)) PluralWildcard
   deriving (Show, Eq)
 
 data PluralCase a = PluralCase a Stream

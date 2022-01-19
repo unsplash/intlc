@@ -116,7 +116,7 @@ selectCases = (,) <$> cases <*> optional wildcard
         wildcardName = "other"
 
 pluralCases :: Text -> Parser Plural
-pluralCases name = (tryClassify =<<) $ (,) <$> plurals <*> optional wildcard
+pluralCases name = (fmap Cardinal . tryClassify =<<) $ (,) <$> plurals <*> optional wildcard
   where body = reconcile <$> (string "{" *> manyTill token' (string "}"))
           -- Plural cases support interpolating the number in context with `#`.
           where token' = Interpolation (Arg name Number) <$ string "#" <|> token
@@ -134,7 +134,7 @@ pluralCases name = (tryClassify =<<) $ (,) <$> plurals <*> optional wildcard
                   ]
         wildcard = PluralWildcard <$> (wildcardMatch *> hspace1 *> body)
         wildcardMatch = string "other"
-        tryClassify = maybe empty pure . classifyPluralCases
+        tryClassify = maybe empty pure . classifyCardinal
 
 -- | To simplify parsing cases we validate after-the-fact here. This achieves
 -- two purposes. Firstly it enables us to fail the parse if the cases are not
@@ -147,8 +147,8 @@ pluralCases name = (tryClassify =<<) $ (,) <$> plurals <*> optional wildcard
 -- one {} two {} other {}   -- Rule
 --  =0 {} one {} other {}   -- Mixed
 --
-classifyPluralCases :: Foldable f => (f ParsedPluralCase, Maybe PluralWildcard) -> Maybe Plural
-classifyPluralCases (xs, mw) =
+classifyCardinal :: Foldable f => (f ParsedPluralCase, Maybe PluralWildcard) -> Maybe CardinalPlural
+classifyCardinal (xs, mw) =
   case (organise xs, mw) of
     ((Just ls, Nothing), mw')     -> Just (LitPlural   ls mw')
     ((Nothing, Just rs), Just w)  -> Just (RulePlural  rs w)

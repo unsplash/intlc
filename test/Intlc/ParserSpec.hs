@@ -83,7 +83,7 @@ spec = describe "parser" $ do
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
       parse' (pluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])
+        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "select" $ do
     it "disallows wildcard not at the end" $ do

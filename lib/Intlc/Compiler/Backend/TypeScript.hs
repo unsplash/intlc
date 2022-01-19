@@ -67,25 +67,29 @@ fromToken ICU.Plaintext {}      = mempty
 fromToken (ICU.Interpolation x) = fromArg x
 
 fromArg :: ICU.Arg -> Args
-fromArg (ICU.Arg n ICU.String)                             = pure (n, TUniIn TStr)
-fromArg (ICU.Arg n ICU.Number)                             = pure (n, TNum)
-fromArg (ICU.Arg n ICU.Date {})                            = pure (n, TDate)
-fromArg (ICU.Arg n ICU.Time {})                            = pure (n, TDate)
-fromArg (ICU.Arg n (ICU.Plural (ICU.LitPlural ls mw)))     = (n, t) : (fromExactPluralCase =<< toList ls) <> foldMap fromPluralWildcard mw
-  -- When there's no wildcard case we can compile to a union of number literals.
-  where t = case mw of
-              Just _  -> TNum
-              Nothing -> TNumLitUnion . toList $ caseLit <$> ls
-        caseLit (ICU.PluralCase (ICU.PluralExact x) _)     = x
-fromArg (ICU.Arg n (ICU.Plural (ICU.RulePlural rs w)))     = (n, TNum) : (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
-fromArg (ICU.Arg n (ICU.Plural (ICU.MixedPlural ls rs w))) = (n, TNum) : (fromExactPluralCase =<< toList ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
-fromArg (ICU.Arg n (ICU.Select cs mw))                     = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
+fromArg (ICU.Arg n ICU.String)         = pure (n, TUniIn TStr)
+fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
+fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)
+fromArg (ICU.Arg n ICU.Time {})        = pure (n, TDate)
+fromArg (ICU.Arg n (ICU.Plural x))     = fromPlural n x
+fromArg (ICU.Arg n (ICU.Select cs mw)) = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
   -- When there's no wildcard case we can compile to a union of string literals.
   where t = case mw of
               Just _  -> TUniIn TStr
               Nothing -> TStrLitUnion . toList $ caseLit <$> cs
         caseLit (ICU.SelectCase x _) = x
-fromArg (ICU.Arg n (ICU.Callback xs))                      = (n, TEndo) : (fromToken =<< xs)
+fromArg (ICU.Arg n (ICU.Callback xs))  = (n, TEndo) : (fromToken =<< xs)
+
+fromPlural :: Text -> ICU.Plural -> Args
+fromPlural n (ICU.Cardinal (ICU.LitPlural ls mw))      = (n, t) : (fromExactPluralCase =<< toList ls) <> foldMap fromPluralWildcard mw
+  -- When there's no wildcard case we can compile to a union of number literals.
+  where t = case mw of
+              Just _  -> TNum
+              Nothing -> TNumLitUnion . toList $ caseLit <$> ls
+        caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
+fromPlural n (ICU.Cardinal (ICU.RulePlural rs w))      = (n, TNum) : (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
+fromPlural n (ICU.Cardinal (ICU.MixedPlural ls rs w))  = (n, TNum) : (fromExactPluralCase =<< toList ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
+fromPlural n (ICU.Ordinal (ICU.OrdinalPlural ls rs w)) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> Args
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact _) xs) = fromToken =<< xs
