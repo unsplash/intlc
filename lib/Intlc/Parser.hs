@@ -96,6 +96,7 @@ interp = choice
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
           , Plural <$> (string "plural" *> sep *> cardinalPluralCases n)
+          , Plural <$> (string "selectordinal" *> sep *> ordinalPluralCases n)
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
 
@@ -119,6 +120,11 @@ cardinalPluralCases :: Text -> Parser Plural
 cardinalPluralCases n = fmap Cardinal . tryClassify =<< p
     where tryClassify = maybe empty pure . uncurry classifyCardinal
           p = (,) <$> disorderedPluralCases n <*> optional (pluralWildcard n)
+
+ordinalPluralCases :: Text -> Parser Plural
+ordinalPluralCases n = fmap Ordinal . tryClassify =<< p
+    where tryClassify = maybe empty pure . uncurry classifyOrdinal
+          p = (,) <$> disorderedPluralCases n <*> pluralWildcard n
 
 -- Need to lift parsed plural cases into this type to make the list homogeneous.
 data ParsedPluralCase
@@ -164,7 +170,7 @@ pluralBody n = reconcile <$> (string "{" *> manyTill pluralToken (string "}"))
 --
 classifyCardinal :: Foldable f => f ParsedPluralCase -> Maybe PluralWildcard -> Maybe CardinalPlural
 classifyCardinal xs mw =
-  case (organise xs, mw) of
+  case (organisePluralCases xs, mw) of
     ((Just ls, Nothing), mw')     -> Just (LitPlural   ls mw')
     ((Nothing, Just rs), Just w)  -> Just (RulePlural  rs w)
     ((Just ls, Just rs), Just w)  -> Just (MixedPlural ls rs w)
@@ -172,7 +178,18 @@ classifyCardinal xs mw =
     ((_,       Just _),  Nothing) -> Nothing
     -- We should have parsed and organised at least one case somewhere.
     ((Nothing, Nothing), _)       -> Nothing
-  where organise :: Foldable f => f ParsedPluralCase -> (Maybe (NonEmpty (PluralCase PluralExact)), Maybe (NonEmpty (PluralCase PluralRule)))
-        organise = bimap nonEmpty nonEmpty . foldr f mempty
-        f (ParsedExact x) = first (x:)
+
+-- | This is simpler than its cardinal counterpart. Here we need only validate
+-- that there is at least one rule case. This is performed here to simplify
+-- supporting disordered cases in the parser (whereas validating the presence
+-- of a wildcard at the end is trivial in the parser).
+classifyOrdinal :: Foldable f => f ParsedPluralCase -> PluralWildcard -> Maybe OrdinalPlural
+classifyOrdinal xs w =
+  case organisePluralCases xs of
+    (_, Nothing)   -> Nothing
+    (mls, Just rs) -> Just $ OrdinalPlural (foldMap toList mls) rs w
+
+organisePluralCases :: Foldable f => f ParsedPluralCase -> (Maybe (NonEmpty (PluralCase PluralExact)), Maybe (NonEmpty (PluralCase PluralRule)))
+organisePluralCases = bimap nonEmpty nonEmpty . foldr f mempty
+  where f (ParsedExact x) = first (x:)
         f (ParsedRule x)  = second (x:)

@@ -116,7 +116,7 @@ fromPlural r (ICU.Cardinal (ICU.MixedPlural lcs rcs w))       = ((prop r,) .) . 
 fromPlural r (ICU.Ordinal (ICU.OrdinalPlural [] rcs w))       = ((prop r,) .) . NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
 fromPlural r (ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w)) = ((prop r,) .) . RecMatch <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> nested
   where nested = (,) <$> (ruleCond <$> ask) <*> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
-        ruleCond (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop r <> ")" -- TODO!
+        ruleCond (Locale l) = "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop r <> ")"
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromToken `mapM` xs)

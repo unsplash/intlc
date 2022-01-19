@@ -85,6 +85,27 @@ spec = describe "parser" $ do
       parse' (cardinalPluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
+  describe "selectordinal" $ do
+    it "disallows wildcard not at the end" $ do
+      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
+      parse' (ordinalPluralCases "any") `shouldFailOn` "other {bar} one {foo}"
+
+    it "tolerates empty cases" $ do
+      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {} other {}"
+
+    it "requires at least one rule" $ do
+      parse' (ordinalPluralCases "any") `shouldFailOn` "other {foo}"
+      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
+      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {foo} two {bar} other {baz}"
+
+    it "requires a wildcard" $ do
+      parse' (ordinalPluralCases "any") `shouldFailOn`    "=0 {foo} one {bar}"
+      parse' (ordinalPluralCases "any") `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+
+    it "parses literal and plural cases, wildcard, and interpolation token" $ do
+      parse' (cardinalPluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
+        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
+
   describe "select" $ do
     it "disallows wildcard not at the end" $ do
       parse' selectCases "foo {bar} other {baz}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Just (SelectWildcard [Plaintext "baz"]))
