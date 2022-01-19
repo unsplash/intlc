@@ -1,4 +1,4 @@
-module Intlc.Compiler (dataset) where
+module Intlc.Compiler (compileDataset) where
 
 import qualified Data.Map                          as M
 import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..))
@@ -11,8 +11,8 @@ import           Prelude
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `f` prevents a spare newline, acting like
 -- intercalation.
-dataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
-dataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
+compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
+compileDataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
   where
         -- Merge two `Right`s, essentially intercalating with newlines (hence
         -- the empty accumulator base case).
