@@ -1,0 +1,42 @@
+name: Check
+on: [push]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: haskell/actions/setup@v1
+        id: setup-haskell
+        with:
+          ghc-version: 8.10.7
+      - run: cabal freeze
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: hashFiles('cabal.project.freeze')
+      - run: cabal build
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: haskell/actions/setup@v1
+        id: setup-haskell
+        with:
+          ghc-version: 8.10.7
+      - run: cabal freeze
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: hashFiles('cabal.project.freeze')
+      - run: cabal test
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: haskell/actions/hlint-setup@v1
+      - uses: haskell/actions/hlint-run@v1
+        with:
+          path: '["lib/", "cli/"]'
