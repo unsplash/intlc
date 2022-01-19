@@ -2,8 +2,6 @@
 --   * Consume all whitespace after tokens where possible.
 --   * Therefore, assume no whitespace before tokens.
 
-{-# LANGUAGE FlexibleContexts #-}
-
 module Intlc.Parser where
 
 import qualified Control.Applicative.Combinators.NonEmpty as NE
