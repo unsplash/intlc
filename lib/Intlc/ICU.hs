@@ -13,8 +13,8 @@ data Message
 type Stream = [Token]
 
 -- | A token is either an interpolation - some sort of identifier for input -
--- or mere plaintext. A collection of tokens make up any message. A message
--- without any interpolation will be a single `Plaintext` token.
+-- or mere plaintext. A collection of tokens make up any message. A non-empty
+-- message without any interpolation will be a single `Plaintext` token.
 data Token
   = Plaintext Text
   | Interpolation Arg
