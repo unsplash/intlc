@@ -1,22 +1,37 @@
 module Intlc.Compiler.Backend.JavaScript (Pieces (..), InterpStrat (..), compileStmt, compileStmtPieces) where
 
-import qualified Intlc.ICU as ICU
-import           Prelude   hiding (Type, fromList)
-import           Utils     ((<>^))
+import           Intlc.Core (Locale (Locale))
+import qualified Intlc.ICU  as ICU
+import           Prelude    hiding (Type, fromList)
+import           Utils      ((<>^))
+
+-- The primary code generation compiler.
+type Compiler = Reader Cfg
+
+-- The intermediary AST compiler.
+type ASTCompiler = Reader Locale
+
+data Cfg = Cfg
+  { locale :: Locale
+  , interp :: Interp
+  }
 
 -- Offers cheap extensibility with TypeScript over rendering statements.
 data Pieces
   = ConstantPieces
   | LambdaPieces
 
-compileStmt :: InterpStrat -> Text -> ICU.Message -> Text
+compileStmt :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
 compileStmt = compileWith stmt
 
-compileStmtPieces :: InterpStrat -> Text -> ICU.Message -> (Pieces, Text, Text)
+compileStmtPieces :: InterpStrat -> Locale -> Text -> ICU.Message -> (Pieces, Text, Text)
 compileStmtPieces = compileWith stmtPieces
 
-compileWith :: (Stmt -> Compiler a) -> InterpStrat -> Text -> ICU.Message -> a
-compileWith f o k = flip runReader (fromStrat o) . f . fromKeyedMsg k
+compileWith :: (Stmt -> Compiler a) -> InterpStrat -> Locale -> Text -> ICU.Message -> a
+compileWith f o l k m = f' fromKeyedMsg'
+  where f' = flip runReader cfg . f
+        fromKeyedMsg' = runReader (fromKeyedMsg k m) l
+        cfg = Cfg l (fromStrat o)
 
 data InterpStrat
   = TemplateLit
@@ -72,53 +87,52 @@ newtype Ref = Ref Text
 data Branch = Branch Text [Expr]
 newtype Wildcard = Wildcard [Expr]
 
-fromKeyedMsg :: Text -> ICU.Message -> Stmt
-fromKeyedMsg n (ICU.Static x)   = Stmt n (Constant x)
-fromKeyedMsg n (ICU.Dynamic ys) = Stmt n (Lambda $ fromToken <$> ys)
+fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
+fromKeyedMsg n (ICU.Static x)   = pure $ Stmt n (Constant x)
+fromKeyedMsg n (ICU.Dynamic ys) = Stmt n . Lambda <$> (fromToken `mapM` ys)
 
-fromToken :: ICU.Token -> Expr
-fromToken (ICU.Plaintext x)     = TPrint x
+fromToken :: ICU.Token -> ASTCompiler Expr
+fromToken (ICU.Plaintext x)     = pure $ TPrint x
 fromToken (ICU.Interpolation x) = fromArg x
 
-fromArg :: ICU.Arg -> Expr
-fromArg (ICU.Arg n ICU.String)               = TStr   (Ref n)
-fromArg (ICU.Arg n ICU.Number)               = TNum   (Ref n)
-fromArg (ICU.Arg n (ICU.Date x))             = TDate  (Ref n) x
-fromArg (ICU.Arg n (ICU.Plural cs))          = TMatch (fromPlural (Ref n) cs)
-fromArg (ICU.Arg n (ICU.Select cs (Just w))) = TMatch (prop (Ref n), NonLitMatch (fromSelectCase <$> cs) (fromSelectWildcard w))
-fromArg (ICU.Arg n (ICU.Select cs Nothing))  = TMatch (prop (Ref n), LitMatch (fromSelectCase <$> cs))
-fromArg (ICU.Arg n (ICU.Callback xs))        = TApply (Ref n) (fromToken <$> xs)
+fromArg :: ICU.Arg -> ASTCompiler Expr
+fromArg (ICU.Arg n ICU.String)               = pure $ TStr   (Ref n)
+fromArg (ICU.Arg n ICU.Number)               = pure $ TNum   (Ref n)
+fromArg (ICU.Arg n (ICU.Date x))             = pure $ TDate  (Ref n) x
+fromArg (ICU.Arg n (ICU.Plural cs))          = TMatch <$> fromPlural (Ref n) cs
+fromArg (ICU.Arg n (ICU.Select cs (Just w))) = ((TMatch . (prop (Ref n),)) .) . NonLitMatch <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
+fromArg (ICU.Arg n (ICU.Select cs Nothing))  = TMatch . (prop (Ref n),) . LitMatch <$> (fromSelectCase `mapM` cs)
+fromArg (ICU.Arg n (ICU.Callback xs))        = TApply (Ref n) <$> (fromToken `mapM` xs)
 
-fromPlural :: Ref -> ICU.Plural -> MatchOn
-fromPlural r (ICU.LitPlural lcs Nothing)  = (prop r, LitMatch    (fromExactPluralCase <$> lcs))
-fromPlural r (ICU.LitPlural lcs (Just w)) = (prop r, NonLitMatch (fromExactPluralCase <$> lcs) (fromPluralWildcard w))
-fromPlural r (ICU.RulePlural rcs w)       = (prop r, NonLitMatch (fromRulePluralCase <$> rcs)  (fromPluralWildcard w))
-fromPlural r (ICU.MixedPlural lcs rcs w)  = (prop r, RecMatch    (fromExactPluralCase <$> lcs) nested)
-  where nested = (ruleCond, NonLitMatch (fromRulePluralCase <$> rcs) (fromPluralWildcard w))
-        ruleCond = "new Intl.PluralRules('en-US').select(" <> prop r <> ")"
+fromPlural :: Ref -> ICU.Plural -> ASTCompiler MatchOn
+fromPlural r (ICU.LitPlural lcs Nothing)  = (prop r,) . LitMatch <$> (fromExactPluralCase `mapM` lcs)
+fromPlural r (ICU.LitPlural lcs (Just w)) = ((prop r,) .) . NonLitMatch <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
+fromPlural r (ICU.RulePlural rcs w)       = ((prop r,) .) . NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+fromPlural r (ICU.MixedPlural lcs rcs w)  = ((prop r,) .) . RecMatch <$> (fromExactPluralCase `mapM` lcs) <*> nested
+  where nested = (,) <$> (ruleCond <$> ask) <*> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
+        ruleCond (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop r <> ")"
 
-fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> Branch
-fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n (fromToken <$> xs)
+fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
+fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromToken `mapM` xs)
 
-fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> Branch
-fromRulePluralCase (ICU.PluralCase r xs) = flip Branch (fromToken <$> xs) . qts $ case r of
-   ICU.Zero -> "zero"
-   ICU.One  -> "one"
-   ICU.Two  -> "two"
-   ICU.Few  -> "few"
-   ICU.Many -> "many"
-  where qts x = "'" <> x <> "'"
+fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> ASTCompiler Branch
+fromRulePluralCase (ICU.PluralCase r xs) = Branch (qts matcher) <$> (fromToken `mapM` xs)
+  where matcher = case r of
+         ICU.Zero -> "zero"
+         ICU.One  -> "one"
+         ICU.Two  -> "two"
+         ICU.Few  -> "few"
+         ICU.Many -> "many"
+        qts x = "'" <> x <> "'"
 
-fromPluralWildcard :: ICU.PluralWildcard -> Wildcard
-fromPluralWildcard (ICU.PluralWildcard xs) = Wildcard (fromToken <$> xs)
+fromPluralWildcard :: ICU.PluralWildcard -> ASTCompiler Wildcard
+fromPluralWildcard (ICU.PluralWildcard xs) = Wildcard <$> (fromToken `mapM` xs)
 
-fromSelectCase :: ICU.SelectCase -> Branch
-fromSelectCase (ICU.SelectCase x ys) = Branch ("'" <> x <> "'") (fromToken <$> ys)
+fromSelectCase :: ICU.SelectCase -> ASTCompiler Branch
+fromSelectCase (ICU.SelectCase x ys) = Branch ("'" <> x <> "'") <$> (fromToken `mapM` ys)
 
-fromSelectWildcard :: ICU.SelectWildcard -> Wildcard
-fromSelectWildcard (ICU.SelectWildcard xs) = Wildcard (fromToken <$> xs)
-
-type Compiler = Reader Interp
+fromSelectWildcard :: ICU.SelectWildcard -> ASTCompiler Wildcard
+fromSelectWildcard (ICU.SelectWildcard xs) = Wildcard <$> (fromToken `mapM` xs)
 
 -- | Everything shares a single argument object whence we can access
 -- interpolations.
@@ -130,12 +144,12 @@ prop (Ref x) = argName <> "." <> x
 
 wrap :: Text -> Compiler Text
 wrap x = do
-  (o, c) <- asks (open &&& close)
+  (o, c) <- asks ((open &&& close) . interp)
   pure $ o <> x <> c
 
-interp :: Text -> Compiler Text
-interp x = do
-  (o, c) <- asks (interpOpen &&& interpClose)
+interpc :: Text -> Compiler Text
+interpc x = do
+  (o, c) <- asks ((interpOpen &&& interpClose) . interp)
   pure $ o <> x <> c
 
 stmt :: Stmt -> Compiler Text
@@ -151,11 +165,13 @@ exprs = foldMapM expr
 
 expr :: Expr -> Compiler Text
 expr (TPrint x)    = pure x
-expr (TStr x)      = interp (prop x)
-expr (TNum x)      = interp $ "new Intl.NumberFormat('en-US').format(" <> prop x <> ")"
-expr (TDate x fmt) = interp =<< date x fmt
-expr (TApply x ys) = interp =<< apply x ys
-expr (TMatch x)    = interp =<< match x
+expr (TStr x)      = interpc (prop x)
+expr (TNum x)      = do
+  (Locale l) <- asks locale
+  interpc $ "new Intl.NumberFormat('" <> l <> "').format(" <> prop x <> ")"
+expr (TDate x fmt) = interpc =<< date x fmt
+expr (TApply x ys) = interpc =<< apply x ys
+expr (TMatch x)    = interpc =<< match x
 
 apply :: Ref -> [Expr] -> Compiler Text
 apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
@@ -177,7 +193,9 @@ match = fmap iife . go
           where nest x = "default: { " <> x <> " }"
 
 date :: Ref -> ICU.DateFmt -> Compiler Text
-date n d = pure $ prop n <> ".toLocaleString('en-US', { dateStyle: '" <> style d <> "' }" <> ")"
+date n d = do
+  (Locale l) <- asks locale
+  pure $ prop n <> ".toLocaleString('" <> l <> "', { dateStyle: '" <> style d <> "' }" <> ")"
   where style ICU.Short  = "short"
         style ICU.Medium = "medium"
         style ICU.Long   = "long"

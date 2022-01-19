@@ -10,8 +10,8 @@ main :: IO ()
 main = do
   opts <- getOpts
   contents <- readFileLBS (path opts)
-  handleParse . parseDataset $ contents
-  where handleParse = either parserDie (handleValidation . dataset)
+  handleParse (locale opts) . parseDataset $ contents
+  where handleParse l = either parserDie (handleValidation . dataset l)
         parserDie = die . printErr
         handleValidation = either validationDie putTextLn
         validationDie = die . T.unpack . T.intercalate "\n" . toList

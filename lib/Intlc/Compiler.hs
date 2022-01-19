@@ -1,4 +1,4 @@
-module Intlc.Compiler where
+module Intlc.Compiler (dataset) where
 
 import qualified Data.Map                          as M
 import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..))
@@ -11,8 +11,8 @@ import           Prelude
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `f` prevents a spare newline, acting like
 -- intercalation.
-dataset :: Dataset Translation -> Either (NonEmpty Text) Text
-dataset = M.foldrWithKey ((merge .) . translation) (Right mempty)
+dataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
+dataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
   where
         -- Merge two `Right`s, essentially intercalating with newlines (hence
         -- the empty accumulator base case).
@@ -24,10 +24,10 @@ dataset = M.foldrWithKey ((merge .) . translation) (Right mempty)
         merge es@(Left _) (Right _) = es
         merge (Right _) es@(Left _) = es
 
-translation :: Text -> Translation -> Either (NonEmpty Text) Text
-translation k (Translation v be) = validateArgs (args v) $> case be of
-  TypeScript      -> TS.compileNamedExport TemplateLit k v
-  TypeScriptReact -> TS.compileNamedExport JSX         k v
+translation :: Locale -> Text -> Translation -> Either (NonEmpty Text) Text
+translation l k (Translation v be) = validateArgs (args v) $> case be of
+  TypeScript      -> TS.compileNamedExport TemplateLit l k v
+  TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
 args :: ICU.Message -> [ICU.Arg]
 args ICU.Static {}    = []

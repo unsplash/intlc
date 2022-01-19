@@ -9,13 +9,14 @@ import qualified Data.Text                         as T
 import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..),
                                                     Pieces (..),
                                                     compileStmtPieces)
+import           Intlc.Core                        (Locale)
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (Type)
 import           Utils                             ((<>^))
 
-compileNamedExport :: InterpStrat -> Text -> ICU.Message -> Text
-compileNamedExport x k v =
-  let (p, n, r) = compileStmtPieces x k v
+compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
+compileNamedExport x l k v =
+  let (p, n, r) = compileStmtPieces x l k v
    in case p of
     ConstantPieces -> "export const " <> n <> ": " <> compileTypeof x v <> " = '" <> r <> "'"
     LambdaPieces   -> "export const " <> n <> ": " <> compileTypeof x v <> " = x => " <> r

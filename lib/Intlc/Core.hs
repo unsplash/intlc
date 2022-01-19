@@ -6,6 +6,10 @@ import qualified Data.Text  as T
 import           Intlc.ICU  (Message)
 import           Prelude
 
+-- Locales are too broad and too much of a moving target to validate, so this
+-- is a source of unsafety for consumers.
+newtype Locale = Locale Text
+
 type UnparsedMessage = Text
 
 data Backend

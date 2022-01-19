@@ -1,9 +1,15 @@
 # intlc
 
-For the time being the CLI takes a single translation JSON via stdin. To play with this in dev, run:
+For the time being the CLI has the following interface:
 
 ```
-$ echo '{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }' | cabal run -- intlc
+intlc filepath (-l|--locale ARG)
+```
+
+For example:
+
+```
+$ cabal run -- intlc ./translations.json -l en-US
 ```
 
 Currently building against GHC 8.10.7.

@@ -2,6 +2,7 @@ module Intlc.EndToEndSpec (spec) where
 
 import           Data.ByteString.Lazy (ByteString)
 import           Intlc.Compiler       (dataset)
+import           Intlc.Core           (Locale (Locale))
 import           Intlc.Parser         (parseDataset)
 import           Prelude              hiding (ByteString)
 import           Test.Hspec
@@ -9,7 +10,7 @@ import           Text.RawString.QQ    (r)
 
 (=*=) :: ByteString -> Text -> IO ()
 x =*= y = f x `shouldBe` Right y
-  where f = dataset <=< first (pure . show) . parseDataset
+  where f = dataset (Locale "en-US") <=< first (pure . show) . parseDataset
 
 spec :: Spec
 spec = describe "end-to-end" $ do
