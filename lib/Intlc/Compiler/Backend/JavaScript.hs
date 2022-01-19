@@ -71,7 +71,7 @@ data Expr
   = TPrint Text
   | TStr Ref
   | TNum Ref
-  | TDate Ref ICU.DateFmt
+  | TDate Ref ICU.DateTimeFmt
   | TApply Ref [Expr]
   | TMatch MatchOn
 
@@ -192,7 +192,7 @@ match = fmap iife . go
         recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
           where nest x = "default: { " <> x <> " }"
 
-date :: Ref -> ICU.DateFmt -> Compiler Text
+date :: Ref -> ICU.DateTimeFmt -> Compiler Text
 date n d = do
   (Locale l) <- asks locale
   pure $ "new Intl.DateTimeFormat('" <> l <> "', { dateStyle: '" <> style d <> "' }).format(" <> prop n <> ")"

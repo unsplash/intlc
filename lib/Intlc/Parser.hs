@@ -93,13 +93,13 @@ interp = choice
   where sep = string "," <* hspace1
         body n = option String $ sep *> choice
           [ Number <$ string "number"
-          , Date <$> (string "date" *> sep *> dateFmt)
+          , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Plural <$> (string "plural" *> sep *> pluralCases n)
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
 
-dateFmt :: Parser DateFmt
-dateFmt = choice
+dateTimeFmt :: Parser DateTimeFmt
+dateTimeFmt = choice
   [ Short  <$ string "short"
   , Medium <$ string "medium"
   , Long   <$ string "long"

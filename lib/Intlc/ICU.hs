@@ -28,13 +28,13 @@ data Arg = Arg Text Type
 data Type
   = String
   | Number
-  | Date DateFmt
+  | Date DateTimeFmt
   | Plural Plural
   | Select (NonEmpty SelectCase) (Maybe SelectWildcard)
   | Callback Stream
   deriving (Show, Eq)
 
-data DateFmt
+data DateTimeFmt
   = Short
   | Medium
   | Long
