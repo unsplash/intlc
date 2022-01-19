@@ -17,7 +17,7 @@ compileDataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
         -- Merge two `Right`s, essentially intercalating with newlines (hence
         -- the empty accumulator base case).
         merge (Right x) (Right "")  = Right x
-        merge (Right x) (Right acc) = Right $ acc <> "\n" <> x
+        merge (Right x) (Right acc) = Right $ x <> "\n" <> acc
         -- Merge two `Left`s, or if one side is `Left` take that side,
         -- discarding any `Right`.
         merge (Left es) (Left acc)  = Left $ es <> acc

@@ -16,11 +16,15 @@ spec :: Spec
 spec = describe "end-to-end" $ do
   it "example message" $ do
     [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]
-      =*= "export const title: string = 'Unsplash'\nexport const greeting: (x: { bold: (x: string) => string; name: string; age: number }) => string = x => `Hello ${x.bold(`${x.name}`)}, ${new Intl.NumberFormat('en-US').format(x.age)}!`"
+      =*= "export const greeting: (x: { bold: (x: string) => string; name: string; age: number }) => string = x => `Hello ${x.bold(`${x.name}`)}, ${new Intl.NumberFormat('en-US').format(x.age)}!`\nexport const title: string = 'Unsplash'"
 
   it "parses and discards descriptions" $ do
     [r|{ "brand": { "message": "Unsplash", "description": "The company name" } }|]
       =*= "export const brand: string = 'Unsplash'"
+
+  it "outputs in alphabetical order" $ do
+    [r|{ "x": { "message": "" }, "A": { "message": "" }, "z": { "message": "" } }|]
+      =*= "export const A: string = ''\nexport const x: string = ''\nexport const z: string = ''"
 
   it "compiles plurals" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]
