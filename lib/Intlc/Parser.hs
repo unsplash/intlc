@@ -65,7 +65,7 @@ msg :: Parser Message
 msg = f . reconcile <$> manyTill token eof
   where f []            = Static ""
         f [Plaintext x] = Static x
-        f xs            = Dynamic xs
+        f (x:xs)        = Dynamic (x :| xs)
 
 token :: Parser Token
 token = choice

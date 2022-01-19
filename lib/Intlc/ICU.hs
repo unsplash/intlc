@@ -7,9 +7,10 @@ import           Prelude hiding (Type)
 
 data Message
   = Static Text
-  | Dynamic Stream
+  | Dynamic NEStream
   deriving (Show, Eq)
 
+type NEStream = NonEmpty Token
 type Stream = [Token]
 
 -- | A token is either an interpolation - some sort of identifier for input -

@@ -1,6 +1,6 @@
 -- This module mostly only concerns itself with what the type-level output will
 -- look like. The value-level output is JavaScript and resides almost entirely
--- in the corresponding module.
+-- in the corresponding module. They have been written with one-another in mind.
 
 module Intlc.Compiler.Backend.TypeScript (compileNamedExport) where
 
@@ -59,7 +59,7 @@ data Out
 
 fromMsg :: Out -> ICU.Message -> TypeOf
 fromMsg _ ICU.Static {}    = Constant
-fromMsg x (ICU.Dynamic ys) = Lambda (fromToken =<< ys) x
+fromMsg x (ICU.Dynamic ys) = Lambda (fromToken =<< toList ys) x
 
 fromToken :: ICU.Token -> Args
 fromToken ICU.Plaintext {}      = mempty

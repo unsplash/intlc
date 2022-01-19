@@ -22,6 +22,13 @@ data InterpStrat
   = TemplateLit
   | JSX
 
+data Interp = Interp
+  { open        :: Text
+  , close       :: Text
+  , interpOpen  :: Text
+  , interpClose :: Text
+  }
+
 fromStrat :: InterpStrat -> Interp
 fromStrat TemplateLit = Interp
   { open = "`"
@@ -43,14 +50,7 @@ data Stmt = Stmt Text Ret
 
 data Ret
   = Constant Text
-  | Lambda [Expr]
-
-data Interp = Interp
-  { open        :: Text
-  , close       :: Text
-  , interpOpen  :: Text
-  , interpClose :: Text
-  }
+  | Lambda (NonEmpty Expr)
 
 data Expr
   = TPrint Text
@@ -146,7 +146,7 @@ stmtPieces :: Stmt -> Compiler (Pieces, Text, Text)
 stmtPieces (Stmt n (Constant r)) = pure (ConstantPieces, n, r)
 stmtPieces (Stmt n (Lambda xs))  = (LambdaPieces, n, ) <$> (wrap =<< exprs xs)
 
-exprs :: [Expr] -> Compiler Text
+exprs :: Foldable f => f Expr -> Compiler Text
 exprs = foldMapM expr
 
 expr :: Expr -> Compiler Text

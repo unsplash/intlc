@@ -16,11 +16,11 @@ spec = describe "parser" $ do
   describe "message" $ do
     it "tolerates unclosed braces" $ do
       parse' msg "a {b} c { d" `shouldParse`
-        Dynamic [Plaintext "a ", Interpolation (Arg "b" String), Plaintext " c { d"]
+        Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " c { d"])
 
     it "tolerates empty braces" $ do
       parse' msg "a {b} c {} d {e, number}" `shouldParse`
-        Dynamic [Plaintext "a ", Interpolation (Arg "b" String), Plaintext " c {} d ", Interpolation (Arg "e" Number)]
+        Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " c {} d ", Interpolation (Arg "e" Number)])
 
     it "tolerates interpolations with a bad type" $ do
       parse' msg "{n, bool}" `shouldParse` Static "{n, bool}"

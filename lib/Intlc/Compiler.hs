@@ -31,6 +31,6 @@ translation k (Translation v be) = validateArgs (args v) $> case be of
 
 args :: ICU.Message -> [ICU.Arg]
 args ICU.Static {}    = []
-args (ICU.Dynamic xs) = token `mapMaybe` xs
+args (ICU.Dynamic xs) = token `mapMaybe` toList xs
   where token ICU.Plaintext {}      = Nothing
         token (ICU.Interpolation x) = Just x
