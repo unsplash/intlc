@@ -9,12 +9,14 @@ import           Prelude
 -- Locales are too broad and too much of a moving target to validate, so this
 -- is a source of unsafety for consumers.
 newtype Locale = Locale Text
+  deriving (Show, Eq)
 
 type UnparsedMessage = Text
 
 data Backend
   = TypeScript
   | TypeScriptReact
+  deriving (Show, Eq)
 
 instance FromJSON Backend where
   parseJSON = withText "Backend" decode
@@ -26,6 +28,7 @@ data UnparsedTranslation = UnparsedTranslation
   { umessage :: UnparsedMessage
   , ubackend :: Backend
   }
+  deriving (Show, Eq)
 
 instance FromJSON UnparsedTranslation where
   parseJSON = withObject "UnparsedTranslation" decode
@@ -37,5 +40,6 @@ data Translation = Translation
   { message :: Message
   , backend :: Backend
   }
+  deriving (Show, Eq)
 
 type Dataset = Map Text
