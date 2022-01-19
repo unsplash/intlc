@@ -1,13 +1,16 @@
 module Main where
 
-import           Data.ByteString.Lazy (getContents)
-import qualified Data.Text            as T
-import           Intlc.Compiler       (dataset)
-import           Intlc.Parser         (parseDataset, printErr)
-import           Prelude              hiding (stdin)
+import           CLI            (Opts (..), getOpts)
+import qualified Data.Text      as T
+import           Intlc.Compiler (dataset)
+import           Intlc.Parser   (parseDataset, printErr)
+import           Prelude
 
 main :: IO ()
-main = handleParse . parseDataset =<< getContents
+main = do
+  opts <- getOpts
+  contents <- readFileLBS (path opts)
+  handleParse . parseDataset $ contents
   where handleParse = either parserDie (handleValidation . dataset)
         parserDie = die . printErr
         handleValidation = either validationDie putTextLn
