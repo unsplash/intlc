@@ -22,6 +22,12 @@ spec = describe "parser" $ do
       parse' msg "a {b} c {} d {e, number}" `shouldParse`
         Dynamic [Plaintext "a ", Interpolation (Arg "b" String), Plaintext " c {} d ", Interpolation (Arg "e" Number)]
 
+    it "tolerates interpolations with a bad type" $ do
+      parse' msg "{n, bool}" `shouldParse` Static "{n, bool}"
+
+    it "does not tolerate empty tags" $ do
+      parse' msg `shouldFailOn` "a <> b"
+
   describe "interpolation" $ do
     it "interpolates appropriately" $ do
       parse' interp "{x}" `shouldParse` Arg "x" String
@@ -32,11 +38,20 @@ spec = describe "parser" $ do
       parse' interp `shouldFailOn` "{x y}"
       parse' interp `shouldFailOn` "<x y></x y>"
 
-    it "validates closing tag name" $ do
-      parse' interp "<hello></hello>" `shouldParse` Arg "hello" (Callback [])
-      parse' interp `shouldFailOn` "<hello></there>"
+    describe "date" $ do
+      it "disallows bad formats" $ do
+        parse' interp "{x, date, short}" `shouldParse` Arg "x" (Date Short)
+        parse' interp `shouldFailOn` "{x, date, miniature}"
 
   describe "callback" $ do
+    it "parses nested" $ do
+      parse' callback "<f><g>x{y}z</g></f>" `shouldParse`
+        Arg "f" (Callback [Interpolation $ Arg "g" (Callback [Plaintext "x", Interpolation (Arg "y" String), Plaintext "z"])])
+
+    it "validates closing tag name" $ do
+      parse' callback "<hello></hello>" `shouldParse` Arg "hello" (Callback [])
+      parse' callback `shouldFailOn` "<hello></there>"
+
     it "reports friendly error for bad closing tag" $ do
       let e i = errFancy i . fancy . ErrorCustom
 
@@ -44,6 +59,13 @@ spec = describe "parser" $ do
       parse' callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
 
   describe "plural" $ do
+    it "disallows wildcard not at the end" $ do
+      parse' (pluralCases "any") `shouldSucceedOn` "=1 {foo} other {bar}"
+      parse' (pluralCases "any") `shouldFailOn` "other {bar} =1 {foo}"
+
+    it "tolerates empty cases" $ do
+      parse' (pluralCases "any") `shouldSucceedOn` "=1 {} other {}"
+
     it "requires at least one non-wildcard case" $ do
       parse' (pluralCases "any") `shouldFailOn` "other {foo}"
       parse' (pluralCases "any") `shouldSucceedOn` "=0 {foo} other {bar}"
@@ -57,3 +79,16 @@ spec = describe "parser" $ do
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
       parse' (pluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
         MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)])
+
+  describe "select" $ do
+    it "disallows wildcard not at the end" $ do
+      parse' selectCases "foo {bar} other {baz}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Just (SelectWildcard [Plaintext "baz"]))
+      parse' selectCases `shouldFailOn` "other {bar} foo {baz}"
+
+    it "tolerates empty cases" $ do
+      parse' selectCases "x {} other {}" `shouldParse` (pure (SelectCase "x" []), Just (SelectWildcard []))
+
+    it "requires at least one non-wildcard case" $ do
+      parse' selectCases "foo {bar}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Nothing)
+      parse' selectCases "foo {bar} other {baz}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Just (SelectWildcard [Plaintext "baz"]))
+      parse' selectCases `shouldFailOn` "other {foo}"
