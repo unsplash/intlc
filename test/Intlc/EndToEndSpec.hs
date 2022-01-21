@@ -48,4 +48,4 @@ spec = describe "end-to-end" $ do
 
   it "TypeScriptReact backend" $ do
     [r|{ "f": { "message": "{x} <z>{y, number}</z>", "backend": "tsx" } }|]
-      =*= "export const f: (x: { x: string; z: (x: ReactElement) => ReactElement; y: number }) => ReactElement = x => <>{x.x} {x.z(<>{new Intl.NumberFormat('en-US').format(x.y)}</>)}</>"
+      =*= "import React from 'React'\nexport const f: (x: { x: string; z: (x: ReactElement) => ReactElement; y: number }) => ReactElement = x => <>{x.x} {x.z(<>{new Intl.NumberFormat('en-US').format(x.y)}</>)}</>"
