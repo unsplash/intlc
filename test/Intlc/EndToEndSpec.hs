@@ -35,6 +35,8 @@ spec = describe "end-to-end" $ do
       =*= "export const f: (x: { n: 0 | 42 }) => string = x => `${(() => { switch (x.n) { case 0: return `x`; case 42: return `y`; } })()}`"
     [r|{ "f": { "message": "{n, plural, =0 {zero} many {many} other {#}}", "backend": "ts" } }|]
       =*= "export const f: (x: { n: number }) => string = x => `${(() => { switch (x.n) { case 0: return `zero`; default: { switch (new Intl.PluralRules('en-US').select(x.n)) { case 'many': return `many`; default: return `${new Intl.NumberFormat('en-US').format(x.n)}`; } } } })()}`"
+    [r|{ "f": { "message": "{n, plural, many {many} other {#}}", "backend": "ts" } }|]
+      =*= "export const f: (x: { n: number }) => string = x => `${(() => { switch (new Intl.PluralRules('en-US').select(x.n)) { case 'many': return `many`; default: return `${new Intl.NumberFormat('en-US').format(x.n)}`; } })()}`"
 
   it "compiles select" $ do
     [r|{ "f": { "message": "{x, select, a {hi} b {yo}}", "backend": "ts" } }|]

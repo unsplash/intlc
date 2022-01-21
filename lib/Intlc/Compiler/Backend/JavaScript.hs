@@ -109,7 +109,9 @@ fromArg (ICU.Arg n (ICU.Callback xs))        = TApply (Ref n) <$> (fromToken `ma
 fromPlural :: Ref -> ICU.Plural -> ASTCompiler MatchOn
 fromPlural r (ICU.Cardinal (ICU.LitPlural lcs Nothing))       = (prop r,) . LitMatch <$> (fromExactPluralCase `mapM` lcs)
 fromPlural r (ICU.Cardinal (ICU.LitPlural lcs (Just w)))      = ((prop r,) .) . NonLitMatch <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
-fromPlural r (ICU.Cardinal (ICU.RulePlural rcs w))            = ((prop r,) .) . NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+fromPlural r (ICU.Cardinal (ICU.RulePlural rcs w))            = (,) <$> c <*> m
+  where c = cardinalCond r <$> ask
+        m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
 fromPlural r (ICU.Cardinal (ICU.MixedPlural lcs rcs w))       = ((prop r,) .) . RecMatch <$> (fromExactPluralCase `mapM` lcs) <*> nested
   where nested = (,) <$> (cardinalCond r <$> ask) <*> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
 fromPlural r (ICU.Ordinal (ICU.OrdinalPlural [] rcs w))       = (,) <$> c <*> m
