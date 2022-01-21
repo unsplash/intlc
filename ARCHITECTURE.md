@@ -33,7 +33,7 @@ flowchart
   end
 
   subgraph Compiler
-    compilerIntermediary[Compile to intermediary AST]
+    compilerIntermediary[Convert to intermediary AST]
     -->
     compilerCode[Compile to code string]
   end
@@ -45,7 +45,7 @@ flowchart
 
 The ICU message parser is a [recursive descent parser](https://en.wikipedia.org/wiki/Recursive_descent_parser) written with [Megaparsec](https://hackage.haskell.org/package/megaparsec). Recursive descent essentially means for the mental model that we have a recursive tree of parsers that will each try in turn to match on some amount of the text on the left-hand side of our string, progressively parsing from left-to-right until we reach the end.
 
-For example, given an ICU message `hello <bold>{name}</bold>`, we’d first try parsing for an interpolation or tag, and failing that would parse plaintext, which we’d do until we encountered a reason to stop, in this case the tag opening character. We’ve stored "hello " as plaintext and will now continue along, this time succeeding in parsing the tag. We’ll now recursively parse inside the bounds of the tag, reusing the same top-level parser we were just using, this time parsing an interpolation. Having done this we’ve consumed the entire input string and have successfully parsed a recursive list of nodes making up our AST.
+For example, given an ICU message `hello <bold>{name}</bold>`, we’d first try parsing for an interpolation or tag, and failing that would parse plaintext, which we’d do until we encountered a reason to stop, in this case the tag opening character. We’ve stored "hello " as plaintext and will now continue along, this time succeeding in parsing the tag. We’ll now recursively parse inside the bounds of the tag, reusing the same top-level parser we were just using, this time parsing an interpolation. Having done this we’ve _consumed_ the entire input string and have successfully parsed a recursive list of nodes making up our [AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree).
 
 JSON parsing is offloaded to [aeson](https://hackage.haskell.org/package/aeson).
 
