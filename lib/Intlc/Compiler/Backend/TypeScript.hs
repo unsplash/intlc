@@ -146,7 +146,7 @@ in' TEndo             = endo
 
 out :: Out -> Compiler Text
 out (TUniOut x) = uni x
-out TFragment   = pure "ReactElement"
+out TFragment   = pure "React.ReactElement"
 
 endo :: Compiler Text
 endo = do
