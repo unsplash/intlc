@@ -10,6 +10,37 @@ The CLI portion is fairly small and handles taking user input and producing outp
 
 The library is the pure functional core. It takes care of parsing and compiling, taking anticipated valid JSON input and outputting, if all goes well, a string representing code in the format of the requested backend.
 
+```mermaid
+flowchart
+  subgraph CLI
+    CLIParse[Parse CLI opts]
+    -->
+    CLIReadFile[Read file at provided path]
+
+    CLIStdOut[Print to stdout]
+  end
+
+  subgraph Library
+    Parser
+
+    Compiler
+  end
+
+  subgraph Parser
+    parserJSON[Parse JSON]
+    -->
+    parserICU[Parse ICU messages]
+  end
+
+  subgraph Compiler
+    compilerIntermediary[Compile to intermediary AST]
+    -->
+    compilerCode[Compile to code string]
+  end
+
+  CLIReadFile --> Parser --> Compiler --> CLIStdOut
+```
+
 ### Parsing
 
 The ICU message parser is a [recursive descent parser](https://en.wikipedia.org/wiki/Recursive_descent_parser) written with [Megaparsec](https://hackage.haskell.org/package/megaparsec). Recursive descent essentially means for the mental model that we have a recursive tree of parsers that will each try in turn to match on some amount of the text on the left-hand side of our string, progressively parsing from left-to-right until we reach the end.
