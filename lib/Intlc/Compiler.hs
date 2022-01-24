@@ -28,7 +28,7 @@ compileDataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
 translation :: Locale -> Text -> Translation -> Either (NonEmpty Text) Text
 translation l k (Translation v be) = validateArgs (args v) $> case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
-  TypeScriptReact -> Text.append(TS.compileReactImport() <> "\n") $ TS.compileNamedExport JSX l k v
+  TypeScriptReact -> Text.append(TS.reactImport <> "\n") $ TS.compileNamedExport JSX l k v
 
 args :: ICU.Message -> [ICU.Arg]
 args ICU.Static {}    = []
