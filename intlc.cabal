@@ -16,6 +16,7 @@ common common
       base                 ^>=4.14
     , bytestring           ^>=0.10
     , containers           ^>=0.6
+    , extra                ^>=1.7
     , mtl                  ^>=2.2
     , relude               ^>=0.7
     , text                 ^>=1.2
