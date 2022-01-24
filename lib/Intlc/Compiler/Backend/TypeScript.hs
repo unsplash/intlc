@@ -25,7 +25,7 @@ compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
 
 reactImport :: Text 
-reactImport = "import * as React from 'types/React'"
+reactImport = "import React, { ReactElement } from 'React'"
 
 fromStrat :: InterpStrat -> Out
 fromStrat TemplateLit = TUniOut TStr

@@ -1,7 +1,6 @@
 module Intlc.Compiler (compileDataset) where
 
 import qualified Data.Map                          as M
-import qualified Data.Text                         as Text
 import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..))
 import qualified Intlc.Compiler.Backend.TypeScript as TS
 import           Intlc.Compiler.Common             (validateArgs)
@@ -13,7 +12,7 @@ import           Prelude
 -- The `""` base case in `f` prevents a spare newline, acting like
 -- intercalation.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
-compileDataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
+compileDataset l = fmap ((TS.reactImport <> "\n") <>) . M.foldrWithKey ((merge .) . translation l) (Right mempty)
   where
         -- Merge two `Right`s, essentially intercalating with newlines (hence
         -- the empty accumulator base case).
@@ -28,7 +27,7 @@ compileDataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
 translation :: Locale -> Text -> Translation -> Either (NonEmpty Text) Text
 translation l k (Translation v be) = validateArgs (args v) $> case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
-  TypeScriptReact -> Text.append(TS.reactImport <> "\n") $ TS.compileNamedExport JSX l k v
+  TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
 args :: ICU.Message -> [ICU.Arg]
 args ICU.Static {}    = []
