@@ -21,6 +21,12 @@ data Token
   | Interpolation Arg
   deriving (Show, Eq)
 
+-- | Merges any sibling `Plaintext` tokens in a `Stream`.
+mergePlaintext :: Stream -> Stream
+mergePlaintext []                               = []
+mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x <> y) : zs
+mergePlaintext (x:ys)                           = x : mergePlaintext ys
+
 data Arg = Arg Text Type
   deriving (Show, Eq)
 

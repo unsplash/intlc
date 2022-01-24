@@ -50,17 +50,11 @@ type ParseErr = ParseErrorBundle Text MessageParseErr
 
 type Parser = Parsec MessageParseErr Text
 
--- | Plaintext is parsed as individual chars. Here we'll merge any siblings.
-reconcile :: Stream -> Stream
-reconcile []                               = []
-reconcile (Plaintext x : Plaintext y : zs) = reconcile $ Plaintext (x <> y) : zs
-reconcile (x:ys)                           = x : reconcile ys
-
 ident :: Parser Text
 ident = T.pack <$> some letterChar
 
 msg :: Parser Message
-msg = f . reconcile <$> manyTill token eof
+msg = f . mergePlaintext <$> manyTill token eof
   where f []            = Static ""
         f [Plaintext x] = Static x
         f (x:xs)        = Dynamic (x :| xs)
@@ -101,7 +95,7 @@ callback = do
     Right (ch, pos, cname) -> if oname == cname
        then pure (Arg oname ch)
        else e pos (BadClosingCallbackTag oname cname)
-    where children = Callback . reconcile <$> manyTill token (lookAhead $ string "</")
+    where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ string "</")
           e pos = parseError . errFancy pos . fancy . ErrorCustom
 
 interp :: Parser Arg
@@ -134,7 +128,7 @@ selectCases = (,) <$> cases <*> optional wildcard
   where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> body) hspace1
         wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> body)
         name = try $ mfilter (/= wildcardName) ident
-        body = reconcile <$> (string "{" *> manyTill token (string "}"))
+        body = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
         wildcardName = "other"
 
 cardinalPluralCases :: Text -> Parser Plural
@@ -174,7 +168,7 @@ pluralWildcard :: Text -> Parser PluralWildcard
 pluralWildcard n = PluralWildcard <$> (string "other" *> hspace1 *> pluralBody n)
 
 pluralBody :: Text -> Parser Stream
-pluralBody n = reconcile <$> (string "{" *> manyTill pluralToken (string "}"))
+pluralBody n = mergePlaintext <$> (string "{" *> manyTill pluralToken (string "}"))
   -- Plural cases support interpolating the number/argument in context with `#`.
   where pluralToken = Interpolation (Arg n Number) <$ string "#" <|> token
 
