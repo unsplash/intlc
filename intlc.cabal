@@ -44,6 +44,7 @@ library
   exposed-modules:
     Intlc.Compiler
     Intlc.Compiler.Backend.JavaScript
+    Intlc.Compiler.Backend.ICU
     Intlc.Compiler.Backend.TypeScript
     Intlc.Compiler.Common
     Intlc.Core
