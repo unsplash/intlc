@@ -1,14 +1,17 @@
-module Intlc.Compiler (compileDataset, flatten) where
+module Intlc.Compiler (compileDataset, compileFlattened, flatten) where
 
 import           Control.Applicative.Combinators   (choice)
+import           Data.Aeson                        (encode)
+import           Data.ByteString.Lazy              (ByteString)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
+import           Intlc.Compiler.Backend.ICU        (compileMsg)
 import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..))
 import qualified Intlc.Compiler.Backend.TypeScript as TS
 import           Intlc.Compiler.Common             (validateArgs)
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
-import           Prelude
+import           Prelude                           hiding (ByteString)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `merge` prevents a spare newline, acting like
@@ -38,6 +41,12 @@ args (ICU.Dynamic xs) = token `mapMaybe` toList xs
         token (ICU.Interpolation x) = Just x
 
 type ICUSelect = (NonEmpty ICU.SelectCase, Maybe ICU.SelectWildcard)
+
+compileFlattened :: Dataset Translation -> ByteString
+compileFlattened = encode . flattenDataset
+
+flattenDataset :: Dataset Translation -> Dataset UnparsedTranslation
+flattenDataset = fmap $ \(Translation msg be) -> UnparsedTranslation (compileMsg . flatten $ msg) be
 
 flatten :: ICU.Message -> ICU.Message
 flatten x@(ICU.Static _)      = x
