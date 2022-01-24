@@ -64,13 +64,7 @@ jobs:
           key: hashFiles('cabal.project.freeze')
       - name: Build
         run: cabal install exe:intlc --install-method=copy --overwrite-policy=always --installdir=dist-newstyle
-      - name: Test
-        run: ls -la dist-newstyle/
-
-  # release:
-  #   name: Release
-  #   runs-on: ubuntu-latest
-  #   uses: softprops/action-gh-release@v1
-  #   with:
-  #     files: intlc
-  #   needs: build_binary
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist-newstyle/intlc
