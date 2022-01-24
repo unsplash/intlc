@@ -9,7 +9,7 @@ import qualified Intlc.ICU                         as ICU
 import           Prelude
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
--- The `""` base case in `f` prevents a spare newline, acting like
+-- The `""` base case in `merge` prevents a spare newline, acting like
 -- intercalation.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
 compileDataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
