@@ -12,7 +12,7 @@ import           Prelude
 -- The `""` base case in `f` prevents a spare newline, acting like
 -- intercalation.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
-compileDataset l = M.foldrWithKey ((merge .) . translation l) (Right mempty)
+compileDataset l = fmap ((TS.reactImport <> "\n") <>) . M.foldrWithKey ((merge .) . translation l) (Right mempty)
   where
         -- Merge two `Right`s, essentially intercalating with newlines (hence
         -- the empty accumulator base case).

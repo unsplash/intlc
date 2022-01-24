@@ -2,7 +2,7 @@
 -- look like. The value-level output is JavaScript and resides almost entirely
 -- in the corresponding module. They have been written with one-another in mind.
 
-module Intlc.Compiler.Backend.TypeScript (compileNamedExport) where
+module Intlc.Compiler.Backend.TypeScript (compileNamedExport, reactImport) where
 
 import           Data.List                         (nubBy)
 import qualified Data.Text                         as T
@@ -23,6 +23,9 @@ compileNamedExport x l k v =
 
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
+
+reactImport :: Text 
+reactImport = "import React, { ReactElement } from 'React'"
 
 fromStrat :: InterpStrat -> Out
 fromStrat TemplateLit = TUniOut TStr
