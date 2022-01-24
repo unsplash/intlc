@@ -67,9 +67,30 @@ msg = f . reconcile <$> manyTill token eof
 
 token :: Parser Token
 token = choice
-  [ Interpolation           <$> interp
-  , Plaintext . T.singleton <$> L.charLiteral
+  [ Interpolation <$> interp
+  , Plaintext     <$> (try escaped <|> plaintext)
   ]
+
+plaintext :: Parser Text
+plaintext = T.singleton <$> L.charLiteral
+
+escaped :: Parser Text
+escaped = apos *> choice
+  -- Double escape two apostrophes as one: "''" -> "'"
+  [ "'" <$ apos
+  -- Escape everything until another apostrophe, being careful of internal
+  -- double escapes: "'{a''}'" -> "{a'}"
+  , try $ T.pack <$> someTillNotDouble L.charLiteral apos
+  -- Escape the next syntax character as plaintext: "'{" -> "{"
+  , T.singleton <$> syn
+  ]
+  where apos = char '\''
+        syn = char '{' <|> char '<'
+        -- Like `someTill`, but doesn't end upon encountering two `end` tokens,
+        -- instead consuming them as one and continuing.
+        someTillNotDouble p end = tryOne
+          where tryOne = (:) <$> p <*> go
+                go = ((:) <$> try (end <* end) <*> go) <|> (mempty <$ end) <|> tryOne
 
 callback :: Parser Arg
 callback = do

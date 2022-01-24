@@ -28,6 +28,35 @@ spec = describe "parser" $ do
     it "does not tolerate empty tags" $ do
       parse' msg `shouldFailOn` "a <> b"
 
+    describe "escaping" $ do
+      it "escapes non-empty contents between single quotes" $ do
+        parse' msg "These are not interpolations: '{word1} {word2}'" `shouldParse`
+          Static "These are not interpolations: {word1} {word2}"
+        parse' msg "'<notATag>hello</notATag>'" `shouldParse`
+          Static "<notATag>hello</notATag>"
+        parse' msg "a {b} '{c}' {d} e" `shouldParse`
+          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " {c} ", Interpolation (Arg "d" String), Plaintext " e"])
+        parse' msg "'<f>'" `shouldParse` Static "<f>"
+        parse' msg "'<f>x</f>'" `shouldParse` Static "<f>x</f>"
+        parse' msg "'<f>x</g>'" `shouldParse` Static "<f>x</g>"
+
+      it "escapes next syntax character following one unclosed single quote" $ do
+        parse' msg "This is not an interpolation: '{word}" `shouldParse` Static "This is not an interpolation: {word}"
+        parse' msg "'<notATag>" `shouldParse` Static "<notATag>"
+        parse' msg "a {b} '{c} {d} e" `shouldParse`
+          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " {c} ", Interpolation (Arg "d" String), Plaintext " e"])
+        parse' msg "a {b} 'c {d} e" `shouldParse`
+          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " 'c ", Interpolation (Arg "d" String), Plaintext " e"])
+
+      it "escapes two single quotes as one single quote" $ do
+        parse' msg "This '{isn''t}' obvious." `shouldParse` Static "This {isn't} obvious."
+        parse' msg "a {b} ''{c}'' {d} e" `shouldParse`
+          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " '", Interpolation (Arg "c" String), Plaintext "' ", Interpolation (Arg "d" String), Plaintext " e"])
+
+      it "ignores one single quote not immediately preceding a syntax character" $ do
+        parse' msg "'" `shouldParse` Static "'"
+        parse' msg "x'y" `shouldParse` Static "x'y"
+
   describe "interpolation" $ do
     it "interpolates appropriately" $ do
       parse' interp "{x}" `shouldParse` Arg "x" String
