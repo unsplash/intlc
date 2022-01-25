@@ -1,5 +1,12 @@
 name: Check
-on: [push]
+on:
+  pull_request:
+  push:
+    tags:
+      - v*.*.*
+    branches:
+      - master
+
 jobs:
   build:
     name: Build
@@ -40,3 +47,24 @@ jobs:
       - uses: haskell/actions/hlint-run@v1
         with:
           path: '["lib/", "cli/"]'
+  build_binary:
+    name: Build Binary
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v2
+      - uses: haskell/actions/setup@v1
+        id: setup-haskell
+        with:
+          ghc-version: 8.10.7
+      - run: cabal freeze
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: hashFiles('cabal.project.freeze')
+      - name: Build
+        run: cabal install exe:intlc --install-method=copy --overwrite-policy=always --installdir=dist-newstyle
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist-newstyle/intlc
