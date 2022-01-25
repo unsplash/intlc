@@ -13,7 +13,7 @@ x =*= y = f x `shouldBe` Right y
   where f = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset
 
 withReactImport :: Text -> Text
-withReactImport = ("import React, { ReactElement } from 'React'\n" <>)
+withReactImport = ("import React, { ReactElement } from 'react'\n" <>)
 
 spec :: Spec
 spec = describe "end-to-end" $ do
