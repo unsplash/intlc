@@ -9,7 +9,7 @@ data Opts
   | Flatten FilePath
 
 getOpts :: IO Opts
-getOpts = execParser (info (opts <**> helper) mempty)
+getOpts = execParser (info (opts <**> helper) (progDesc h))
   where h = "Compile ICU messages into code."
 
 opts :: Parser Opts
