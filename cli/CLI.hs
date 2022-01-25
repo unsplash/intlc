@@ -4,16 +4,24 @@ import           Intlc.Core          (Locale (..))
 import           Options.Applicative
 import           Prelude
 
-data Opts = Opts
-  { path   :: FilePath
-  , locale :: Locale
-  }
+data Opts
+  = Compile FilePath Locale
+  | Flatten FilePath
 
 getOpts :: IO Opts
 getOpts = execParser (info opts mempty)
 
 opts :: Parser Opts
-opts = Opts <$> pathp <*> localep
+opts = subparser
+  ( command "compile" (info compile mempty)
+ <> command "flatten" (info flatten mempty)
+  )
+
+compile :: Parser Opts
+compile = Compile <$> pathp <*> localep
+
+flatten :: Parser Opts
+flatten = Flatten <$> pathp
 
 pathp :: Parser FilePath
 pathp = argument str (metavar "filepath")

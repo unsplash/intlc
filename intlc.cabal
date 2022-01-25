@@ -16,6 +16,7 @@ common common
       base                 ^>=4.14
     , bytestring           ^>=0.10
     , containers           ^>=0.6
+    , extra                ^>=1.7
     , mtl                  ^>=2.2
     , relude               ^>=0.7
     , text                 ^>=1.2
@@ -43,6 +44,7 @@ library
   exposed-modules:
     Intlc.Compiler
     Intlc.Compiler.Backend.JavaScript
+    Intlc.Compiler.Backend.ICU
     Intlc.Compiler.Backend.TypeScript
     Intlc.Compiler.Common
     Intlc.Core
