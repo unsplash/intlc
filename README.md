@@ -1,15 +1,25 @@
 # intlc
 
-For the time being the CLI has the following interface:
+Compile ICU messages into code.
 
 ```
-intlc filepath (-l|--locale ARG)
+Usage: intlc COMMAND
+  Compile ICU messages into code.
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  compile
+  flatten
 ```
 
 For example:
 
 ```
-$ cabal run -- intlc ./translations.json -l en-US
+$ intlc compile ./translations.json -l en-US
 ```
+
+---
 
 Currently building against GHC 8.10.7.
