@@ -51,6 +51,7 @@ jobs:
     name: Build Binary
     runs-on: ubuntu-latest
     if: startsWith(github.event.ref, 'refs/tags/v')
+    needs: [build, test, lint]
     steps:
       - uses: actions/checkout@v2
       - uses: haskell/actions/setup@v1
