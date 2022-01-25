@@ -9,12 +9,13 @@ data Opts
   | Flatten FilePath
 
 getOpts :: IO Opts
-getOpts = execParser (info opts mempty)
+getOpts = execParser (info (opts <**> helper) mempty)
+  where h = "Compile ICU messages into code."
 
 opts :: Parser Opts
 opts = subparser
-  ( command "compile" (info compile mempty)
- <> command "flatten" (info flatten mempty)
+  ( command "compile" (info (compile <**> helper) mempty)
+ <> command "flatten" (info (flatten <**> helper) mempty)
   )
 
 compile :: Parser Opts
