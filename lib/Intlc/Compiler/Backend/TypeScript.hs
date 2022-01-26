@@ -7,7 +7,6 @@ module Intlc.Compiler.Backend.TypeScript (compileNamedExport, reactImport) where
 import           Data.List                         (nubBy)
 import qualified Data.Text                         as T
 import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..),
-                                                    Pieces (..),
                                                     compileStmtPieces)
 import           Intlc.Core                        (Locale)
 import qualified Intlc.ICU                         as ICU
@@ -16,15 +15,13 @@ import           Utils                             ((<>^))
 
 compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
 compileNamedExport x l k v =
-  let (p, n, r) = compileStmtPieces x l k v
-   in case p of
-    ConstantPieces -> "export const " <> n <> ": " <> compileTypeof x v <> " = '" <> r <> "'"
-    LambdaPieces   -> "export const " <> n <> ": " <> compileTypeof x v <> " = x => " <> r
+  let (n, r) = compileStmtPieces x l k v
+   in "export const " <> n <> ": " <> compileTypeof x v <> " = x => " <> r
 
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
 
-reactImport :: Text 
+reactImport :: Text
 reactImport = "import React, { ReactElement } from 'react'"
 
 fromStrat :: InterpStrat -> Out
@@ -34,13 +31,8 @@ fromStrat JSX         = TFragment
 -- | A representation of the type-level output we will be compiling. It's a
 -- little verbose split into these various sum types, but in doing so it's
 -- correct by construction.
-data TypeOf
-  = Constant
-  | Lambda Args Out
+data TypeOf = Lambda Args Out
 
--- This should really be `NonEmpty`, but we can't guarantee that based upon the
--- ICU AST.
---
 -- Avoid `Map` due to its `Ord` constraint.
 type Args = [(Text, In)]
 
@@ -62,7 +54,7 @@ data Out
   | TFragment
 
 fromMsg :: Out -> ICU.Message -> TypeOf
-fromMsg _ ICU.Static {}    = Constant
+fromMsg x ICU.Static {}    = Lambda mempty x
 fromMsg x (ICU.Dynamic ys) = Lambda (fromToken =<< toList ys) x
 
 fromToken :: ICU.Token -> Args
@@ -119,7 +111,6 @@ union :: [Text] -> Text
 union = T.intercalate " | "
 
 typeof :: TypeOf -> Compiler Text
-typeof Constant      = uni TStr
 typeof (Lambda as r) = lambda as r
 
 lambda :: Args -> Out -> Compiler Text
