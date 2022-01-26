@@ -51,8 +51,12 @@ jobs:
     name: Build Binary
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        os:
+          [
+            { name: "linux", runner: "ubuntu-latest" },
+            { name: "macos", runner: "macos-latest" },
+          ]
+    runs-on: ${{ matrix.os.runner }}
     if: startsWith(github.event.ref, 'refs/tags/v')
     needs: [build, test, lint]
     steps:
@@ -69,8 +73,8 @@ jobs:
       - name: Build
         run: |
           cabal install exe:intlc --install-method=copy --overwrite-policy=always --installdir=dist-newstyle
-          mv dist-newstyle/intlc "dist-newstyle/intlc_${{ matrix.os }}"
+          mv dist-newstyle/intlc "dist-newstyle/intlc_${{ matrix.os.name }}"
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: "dist-newstyle/intlc_${{ matrix.os }}"
+          files: "dist-newstyle/intlc_${{ matrix.os.name }}"
