@@ -69,8 +69,8 @@ jobs:
       - name: Build
         run: |
           cabal install exe:intlc --install-method=copy --overwrite-policy=always --installdir=dist-newstyle
-          mv dist-newstyle/intlc "dist-newstyle/intlc-${{ matrix.os }}"
+          mv dist-newstyle/intlc "dist-newstyle/intlc_${{ matrix.os }}"
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist-newstyle/intlc
+          files: "dist-newstyle/intlc_${{ matrix.os }}"
