@@ -16,7 +16,10 @@ import           Utils                             ((<>^))
 compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
 compileNamedExport x l k v =
   let (n, r) = compileStmtPieces x l k v
-   in "export const " <> n <> ": " <> compileTypeof x v <> " = x => " <> r
+      arg = case v of
+        ICU.Static {}  -> "()"
+        ICU.Dynamic {} -> "x"
+   in "export const " <> n <> ": " <> compileTypeof x v <> " = " <> arg <> " => " <> r
 
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
@@ -118,6 +121,7 @@ lambda as r = args (dedupe as) <>^ pure " => " <>^ out r
   where dedupe = nubBy ((==) `on` fst)
 
 args :: Args -> Compiler Text
+args [] = pure "()"
 args xs = do
   y <- T.intercalate "; " <$> mapM (uncurry arg) xs
   pure $ "(" <> argName <> ": { " <> y <> " })"
