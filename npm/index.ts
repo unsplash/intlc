@@ -1,6 +1,10 @@
+#!/usr/bin/env node
+
 import * as A from "fp-ts/Array";
+import * as Apply from "fp-ts/Apply";
 import * as ChildProcess from "child_process";
 import * as E from "fp-ts/Either";
+import * as Fs from "fs";
 import * as Https from "https";
 import * as IOE from "fp-ts/IOEither";
 import * as O from "fp-ts/Option";
@@ -38,8 +42,10 @@ type OS = "macos" | "linux";
 // __dirname will point to the dist/ folder since the code is transpiled prior to being ran with node.
 const root = Path.resolve(__dirname, "..");
 const dist = Path.resolve(root, "dist");
+const originalIntlcBinLocation = Path.resolve(dist, "intlc");
 // Github api requires having a user agent header. This can be literally anything.
 const userAgent = "unsplash-intlc";
+const rename = Util.promisify(Fs.rename);
 
 const decode =
   <A>(codec: t.Decoder<unknown, A>) =>
@@ -71,7 +77,7 @@ const decode =
 const getErrorOrElse = (defaultErrorMessage: string) => (error: unknown) =>
   error instanceof Error ? error : new Error(defaultErrorMessage);
 
-const runChildProcess = (command: string) =>
+const execChildProcess = (command: string) =>
   pipe(
     TE.tryCatch(
       () => pipe(Util.promisify(ChildProcess.exec), apply(command)),
@@ -103,7 +109,7 @@ const getOSFromPlatform = (platform: NodeJS.Platform): O.Option<OS> => {
   }
 };
 
-const fetchReleaseAsset = (tag: string, os: OS) =>
+const fetchAssetFromRelease = (tag: string, os: OS) =>
   TE.tryCatch((): Promise<Asset> => {
     return new Promise((resolve, reject) => {
       let body: string = "";
@@ -167,8 +173,19 @@ const downloadAsset = (asset: Asset) =>
         ),
       getErrorOrElse("Could not download binary")
     ),
-    TE.chainFirst((_) =>
-      runChildProcess(`chmod +x ${Path.resolve(dist, "intlc")}`)
+    TE.chainFirst(() =>
+      pipe(
+        Apply.sequenceT(TE.ApplicativePar)(
+          execChildProcess(`chmod +x ${originalIntlcBinLocation}`),
+          execChildProcess("npm bin")
+        ),
+        TE.map(([_chmodOutput, pathToBinDir]) =>
+          rename(
+            originalIntlcBinLocation,
+            Path.join(pathToBinDir.toString().trim(), "intlc")
+          )
+        )
+      )
     )
   );
 
@@ -185,7 +202,7 @@ pipe(
     pipe(
       getOSFromPlatform(OS.platform()),
       TE.fromOption(() => new Error("No binary can be found for your OS")),
-      TE.chain((os) => fetchReleaseAsset(tag, os))
+      TE.chain((os) => fetchAssetFromRelease(tag, os))
     )
   ),
   TE.chainFirst(downloadAsset),
