@@ -62,7 +62,9 @@ test-suite test-intlc
   type:                     exitcode-stdio-1.0
   build-depends:
       intlc
+    , filepath              ^>=1.4
     , hspec                 ^>=2.7
+    , hspec-golden          ^>=0.2
     , hspec-megaparsec      ^>=2.2
     , megaparsec            ^>=9.0
     , raw-strings-qq        ^>=1.1
