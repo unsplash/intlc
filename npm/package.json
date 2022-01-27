@@ -1,15 +1,15 @@
 {
   "name": "@unsplash/intlc",
-  "private": true,
   "version": "0.1.1-0",
   "description": "intlc wrapper that makes it available as a local dependency",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "postinstall": "./dist/index.js"
+    "postinstall": "./dist/index.js",
+    "prepublishOnly": "rm -rf dist/ && tsc"
   },
   "files": [
-    "dist/index.js"
+    "./dist"
   ],
   "author": "Unsplash <dev@unsplash.com>",
   "devDependencies": {
