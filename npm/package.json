@@ -1,7 +1,7 @@
 {
   "name": "@unsplash/intlc",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1-0",
   "description": "intlc wrapper that makes it available as a local dependency",
   "main": "index.js",
   "license": "MIT",
