@@ -1,6 +1,7 @@
 cabal-version:             2.2
 name:                      intlc
 version:                   0.1.0
+license:                   MIT
 build-type:                Simple
 
 common common
