@@ -1,0 +1,14 @@
+{
+  "name": "@unsplash/intlc",
+  "version": "0.2.0",
+  "description": "intlc wrapper that makes it available as a local dependency",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Unsplash <dev@unsplash.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^4.5.5"
+  }
+}
