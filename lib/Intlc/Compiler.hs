@@ -51,7 +51,7 @@ flattenDataset = fmap $ \(Translation msg be) -> UnparsedTranslation (compileMsg
 flatten :: ICU.Message -> ICU.Message
 flatten x@(ICU.Static _)      = x
 flatten (ICU.Dynamic xs)      = ICU.Dynamic . fromList . flattenStream . toList $ xs
-  where flattenStream :: [ICU.Token] -> [ICU.Token]
+  where flattenStream :: ICU.Stream -> ICU.Stream
         flattenStream ys = fromMaybe ys $ choice
           [ mapSelect <$> extractFirstSelect ys
           , mapPlural <$> extractFirstPlural ys
