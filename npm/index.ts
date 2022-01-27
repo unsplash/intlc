@@ -38,6 +38,8 @@ type OS = "macos" | "linux";
 // __dirname will point to the dist/ folder since the code is transpiled prior to being ran with node.
 const root = Path.resolve(__dirname, "..");
 const dist = Path.resolve(root, "dist");
+// Github api requires having a user agent header. This can be literally anything.
+const userAgent = "unsplash-intlc";
 
 const decode =
   <A>(codec: t.Decoder<unknown, A>) =>
@@ -111,7 +113,7 @@ const fetchReleaseAsset = (tag: string, os: OS) =>
           protocol: "https:",
           path: `/repos/unsplash/intlc/releases/tags/${tag}`,
           headers: {
-            "user-agent": "node.js",
+            "user-agent": userAgent,
           },
         },
         (response) => {
@@ -158,7 +160,7 @@ const downloadAsset = (asset: Asset) =>
           {
             filename: "intlc",
             headers: {
-              "user-agent": "unsplash-intlc",
+              "user-agent": userAgent,
               Accept: "application/octet-stream",
             },
           }
