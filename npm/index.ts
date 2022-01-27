@@ -182,7 +182,7 @@ pipe(
   TE.chain((tag) =>
     pipe(
       getOSFromPlatform(OS.platform()),
-      TE.fromOption(() => new Error("No binary will be available for your OS")),
+      TE.fromOption(() => new Error("No binary can be found for your OS")),
       TE.chain((os) => fetchReleaseAsset(tag, os))
     )
   ),
