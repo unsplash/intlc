@@ -35,11 +35,6 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.12.tgz#f7aa331b27f08244888c47b7df126184bc2339c5"
   integrity sha512-4YpbAsnJXWYK/fpTVFlMIcUIho2AYCi4wg5aNPrG1ng7fn/1/RZfCIpRCiBX+12RVa34RluilnvCqD+g3KiSiA==
 
-"@unsplash/sum-types@^0.2.1":
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/@unsplash/sum-types/-/sum-types-0.2.1.tgz#ff0807c841804145ccc363f24c948301d9add578"
-  integrity sha512-5piAoNMCGJaJ99Ee5JYlpvBPlnxNp/ghaJhcktCm/Dvxjlh43OcVwjPD8pXrykL2BGBosvhotET3yx8hTj7Kwg==
-
 archive-type@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/archive-type/-/archive-type-4.0.0.tgz#f92e72233056dfc6969472749c267bdb046b1d70"
