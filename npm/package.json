@@ -3,9 +3,14 @@
   "version": "0.2.0",
   "description": "intlc wrapper that makes it available as a local dependency",
   "main": "index.js",
-  "scripts": {},
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "./dist/index.js"
+  },
+  "files": [
+    "dist/index.js"
+  ],
   "author": "Unsplash <dev@unsplash.com>",
-  "license": "ISC",
   "devDependencies": {
     "@types/download": "^8.0.1",
     "@types/node": "^17.0.12",
