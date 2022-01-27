@@ -1,8 +1,8 @@
 import * as A from "fp-ts/Array";
 import * as ChildProcess from "child_process";
 import * as E from "fp-ts/Either";
-import * as Fs from "fs";
 import * as Https from "https";
+import * as IOE from "fp-ts/IOEither";
 import * as O from "fp-ts/Option";
 import * as OS from "os";
 import * as Path from "path";
@@ -33,16 +33,11 @@ const Release = t.type(
 );
 
 type Release = t.TypeOf<typeof Release>;
-
-const Package = t.type({ version: t.string }, "Package");
-type Package = t.TypeOf<typeof Package>;
-
 type OS = "macos" | "linux";
 
 // __dirname will point to the dist/ folder since the code is transpiled prior to being ran with node.
 const root = Path.resolve(__dirname, "..");
 const dist = Path.resolve(root, "dist");
-const readFileP = Util.promisify(Fs.readFile);
 
 const decode =
   <A>(codec: t.Decoder<unknown, A>) =>
@@ -105,12 +100,6 @@ const getOSFromPlatform = (platform: NodeJS.Platform): O.Option<OS> => {
     return O.none;
   }
 };
-
-const readFile = (path: string) =>
-  TE.tryCatch(
-    () => readFileP(Path.resolve(root, path), { encoding: "utf-8" }),
-    getErrorOrElse(`Could not read file at path: "${path}"`)
-  );
 
 const fetchReleaseAsset = (tag: string, os: OS) =>
   TE.tryCatch((): Promise<Asset> => {
@@ -181,14 +170,15 @@ const downloadAsset = (asset: Asset) =>
     )
   );
 
+const getTag: IOE.IOEither<Error, string> = () =>
+  pipe(
+    process.argv,
+    A.lookup(2),
+    E.fromOption(() => new Error("Missing required git tag"))
+  );
+
 pipe(
-  readFile("package.json"),
-  TE.chainEitherK(
-    flow(
-      decode(Package),
-      E.map((x) => `v${x.version}`)
-    )
-  ),
+  TE.fromIOEither(getTag),
   TE.chain((tag) =>
     pipe(
       getOSFromPlatform(OS.platform()),
