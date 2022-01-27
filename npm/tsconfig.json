@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "strict": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "esModuleInterop": true
   },
   "files": ["./index.ts"]
 }
