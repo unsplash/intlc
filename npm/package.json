@@ -3,12 +3,18 @@
   "version": "0.2.0",
   "description": "intlc wrapper that makes it available as a local dependency",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "scripts": {},
   "author": "Unsplash <dev@unsplash.com>",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^17.0.12",
+    "@unsplash/sum-types": "^0.2.1",
+    "fp-ts": "^2.11.8",
     "typescript": "^4.5.5"
-  }
+  },
+  "peerDependencies": {
+    "@unsplash/sum-types": "^0.2.1",
+    "fp-ts": "^2.11.8"
+  },
+  "dependencies": {}
 }
