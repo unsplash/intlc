@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 import * as A from "fp-ts/Array";
-import * as Apply from "fp-ts/Apply";
-import * as ChildProcess from "child_process";
 import * as E from "fp-ts/Either";
 import * as Fs from "fs";
 import * as Https from "https";
@@ -14,7 +12,8 @@ import * as TE from "fp-ts/TaskEither";
 import * as Util from "util";
 import * as t from "io-ts";
 
-import { apply, flow, pipe } from "fp-ts/function";
+import { execChildProcess, getErrorOrElse } from "./helpers";
+import { flow, pipe } from "fp-ts/function";
 
 import { PathReporter } from "io-ts/PathReporter";
 import download from "download";
@@ -73,26 +72,6 @@ const decode =
       })
     );
   };
-
-const getErrorOrElse = (defaultErrorMessage: string) => (error: unknown) =>
-  error instanceof Error ? error : new Error(defaultErrorMessage);
-
-const execChildProcess = (command: string) =>
-  pipe(
-    TE.tryCatch(
-      () => pipe(Util.promisify(ChildProcess.exec), apply(command)),
-      getErrorOrElse(`Could not run ${command}`)
-    ),
-    TE.chain(({ stderr, stdout }) => {
-      if (stderr.length > 0) {
-        return TE.left(
-          new Error(`Error running command: ${stderr.toString()}`)
-        );
-      } else {
-        return TE.right(stdout);
-      }
-    })
-  );
 
 const getOSFromPlatform = (platform: NodeJS.Platform): O.Option<OS> => {
   const isWindows = platform === "win32";
@@ -174,18 +153,7 @@ const downloadAsset = (asset: Asset) =>
       getErrorOrElse("Could not download binary")
     ),
     TE.chainFirst(() =>
-      pipe(
-        Apply.sequenceT(TE.ApplicativePar)(
-          execChildProcess(`chmod +x ${originalIntlcBinLocation}`),
-          execChildProcess("npm bin")
-        ),
-        TE.map(([_chmodOutput, pathToBinDir]) =>
-          rename(
-            originalIntlcBinLocation,
-            Path.join(pathToBinDir.toString().trim(), "intlc")
-          )
-        )
-      )
+      execChildProcess(`chmod +x ${originalIntlcBinLocation}`)
     )
   );
 

@@ -8,7 +8,7 @@
     "prepublishOnly": "rm -rf dist/ && tsc"
   },
   "bin": {
-    "intlc": "dist/intlc"
+    "intlc": "dist/run-intlc"
   },
   "files": [
     "dist"

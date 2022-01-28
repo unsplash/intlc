@@ -4,5 +4,6 @@
     "outDir": "./dist",
     "esModuleInterop": true
   },
-  "files": ["./index.ts"]
+  "include": ["**/*.ts"],
+  "exclude": ["./dist"]
 }
