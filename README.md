@@ -1,5 +1,10 @@
 # intlc
 
+## Disclaimer
+
+**Currently for internal use but feedback/external usage welcome**
+
+
 Compile ICU messages into code.
 
 ```

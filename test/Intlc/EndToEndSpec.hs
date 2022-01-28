@@ -1,16 +1,32 @@
 module Intlc.EndToEndSpec (spec) where
 
 import           Data.ByteString.Lazy (ByteString)
+import qualified Data.Text            as T
 import           Intlc.Compiler       (compileDataset)
 import           Intlc.Core           (Locale (Locale))
 import           Intlc.Parser         (parseDataset)
 import           Prelude              hiding (ByteString)
+import           System.FilePath      ((<.>), (</>))
 import           Test.Hspec
+import           Test.Hspec.Golden    (Golden (..), defaultGolden)
 import           Text.RawString.QQ    (r)
 
+parseAndCompileDataset :: ByteString -> Either (NonEmpty Text) Text
+parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset
+
+golden :: String -> ByteString -> Golden String
+golden name in' = baseCfg
+  { goldenFile = goldenFile baseCfg <.> "ts"
+  , actualFile = actualFile baseCfg <&> (<.> "ts")
+  }
+  where baseCfg = defaultGolden fileName out
+        fileName = "e2e" </> name
+        out = T.unpack . fromErrs . parseAndCompileDataset $ in'
+        fromErrs (Right x) = x
+        fromErrs (Left es) = T.intercalate "\n" . toList $ es
+
 (=*=) :: ByteString -> Text -> IO ()
-x =*= y = f x `shouldBe` Right y
-  where f = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset
+x =*= y = parseAndCompileDataset x `shouldBe` Right y
 
 withReactImport :: Text -> Text
 withReactImport = ("import React, { ReactElement } from 'react'\n" <>)
@@ -18,16 +34,15 @@ withReactImport = ("import React, { ReactElement } from 'react'\n" <>)
 spec :: Spec
 spec = describe "end-to-end" $ do
   it "example message" $ do
-    [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]
-      =*= withReactImport "export const greeting: (x: { bold: (x: string) => string; name: string; age: number }) => string = x => `Hello ${x.bold(`${x.name}`)}, ${new Intl.NumberFormat('en-US').format(x.age)}!`\nexport const title: string = 'Unsplash'"
+    golden "example" [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]
 
   it "parses and discards descriptions" $ do
     [r|{ "brand": { "message": "Unsplash", "description": "The company name" } }|]
-      =*= withReactImport "export const brand: string = 'Unsplash'"
+      =*= withReactImport "export const brand: () => string = () => 'Unsplash'"
 
   it "outputs in alphabetical order" $ do
     [r|{ "x": { "message": "" }, "A": { "message": "" }, "z": { "message": "" } }|]
-      =*= withReactImport "export const A: string = ''\nexport const x: string = ''\nexport const z: string = ''"
+      =*= withReactImport "export const A: () => string = () => ''\nexport const x: () => string = () => ''\nexport const z: () => string = () => ''"
 
   it "compiles plurals" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]

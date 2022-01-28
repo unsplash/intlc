@@ -1,4 +1,4 @@
-module Intlc.Compiler.Backend.JavaScript (Pieces (..), InterpStrat (..), compileStmt, compileStmtPieces) where
+module Intlc.Compiler.Backend.JavaScript (InterpStrat (..), compileStmt, compileStmtPieces) where
 
 import           Intlc.Core (Locale (Locale))
 import qualified Intlc.ICU  as ICU
@@ -16,15 +16,11 @@ data Cfg = Cfg
   , interp :: Interp
   }
 
--- Offers cheap extensibility with TypeScript over rendering statements.
-data Pieces
-  = ConstantPieces
-  | LambdaPieces
-
 compileStmt :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
 compileStmt = compileWith stmt
 
-compileStmtPieces :: InterpStrat -> Locale -> Text -> ICU.Message -> (Pieces, Text, Text)
+-- Offers cheap extensibility with TypeScript over rendering statements.
+compileStmtPieces :: InterpStrat -> Locale -> Text -> ICU.Message -> (Text, Text)
 compileStmtPieces = compileWith stmtPieces
 
 compileWith :: (Stmt -> Compiler a) -> InterpStrat -> Locale -> Text -> ICU.Message -> a
@@ -61,11 +57,7 @@ fromStrat JSX         = Interp
 -- | A representation of the output we will be compiling. It's a little verbose
 -- split into these various sum types, but in doing so it's correct by
 -- construction.
-data Stmt = Stmt Text Ret
-
-data Ret
-  = Constant Text
-  | Lambda (NonEmpty Expr)
+data Stmt = Stmt Text (NonEmpty Expr)
 
 data Expr
   = TPrint Text
@@ -89,8 +81,8 @@ data Branch = Branch Text [Expr]
 newtype Wildcard = Wildcard [Expr]
 
 fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
-fromKeyedMsg n (ICU.Static x)   = pure $ Stmt n (Constant x)
-fromKeyedMsg n (ICU.Dynamic ys) = Stmt n . Lambda <$> (fromToken `mapM` ys)
+fromKeyedMsg n (ICU.Static x)   = pure $ Stmt n (pure $ TPrint x)
+fromKeyedMsg n (ICU.Dynamic ys) = Stmt n <$> (fromToken `mapM` ys)
 
 fromToken :: ICU.Token -> ASTCompiler Expr
 fromToken (ICU.Plaintext x)     = pure $ TPrint x
@@ -168,11 +160,11 @@ interpc x = do
 
 stmt :: Stmt -> Compiler Text
 stmt = fmap f . stmtPieces
-  where f (_, n, r) = "export const " <> n <> " = " <> r
+  where f (n, r) = "export const " <> n <> " = " <> r
 
-stmtPieces :: Stmt -> Compiler (Pieces, Text, Text)
-stmtPieces (Stmt n (Constant r)) = pure (ConstantPieces, n, r)
-stmtPieces (Stmt n (Lambda xs))  = (LambdaPieces, n, ) <$> (wrap =<< exprs xs)
+stmtPieces :: Stmt -> Compiler (Text, Text)
+stmtPieces (Stmt n ((TPrint x):|[])) = pure (n, "'" <> x <> "'")
+stmtPieces (Stmt n xs)               = (n, ) <$> (wrap =<< exprs xs)
 
 exprs :: Foldable f => f Expr -> Compiler Text
 exprs = foldMapM expr
@@ -221,4 +213,4 @@ dateTimeFmt :: ICU.DateTimeFmt -> Text
 dateTimeFmt ICU.Short  = "short"
 dateTimeFmt ICU.Medium = "medium"
 dateTimeFmt ICU.Long   = "long"
-dateTimeFmt  ICU.Full   = "full"
+dateTimeFmt ICU.Full   = "full"
