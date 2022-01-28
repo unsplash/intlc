@@ -2,7 +2,7 @@
 
 _This package is public for convenience but has peer requirements over `fp-ts` and all so it wouldn't necessarily make sense for all kinds of codebases_
 
-Wrappers that installs the requested `intlc` binary for your OS and make it available as local dependency.
+Wrapper that installs the requested `intlc` binary for your OS and make it available as local dependency.
 
 ### Publishing
 

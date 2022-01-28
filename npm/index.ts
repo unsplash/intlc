@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as A from "fp-ts/Array";
+import * as ChildProcess from "child_process";
 import * as E from "fp-ts/Either";
 import * as Fs from "fs";
 import * as Https from "https";
@@ -12,11 +13,10 @@ import * as TE from "fp-ts/TaskEither";
 import * as Util from "util";
 import * as t from "io-ts";
 
-import {flow, pipe, apply} from 'fp-ts/function';
+import { apply, flow, pipe } from "fp-ts/function";
 
 import { PathReporter } from "io-ts/PathReporter";
 import download from "download";
-import * as ChildProcess from 'child_process';
 
 const Asset = t.type(
   {
@@ -41,14 +41,11 @@ type OS = "macos" | "linux";
 // __dirname will point to the dist/ folder since the code is transpiled prior to being ran with node.
 const root = Path.resolve(__dirname, "..");
 const dist = Path.resolve(root, "dist");
-const originalIntlcBinLocation = Path.resolve(dist, "intlc");
 // Github api requires having a user agent header. This can be literally anything.
 const userAgent = "unsplash-intlc";
 
-
-const getErrorOrElse =
-  (defaultErrorMessage: string) => (error: unknown) =>
-    error instanceof Error ? error : new Error(defaultErrorMessage);
+const getErrorOrElse = (defaultErrorMessage: string) => (error: unknown) =>
+  error instanceof Error ? error : new Error(defaultErrorMessage);
 
 const execChildProcess = (command: string) =>
   pipe(
@@ -174,7 +171,7 @@ const downloadAsset = (asset: Asset) =>
       getErrorOrElse("Could not download binary")
     ),
     TE.chainFirst(() =>
-      execChildProcess(`chmod +x ${originalIntlcBinLocation}`)
+      execChildProcess(`chmod +x ${Path.resolve(dist, "intlc")}`)
     )
   );
 
