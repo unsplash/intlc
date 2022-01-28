@@ -1,14 +1,14 @@
 {
   "name": "@unsplash/intlc",
-  "version": "0.1.1-9",
+  "version": "1.0.0",
   "description": "intlc wrapper that makes it available as a local dependency",
   "license": "MIT",
   "scripts": {
     "postinstall": "node dist/index.js v0.2.0",
-    "prepublishOnly": "rm -rf dist/ && tsc"
+    "prepublishOnly": "rm -rf ./dist && tsc && touch ./dist/intlc"
   },
   "bin": {
-    "intlc": "dist/run-intlc"
+    "intlc": "./dist/intlc"
   },
   "files": [
     "dist"

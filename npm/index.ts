@@ -12,11 +12,11 @@ import * as TE from "fp-ts/TaskEither";
 import * as Util from "util";
 import * as t from "io-ts";
 
-import { execChildProcess, getErrorOrElse } from "./helpers";
-import { flow, pipe } from "fp-ts/function";
+import {flow, pipe, apply} from 'fp-ts/function';
 
 import { PathReporter } from "io-ts/PathReporter";
 import download from "download";
+import * as ChildProcess from 'child_process';
 
 const Asset = t.type(
   {
@@ -44,7 +44,28 @@ const dist = Path.resolve(root, "dist");
 const originalIntlcBinLocation = Path.resolve(dist, "intlc");
 // Github api requires having a user agent header. This can be literally anything.
 const userAgent = "unsplash-intlc";
-const rename = Util.promisify(Fs.rename);
+
+
+const getErrorOrElse =
+  (defaultErrorMessage: string) => (error: unknown) =>
+    error instanceof Error ? error : new Error(defaultErrorMessage);
+
+const execChildProcess = (command: string) =>
+  pipe(
+    TE.tryCatch(
+      () => pipe(Util.promisify(ChildProcess.exec), apply(command)),
+      getErrorOrElse(`Could not run ${command}`)
+    ),
+    TE.chain(({ stderr, stdout }) => {
+      if (stderr.length > 0) {
+        return TE.left(
+          new Error(`Error running command: ${stderr.toString()}`)
+        );
+      } else {
+        return TE.right(stdout);
+      }
+    })
+  );
 
 const decode =
   <A>(codec: t.Decoder<unknown, A>) =>
