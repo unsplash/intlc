@@ -63,9 +63,7 @@ spec = describe "parser" $ do
 
     it "only accepts alphanumeric identifiers" $ do
       parse' interp "{XyZ}" `shouldParse` Arg "XyZ" String
-      parse' interp "<XyZ></XyZ>" `shouldParse` Arg "XyZ" (Callback [])
       parse' interp `shouldFailOn` "{x y}"
-      parse' interp `shouldFailOn` "<x y></x y>"
 
     describe "date" $ do
       it "disallows bad formats" $ do
@@ -91,6 +89,10 @@ spec = describe "parser" $ do
 
       parse' callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
       parse' callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
+
+    it "only accepts alphanumeric identifiers" $ do
+      parse' callback "<XyZ></XyZ>" `shouldParse` Arg "XyZ" (Callback [])
+      parse' callback `shouldFailOn` "<x y></x y>"
 
   describe "plural" $ do
     it "disallows wildcard not at the end" $ do
