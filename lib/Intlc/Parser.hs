@@ -33,6 +33,9 @@ instance ShowErrorComponent MessageParseErr where
   showErrorComponent (NoClosingCallbackTag x)    = "Callback tag <" <> T.unpack x <> "> not closed"
   showErrorComponent (BadClosingCallbackTag x y) = "Callback tag <" <> T.unpack x <> "> not closed, instead found </" <> T.unpack y <> ">"
 
+failingWith :: MonadParsec e s m => Int -> e -> m a
+pos `failingWith` e = parseError . errFancy pos . fancy . ErrorCustom $ e
+
 printErr :: ParseFailure -> String
 printErr FailedJsonParse        = "Failed to parse JSON"
 printErr (FailedMessageParse e) = errorBundlePretty e
@@ -91,12 +94,11 @@ callback = do
   oname <- string "<" *> ident <* ">"
   mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
-    Left _  -> e 1 (NoClosingCallbackTag oname)
+    Left _  -> 1 `failingWith` NoClosingCallbackTag oname
     Right (ch, pos, cname) -> if oname == cname
        then pure (Arg oname ch)
-       else e pos (BadClosingCallbackTag oname cname)
+       else pos `failingWith` BadClosingCallbackTag oname cname
     where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ string "</")
-          e pos = parseError . errFancy pos . fancy . ErrorCustom
 
 interp :: Parser Arg
 interp = choice
