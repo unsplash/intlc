@@ -14,6 +14,15 @@ parse' = flip parse "test"
 spec :: Spec
 spec = describe "parser" $ do
   describe "message" $ do
+    it "does not tolerate unclosed braces" $ do
+      parse' msg `shouldFailOn` "a { b"
+
+    it "does not tolerate interpolations with a bad type" $ do
+      parse' msg `shouldFailOn` "a {n, bool} b"
+
+    it "does not tolerate empty braces" $ do
+      parse' msg `shouldFailOn` "a {} b"
+
     it "does not tolerate empty tags" $ do
       parse' msg `shouldFailOn` "a <> b"
 
