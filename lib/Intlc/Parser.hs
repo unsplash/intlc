@@ -64,7 +64,7 @@ msg = f . mergePlaintext <$> manyTill token eof
 
 token :: Parser Token
 token = choice
-  [ Interpolation <$> interp
+  [ Interpolation <$> (interp <|> callback)
   , Plaintext     <$> (try escaped <|> plaintext)
   ]
 
@@ -101,14 +101,14 @@ callback = do
     where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ string "</")
 
 interp :: Parser Arg
-interp = choice
-  [ try $ do
-      n <- string "{" *> ident
-      Arg n <$> body n <* string "}"
-  , callback
-  ]
+interp = do
+  n <- string "{" *> ident
+  Arg n <$> choice
+    [ String <$ string "}"
+    , sep *> body n <* string "}"
+    ]
   where sep = string "," <* hspace1
-        body n = option String $ sep *> choice
+        body n = choice
           [ Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)

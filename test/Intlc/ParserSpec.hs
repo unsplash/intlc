@@ -14,17 +14,6 @@ parse' = flip parse "test"
 spec :: Spec
 spec = describe "parser" $ do
   describe "message" $ do
-    it "tolerates unclosed braces" $ do
-      parse' msg "a {b} c { d" `shouldParse`
-        Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " c { d"])
-
-    it "tolerates empty braces" $ do
-      parse' msg "a {b} c {} d {e, number}" `shouldParse`
-        Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " c {} d ", Interpolation (Arg "e" Number)])
-
-    it "tolerates interpolations with a bad type" $ do
-      parse' msg "{n, bool}" `shouldParse` Static "{n, bool}"
-
     it "does not tolerate empty tags" $ do
       parse' msg `shouldFailOn` "a <> b"
 
@@ -64,6 +53,10 @@ spec = describe "parser" $ do
     it "only accepts alphanumeric identifiers" $ do
       parse' interp "{XyZ}" `shouldParse` Arg "XyZ" String
       parse' interp `shouldFailOn` "{x y}"
+
+    it "disallows bad types" $ do
+      parse' msg `shouldFailOn` "{n, bool}"
+      parse' msg `shouldFailOn` "{n, int, one {x} other {y}}"
 
     describe "date" $ do
       it "disallows bad formats" $ do
