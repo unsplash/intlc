@@ -1,9 +1,9 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Intlc.Compiler        (flatten)
-import           Intlc.Compiler.Common (validateArgs)
+import           Intlc.Backend.Common (validateArgs)
+import           Intlc.Compiler       (flatten)
 import           Intlc.ICU
-import           Prelude               hiding (one)
+import           Prelude              hiding (one)
 import           Test.Hspec
 
 spec :: Spec

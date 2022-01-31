@@ -1,17 +1,17 @@
 module Intlc.Compiler (compileDataset, compileFlattened, flatten) where
 
-import           Control.Applicative.Combinators   (choice)
-import           Data.Aeson                        (encode)
-import           Data.ByteString.Lazy              (ByteString)
-import           Data.List.Extra                   (firstJust)
-import qualified Data.Map                          as M
-import           Intlc.Compiler.Backend.ICU        (compileMsg)
-import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..))
-import qualified Intlc.Compiler.Backend.TypeScript as TS
-import           Intlc.Compiler.Common             (validateArgs)
+import           Control.Applicative.Combinators (choice)
+import           Data.Aeson                      (encode)
+import           Data.ByteString.Lazy            (ByteString)
+import           Data.List.Extra                 (firstJust)
+import qualified Data.Map                        as M
+import           Intlc.Backend.Common            (validateArgs)
+import           Intlc.Backend.ICU               (compileMsg)
+import           Intlc.Backend.JavaScript        (InterpStrat (..))
+import qualified Intlc.Backend.TypeScript        as TS
 import           Intlc.Core
-import qualified Intlc.ICU                         as ICU
-import           Prelude                           hiding (ByteString)
+import qualified Intlc.ICU                       as ICU
+import           Prelude                         hiding (ByteString)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `merge` prevents a spare newline, acting like

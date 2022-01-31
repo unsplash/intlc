@@ -6,7 +6,7 @@
 -- instead used post-flattening. Additionally it only operates upon individual
 -- ICU messages, offloading JSON handling to the caller.
 
-module Intlc.Compiler.Backend.ICU where
+module Intlc.Backend.ICU where
 
 import           Intlc.ICU
 import           Prelude

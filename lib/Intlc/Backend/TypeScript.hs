@@ -2,16 +2,15 @@
 -- look like. The value-level output is JavaScript and resides almost entirely
 -- in the corresponding module. They have been written with one-another in mind.
 
-module Intlc.Compiler.Backend.TypeScript (compileNamedExport, reactImport) where
+module Intlc.Backend.TypeScript (compileNamedExport, reactImport) where
 
-import           Data.List                         (nubBy)
-import qualified Data.Text                         as T
-import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..),
-                                                    compileStmtPieces)
-import           Intlc.Core                        (Locale)
-import qualified Intlc.ICU                         as ICU
-import           Prelude                           hiding (Type)
-import           Utils                             ((<>^))
+import           Data.List                (nubBy)
+import qualified Data.Text                as T
+import           Intlc.Backend.JavaScript (InterpStrat (..), compileStmtPieces)
+import           Intlc.Core               (Locale)
+import qualified Intlc.ICU                as ICU
+import           Prelude                  hiding (Type)
+import           Utils                    ((<>^))
 
 compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
 compileNamedExport x l k v =

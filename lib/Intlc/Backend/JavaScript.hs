@@ -1,4 +1,4 @@
-module Intlc.Compiler.Backend.JavaScript (InterpStrat (..), compileStmt, compileStmtPieces) where
+module Intlc.Backend.JavaScript (InterpStrat (..), compileStmt, compileStmtPieces) where
 
 import           Intlc.Core (Locale (Locale))
 import qualified Intlc.ICU  as ICU
