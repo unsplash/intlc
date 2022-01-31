@@ -1,6 +1,6 @@
 module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces) where
 
-import           Intlc.Backend.JavaScript.Language hiding (argName, prop)
+import           Intlc.Backend.JavaScript.Language
 import           Intlc.Core                        (Locale (Locale))
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (Type, fromList)
@@ -96,10 +96,11 @@ apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
 
 match :: MatchOn -> Compiler Text
 match = fmap iife . go
-  where go (MatchOn n _ m) = case m of
-          LitMatch bs      -> switch n <$> branches bs
-          NonLitMatch bs w -> switch n <$> wildBranches bs w
-          RecMatch bs m'   -> switch n <$> recBranches bs (go m')
+  where go (MatchOn n c m) = case m of
+          LitMatch bs      -> switch <$> cond <*> branches bs
+          NonLitMatch bs w -> switch <$> cond <*> wildBranches bs w
+          RecMatch bs m'   -> switch <$> cond <*> recBranches bs (go m')
+          where cond = matchCond n c
         iife x = "(() => { " <> x <> " })()"
         switch x ys = "switch (" <> x <> ") { " <> ys <> " }"
         branches xs = concatBranches . toList <$> mapM branch xs
@@ -109,6 +110,13 @@ match = fmap iife . go
           where wildcard (Wildcard xs') = pure "default: return " <>^ (wrap =<< exprs xs') <>^ pure ";"
         recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
           where nest x = "default: { " <> x <> " }"
+
+matchCond :: Text -> MatchCondition -> Compiler Text
+matchCond n LitCond                = pure . prop . Ref $ n
+matchCond n CardinalPluralRuleCond = f <$> asks locale
+  where f (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop (Ref n) <> ")"
+matchCond n OrdinalPluralRuleCond  = f <$> asks locale
+  where f (Locale l) = "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop (Ref n) <> ")"
 
 date :: Ref -> ICU.DateTimeFmt -> Compiler Text
 date n d = do
