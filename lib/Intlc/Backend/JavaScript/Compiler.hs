@@ -111,12 +111,12 @@ match = fmap iife . go
         recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
           where nest x = "default: { " <> x <> " }"
 
-matchCond :: Text -> MatchCondition -> Compiler Text
-matchCond n LitCond                = pure . prop . Ref $ n
+matchCond :: Ref -> MatchCondition -> Compiler Text
+matchCond n LitCond                = pure . prop $ n
 matchCond n CardinalPluralRuleCond = f <$> asks locale
-  where f (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop (Ref n) <> ")"
+  where f (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop n <> ")"
 matchCond n OrdinalPluralRuleCond  = f <$> asks locale
-  where f (Locale l) = "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop (Ref n) <> ")"
+  where f (Locale l) = "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop n <> ")"
 
 date :: Ref -> ICU.DateTimeFmt -> Compiler Text
 date n d = do
