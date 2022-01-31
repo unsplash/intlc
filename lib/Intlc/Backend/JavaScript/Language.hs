@@ -20,9 +20,9 @@ data Expr
   | TApply Ref [Expr]
   | TMatch MatchOn
 
-data MatchOn = MatchOn Ref MatchCondition MatchRet
+data MatchOn = MatchOn Ref MatchCond MatchRet
 
-data MatchCondition
+data MatchCond
   = LitCond
   | CardinalPluralRuleCond
   | OrdinalPluralRuleCond

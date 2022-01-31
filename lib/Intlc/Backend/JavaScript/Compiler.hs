@@ -111,7 +111,7 @@ match = fmap iife . go where
   recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
     where nest x = "default: { " <> x <> " }"
 
-matchCond :: Ref -> MatchCondition -> Compiler Text
+matchCond :: Ref -> MatchCond -> Compiler Text
 matchCond n LitCond                = pure . prop $ n
 matchCond n CardinalPluralRuleCond = f <$> asks locale
   where f (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop n <> ")"
