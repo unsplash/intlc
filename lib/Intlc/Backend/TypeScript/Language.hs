@@ -16,8 +16,8 @@ data Uni
 
 data In
   = TUniIn Uni
-  | TStrLitUnion [Text]
-  | TNumLitUnion [Text]
+  | TStrLitUnion (NonEmpty Text)
+  | TNumLitUnion (NonEmpty Text)
   | TNum
   | TDate
   -- An endomorphism on `Out`. Omitted as an argument to enforce that it's the
@@ -46,7 +46,7 @@ fromArg (ICU.Arg n (ICU.Select cs mw)) = (n, t) : (fromSelectCase =<< toList cs)
   -- When there's no wildcard case we can compile to a union of string literals.
   where t = case mw of
               Just _  -> TUniIn TStr
-              Nothing -> TStrLitUnion . toList $ caseLit <$> cs
+              Nothing -> TStrLitUnion $ caseLit <$> cs
         caseLit (ICU.SelectCase x _) = x
 fromArg (ICU.Arg n (ICU.Callback xs))  = (n, TEndo) : (fromToken =<< xs)
 
@@ -55,7 +55,7 @@ fromPlural n (ICU.Cardinal (ICU.LitPlural ls mw))      = (n, t) : (fromExactPlur
   -- When there's no wildcard case we can compile to a union of number literals.
   where t = case mw of
               Just _  -> TNum
-              Nothing -> TNumLitUnion . toList $ caseLit <$> ls
+              Nothing -> TNumLitUnion $ caseLit <$> ls
         caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
 fromPlural n (ICU.Cardinal (ICU.RulePlural rs w))      = (n, TNum) : (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
 fromPlural n (ICU.Cardinal (ICU.MixedPlural ls rs w))  = (n, TNum) : (fromExactPluralCase =<< toList ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w

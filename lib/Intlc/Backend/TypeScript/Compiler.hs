@@ -38,8 +38,8 @@ type Compiler = Reader Out
 argName :: Text
 argName = "x"
 
-union :: [Text] -> Text
-union = T.intercalate " | "
+union :: Foldable f => f Text -> Text
+union = T.intercalate " | " . toList
 
 typeof :: TypeOf -> Compiler Text
 typeof (Lambda as r) = lambda as r
