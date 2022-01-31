@@ -97,9 +97,9 @@ apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
 match :: MatchOn -> Compiler Text
 match = fmap iife . go where
   go (MatchOn n c m) = case m of
-    LitMatch bs      -> switch <$> cond <*> branches bs
-    NonLitMatch bs w -> switch <$> cond <*> wildBranches bs w
-    RecMatch bs m'   -> switch <$> cond <*> recBranches bs (go m')
+    LitMatchRet bs      -> switch <$> cond <*> branches bs
+    NonLitMatchRet bs w -> switch <$> cond <*> wildBranches bs w
+    RecMatchRet bs m'   -> switch <$> cond <*> recBranches bs (go m')
     where cond = matchCond n c
   iife x = "(() => { " <> x <> " })()"
   switch x ys = "switch (" <> x <> ") { " <> ys <> " }"
