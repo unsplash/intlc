@@ -95,21 +95,21 @@ apply :: Ref -> [Expr] -> Compiler Text
 apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
 
 match :: MatchOn -> Compiler Text
-match = fmap iife . go
-  where go (MatchOn n c m) = case m of
-          LitMatch bs      -> switch <$> cond <*> branches bs
-          NonLitMatch bs w -> switch <$> cond <*> wildBranches bs w
-          RecMatch bs m'   -> switch <$> cond <*> recBranches bs (go m')
-          where cond = matchCond n c
-        iife x = "(() => { " <> x <> " })()"
-        switch x ys = "switch (" <> x <> ") { " <> ys <> " }"
-        branches xs = concatBranches . toList <$> mapM branch xs
-          where branch (Branch x ys) = pure ("case " <> x <> ": return ") <>^ (wrap =<< exprs ys) <>^ pure ";"
-                concatBranches = unwords
-        wildBranches xs w = (<>) <$> branches xs <*> ((" " <>) <$> wildcard w)
-          where wildcard (Wildcard xs') = pure "default: return " <>^ (wrap =<< exprs xs') <>^ pure ";"
-        recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
-          where nest x = "default: { " <> x <> " }"
+match = fmap iife . go where
+  go (MatchOn n c m) = case m of
+    LitMatch bs      -> switch <$> cond <*> branches bs
+    NonLitMatch bs w -> switch <$> cond <*> wildBranches bs w
+    RecMatch bs m'   -> switch <$> cond <*> recBranches bs (go m')
+    where cond = matchCond n c
+  iife x = "(() => { " <> x <> " })()"
+  switch x ys = "switch (" <> x <> ") { " <> ys <> " }"
+  branches xs = concatBranches . toList <$> mapM branch xs
+    where branch (Branch x ys) = pure ("case " <> x <> ": return ") <>^ (wrap =<< exprs ys) <>^ pure ";"
+          concatBranches = unwords
+  wildBranches xs w = (<>) <$> branches xs <*> ((" " <>) <$> wildcard w)
+    where wildcard (Wildcard xs') = pure "default: return " <>^ (wrap =<< exprs xs') <>^ pure ";"
+  recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
+    where nest x = "default: { " <> x <> " }"
 
 matchCond :: Ref -> MatchCondition -> Compiler Text
 matchCond n LitCond                = pure . prop $ n

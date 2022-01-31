@@ -59,21 +59,20 @@ fromArg (ICU.Arg nraw t) =
   where n = Ref nraw
 
 fromPlural :: Ref -> ICU.Plural -> ASTCompiler MatchOn
-fromPlural r p =
-  case p of
-    ICU.Cardinal (ICU.LitPlural lcs mw)            -> MatchOn r LitCond <$> case mw of
-      Nothing -> LitMatch    <$> (fromExactPluralCase `mapM` lcs)
-      Just w  -> NonLitMatch <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
-    ICU.Cardinal (ICU.RulePlural rcs w)            -> MatchOn r CardinalPluralRuleCond <$> m
-      where m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-    ICU.Cardinal (ICU.MixedPlural lcs rcs w)       -> MatchOn r LitCond <$> m
-      where m = RecMatch <$> (fromExactPluralCase `mapM` lcs) <*> (MatchOn r CardinalPluralRuleCond <$> im)
-            im = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-    ICU.Ordinal (ICU.OrdinalPlural [] rcs w)       -> MatchOn r OrdinalPluralRuleCond <$> m
-      where m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-    ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w) -> MatchOn r LitCond <$> m
-      where m = RecMatch <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
-            im = MatchOn r OrdinalPluralRuleCond <$> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
+fromPlural r p = case p of
+  ICU.Cardinal (ICU.LitPlural lcs mw)            -> MatchOn r LitCond <$> case mw of
+    Nothing -> LitMatch    <$> (fromExactPluralCase `mapM` lcs)
+    Just w  -> NonLitMatch <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
+  ICU.Cardinal (ICU.RulePlural rcs w)            -> MatchOn r CardinalPluralRuleCond <$> m
+    where m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+  ICU.Cardinal (ICU.MixedPlural lcs rcs w)       -> MatchOn r LitCond <$> m
+    where m = RecMatch <$> (fromExactPluralCase `mapM` lcs) <*> (MatchOn r CardinalPluralRuleCond <$> im)
+          im = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+  ICU.Ordinal (ICU.OrdinalPlural [] rcs w)       -> MatchOn r OrdinalPluralRuleCond <$> m
+    where m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+  ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w) -> MatchOn r LitCond <$> m
+    where m = RecMatch <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
+          im = MatchOn r OrdinalPluralRuleCond <$> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromToken `mapM` xs)
