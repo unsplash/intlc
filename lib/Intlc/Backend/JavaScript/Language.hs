@@ -18,9 +18,9 @@ data Expr
   | TDate Ref ICU.DateTimeFmt
   | TTime Ref ICU.DateTimeFmt
   | TApply Ref [Expr]
-  | TMatch MatchOn
+  | TMatch Match
 
-data MatchOn = MatchOn Ref MatchCond MatchRet
+data Match = Match Ref MatchCond MatchRet
 
 data MatchCond
   = LitCond
@@ -30,7 +30,7 @@ data MatchCond
 data MatchRet
   = LitMatchRet (NonEmpty Branch)
   | NonLitMatchRet (NonEmpty Branch) Wildcard
-  | RecMatchRet (NonEmpty Branch) MatchOn
+  | RecMatchRet (NonEmpty Branch) Match
 
 newtype Ref = Ref Text
 
@@ -53,26 +53,26 @@ fromArg (ICU.Arg nraw t) =
     ICU.Date x             -> pure $ TDate n x
     ICU.Time x             -> pure $ TTime n x
     ICU.Plural x           -> TMatch <$> fromPlural n x
-    ICU.Select cs (Just w) -> ((TMatch . MatchOn n LitCond) .) . NonLitMatchRet <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
-    ICU.Select cs Nothing  -> TMatch . MatchOn n LitCond . LitMatchRet <$> (fromSelectCase `mapM` cs)
+    ICU.Select cs (Just w) -> ((TMatch . Match n LitCond) .) . NonLitMatchRet <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
+    ICU.Select cs Nothing  -> TMatch . Match n LitCond . LitMatchRet <$> (fromSelectCase `mapM` cs)
     ICU.Callback xs        -> TApply n <$> (fromToken `mapM` xs)
   where n = Ref nraw
 
-fromPlural :: Ref -> ICU.Plural -> ASTCompiler MatchOn
+fromPlural :: Ref -> ICU.Plural -> ASTCompiler Match
 fromPlural r p = case p of
-  ICU.Cardinal (ICU.LitPlural lcs mw)            -> MatchOn r LitCond <$> case mw of
+  ICU.Cardinal (ICU.LitPlural lcs mw)            -> Match r LitCond <$> case mw of
     Nothing -> LitMatchRet    <$> (fromExactPluralCase `mapM` lcs)
     Just w  -> NonLitMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
-  ICU.Cardinal (ICU.RulePlural rcs w)            -> MatchOn r CardinalPluralRuleCond <$> m
+  ICU.Cardinal (ICU.RulePlural rcs w)            -> Match r CardinalPluralRuleCond <$> m
     where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-  ICU.Cardinal (ICU.MixedPlural lcs rcs w)       -> MatchOn r LitCond <$> m
-    where m = RecMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> (MatchOn r CardinalPluralRuleCond <$> im)
+  ICU.Cardinal (ICU.MixedPlural lcs rcs w)       -> Match r LitCond <$> m
+    where m = RecMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> (Match r CardinalPluralRuleCond <$> im)
           im = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-  ICU.Ordinal (ICU.OrdinalPlural [] rcs w)       -> MatchOn r OrdinalPluralRuleCond <$> m
+  ICU.Ordinal (ICU.OrdinalPlural [] rcs w)       -> Match r OrdinalPluralRuleCond <$> m
     where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-  ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w) -> MatchOn r LitCond <$> m
+  ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w) -> Match r LitCond <$> m
     where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
-          im = MatchOn r OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
+          im = Match r OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromToken `mapM` xs)

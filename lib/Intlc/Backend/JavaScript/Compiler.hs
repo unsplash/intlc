@@ -94,9 +94,9 @@ expr (TMatch x)    = interpc =<< match x
 apply :: Ref -> [Expr] -> Compiler Text
 apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
 
-match :: MatchOn -> Compiler Text
+match :: Match -> Compiler Text
 match = fmap iife . go where
-  go (MatchOn n c m) = case m of
+  go (Match n c m) = case m of
     LitMatchRet bs      -> switch <$> cond <*> branches bs
     NonLitMatchRet bs w -> switch <$> cond <*> wildBranches bs w
     RecMatchRet bs m'   -> switch <$> cond <*> recBranches bs (go m')
