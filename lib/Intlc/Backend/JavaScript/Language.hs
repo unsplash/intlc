@@ -62,24 +62,24 @@ fromArg (ICU.Arg nraw t) =
   where n = Ref nraw
 
 fromPlural :: Ref -> ICU.Plural -> ASTCompiler MatchOn
-fromPlural r (ICU.Cardinal (ICU.LitPlural lcs Nothing))       = (prop r,) . LitMatch <$> (fromExactPluralCase `mapM` lcs)
-fromPlural r (ICU.Cardinal (ICU.LitPlural lcs (Just w)))      = ((prop r,) .) . NonLitMatch <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
-fromPlural r (ICU.Cardinal (ICU.RulePlural rcs w))            = (,) <$> c <*> m
-  where c = cardinalCond r <$> ask
-        m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-fromPlural r (ICU.Cardinal (ICU.MixedPlural lcs rcs w))       = ((prop r,) .) . RecMatch <$> (fromExactPluralCase `mapM` lcs) <*> nested
-  where nested = (,) <$> (cardinalCond r <$> ask) <*> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
-fromPlural r (ICU.Ordinal (ICU.OrdinalPlural [] rcs w))       = (,) <$> c <*> m
-  where c = ordinalCond r <$> ask
-        m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-fromPlural r (ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w)) = ((prop r,) .) . RecMatch <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> nested
-  where nested = (,) <$> (ordinalCond r <$> ask) <*> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
-
-cardinalCond :: Ref -> Locale -> Text
-cardinalCond r (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop r <> ")"
-
-ordinalCond :: Ref -> Locale -> Text
-ordinalCond r (Locale l) = "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop r <> ")"
+fromPlural r p =
+  case p of
+    ICU.Cardinal (ICU.LitPlural lcs mw)            -> (litCond,) <$> case mw of
+      Nothing -> LitMatch    <$> (fromExactPluralCase `mapM` lcs)
+      Just w  -> NonLitMatch <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
+    ICU.Cardinal (ICU.RulePlural rcs w)            -> (,) <$> cardinalCond <*> m
+      where m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+    ICU.Cardinal (ICU.MixedPlural lcs rcs w)       -> (litCond,) <$> m
+      where m = RecMatch <$> (fromExactPluralCase `mapM` lcs) <*> ((,) <$> cardinalCond <*> im)
+            im = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+    ICU.Ordinal (ICU.OrdinalPlural [] rcs w)       -> (,) <$> ordinalCond <*> m
+      where m = NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+    ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w) -> (litCond,) <$> m
+      where m = RecMatch <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
+            im = (,) <$> ordinalCond <*> (NonLitMatch <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
+  where litCond = prop r
+        cardinalCond = (\(Locale l) -> "new Intl.PluralRules('" <> l <> "').select(" <> prop r <> ")") <$> ask
+        ordinalCond = (\(Locale l) -> "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop r <> ")") <$> ask
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromToken `mapM` xs)
