@@ -96,7 +96,7 @@ apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
 
 match :: MatchOn -> Compiler Text
 match = fmap iife . go
-  where go (n, m) = case m of
+  where go (n, _, m) = case m of
           LitMatch bs      -> switch n <$> branches bs
           NonLitMatch bs w -> switch n <$> wildBranches bs w
           RecMatch bs m'   -> switch n <$> recBranches bs (go m')
