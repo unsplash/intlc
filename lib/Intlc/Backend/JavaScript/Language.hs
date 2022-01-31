@@ -49,14 +49,17 @@ fromToken (ICU.Plaintext x)     = pure $ TPrint x
 fromToken (ICU.Interpolation x) = fromArg x
 
 fromArg :: ICU.Arg -> ASTCompiler Expr
-fromArg (ICU.Arg n ICU.String)               = pure $ TStr   (Ref n)
-fromArg (ICU.Arg n ICU.Number)               = pure $ TNum   (Ref n)
-fromArg (ICU.Arg n (ICU.Date x))             = pure $ TDate  (Ref n) x
-fromArg (ICU.Arg n (ICU.Time x))             = pure $ TTime  (Ref n) x
-fromArg (ICU.Arg n (ICU.Plural x))           = TMatch <$> fromPlural (Ref n) x
-fromArg (ICU.Arg n (ICU.Select cs (Just w))) = ((TMatch . (prop (Ref n),)) .) . NonLitMatch <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
-fromArg (ICU.Arg n (ICU.Select cs Nothing))  = TMatch . (prop (Ref n),) . LitMatch <$> (fromSelectCase `mapM` cs)
-fromArg (ICU.Arg n (ICU.Callback xs))        = TApply (Ref n) <$> (fromToken `mapM` xs)
+fromArg (ICU.Arg nraw t) =
+  case t of
+    ICU.String             -> pure $ TStr n
+    ICU.Number             -> pure $ TNum n
+    ICU.Date x             -> pure $ TDate n x
+    ICU.Time x             -> pure $ TTime n x
+    ICU.Plural x           -> TMatch <$> fromPlural n x
+    ICU.Select cs (Just w) -> ((TMatch . (prop n,)) .) . NonLitMatch <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
+    ICU.Select cs Nothing  -> TMatch . (prop n,) . LitMatch <$> (fromSelectCase `mapM` cs)
+    ICU.Callback xs        -> TApply n <$> (fromToken `mapM` xs)
+  where n = Ref nraw
 
 fromPlural :: Ref -> ICU.Plural -> ASTCompiler MatchOn
 fromPlural r (ICU.Cardinal (ICU.LitPlural lcs Nothing))       = (prop r,) . LitMatch <$> (fromExactPluralCase `mapM` lcs)
