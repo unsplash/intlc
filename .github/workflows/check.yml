@@ -47,6 +47,16 @@ jobs:
       - uses: haskell/actions/hlint-run@v1
         with:
           path: '["lib/", "cli/"]'
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # stylish-haskell doesn't have a check/dry run option, so we'll run it
+      # against files in place and test if there are any diffs with Git.
+      - run: |
+          curl -sL https://raw.github.com/haskell/stylish-haskell/master/scripts/latest.sh | sh -s 'lib/ src/ test/ -ri'
+          git diff-index --exit-code HEAD
   build_binary:
     name: Build Binary
     strategy:
