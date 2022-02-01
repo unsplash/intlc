@@ -14,16 +14,14 @@ parse' = flip parse "test"
 spec :: Spec
 spec = describe "parser" $ do
   describe "message" $ do
-    it "tolerates unclosed braces" $ do
-      parse' msg "a {b} c { d" `shouldParse`
-        Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " c { d"])
+    it "does not tolerate unclosed braces" $ do
+      parse' msg `shouldFailOn` "a { b"
 
-    it "tolerates empty braces" $ do
-      parse' msg "a {b} c {} d {e, number}" `shouldParse`
-        Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " c {} d ", Interpolation (Arg "e" Number)])
+    it "does not tolerate interpolations with a bad type" $ do
+      parse' msg `shouldFailOn` "a {n, bool} b"
 
-    it "tolerates interpolations with a bad type" $ do
-      parse' msg "{n, bool}" `shouldParse` Static "{n, bool}"
+    it "does not tolerate empty braces" $ do
+      parse' msg `shouldFailOn` "a {} b"
 
     it "does not tolerate empty tags" $ do
       parse' msg `shouldFailOn` "a <> b"
@@ -63,9 +61,11 @@ spec = describe "parser" $ do
 
     it "only accepts alphanumeric identifiers" $ do
       parse' interp "{XyZ}" `shouldParse` Arg "XyZ" String
-      parse' interp "<XyZ></XyZ>" `shouldParse` Arg "XyZ" (Callback [])
       parse' interp `shouldFailOn` "{x y}"
-      parse' interp `shouldFailOn` "<x y></x y>"
+
+    it "disallows bad types" $ do
+      parse' msg `shouldFailOn` "{n, bool}"
+      parse' msg `shouldFailOn` "{n, int, one {x} other {y}}"
 
     describe "date" $ do
       it "disallows bad formats" $ do
@@ -91,6 +91,10 @@ spec = describe "parser" $ do
 
       parse' callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
       parse' callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
+
+    it "only accepts alphanumeric identifiers" $ do
+      parse' callback "<XyZ></XyZ>" `shouldParse` Arg "XyZ" (Callback [])
+      parse' callback `shouldFailOn` "<x y></x y>"
 
   describe "plural" $ do
     it "disallows wildcard not at the end" $ do
