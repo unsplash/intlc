@@ -26,6 +26,26 @@ spec = describe "parser" $ do
     it "does not tolerate empty tags" $ do
       parse' msg `shouldFailOn` "a <> b"
 
+    describe "plural hash" $ do
+      it "parses as plaintext outside of plurals" $ do
+        parse' msg "#" `shouldParse` Static "#"
+
+      it "parses as arg inside shallow plural" $ do
+        let n = pure . Interpolation $ Arg "n" Number
+        parse' msg "{n, plural, one {#} other {#}}" `shouldParse`
+          (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
+            RulePlural (pure $ PluralCase One n) (PluralWildcard n))
+
+      it "parses as nearest arg inside deep plural" $ do
+        let n = pure . Interpolation $ Arg "n" Number
+        let i = pure . Interpolation $ Arg "i" Number
+        parse' msg "{n, plural, one {{i, plural, one {#} other {#}}} other {#}}" `shouldParse`
+          (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
+            RulePlural (pure $ PluralCase One (
+              pure . Interpolation . Arg "i" . Plural . Cardinal $
+                RulePlural (pure $ PluralCase One i) (PluralWildcard i)
+            )) (PluralWildcard n))
+
     describe "escaping" $ do
       it "escapes non-empty contents between single quotes" $ do
         parse' msg "These are not interpolations: '{word1} {word2}'" `shouldParse`
