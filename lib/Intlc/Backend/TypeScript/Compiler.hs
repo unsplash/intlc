@@ -32,7 +32,7 @@ isTsx (Translation _m  be) = case be of
 
 
 buildReactImport :: Dataset Translation -> Text
-buildReactImport =  maybe "" (const ("import React, { ReactElement } from 'react'" <> "\n")) . find isTsx . toList
+buildReactImport =  maybe "" (const ("import React, { ReactElement } from 'react'" <> "\n")) . find isTsx
 
 fromStrat :: InterpStrat -> Out
 fromStrat TemplateLit = TUniOut TStr
