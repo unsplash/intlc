@@ -2,6 +2,9 @@
 --   * Consume all whitespace after tokens where possible.
 --   * Therefore, assume no whitespace before tokens.
 
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+
 module Intlc.Parser where
 
 import qualified Control.Applicative.Combinators.NonEmpty as NE
@@ -13,8 +16,9 @@ import           Data.Void                                ()
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude                                  hiding (ByteString)
-import           Text.Megaparsec                          hiding (Stream, Token,
-                                                           many, some, token)
+import           Text.Megaparsec                          hiding (State, Stream,
+                                                           Token, many, some,
+                                                           token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer               as L
 import           Text.Megaparsec.Error.Builder
@@ -47,11 +51,19 @@ parseDataset = parse' <=< decode'
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
 parseTranslationFor name (UnparsedTranslation umsg be) =
-  flip Translation be <$> parse msg (T.unpack name) umsg
+  flip Translation be <$> evalState (runParserT msg (T.unpack name) umsg) initialState
 
 type ParseErr = ParseErrorBundle Text MessageParseErr
 
-type Parser = Parsec MessageParseErr Text
+data ParserState = ParserState
+  -- FIFO. The head is the most recent addition to the stack.
+  { pluralArgNameStack :: [Text]
+  }
+
+initialState :: ParserState
+initialState = ParserState mempty
+
+type Parser = ParsecT MessageParseErr Text (State ParserState)
 
 ident :: Parser Text
 ident = T.pack <$> some letterChar

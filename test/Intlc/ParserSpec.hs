@@ -4,12 +4,12 @@ import           Intlc.ICU
 import           Intlc.Parser
 import           Prelude               hiding (ByteString)
 import           Test.Hspec
-import           Test.Hspec.Megaparsec
-import           Text.Megaparsec       (ParseErrorBundle, Parsec, parse)
+import           Test.Hspec.Megaparsec hiding (initialState)
+import           Text.Megaparsec       (ParseErrorBundle, runParserT)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
-parse' :: Parsec e s a -> s -> Either (ParseErrorBundle s e) a
-parse' = flip parse "test"
+parse' :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
+parse' p x = evalState (runParserT p "test" x) initialState
 
 spec :: Spec
 spec = describe "parser" $ do
