@@ -8,8 +8,11 @@ import           Test.Hspec.Megaparsec hiding (initialState)
 import           Text.Megaparsec       (ParseErrorBundle, runParserT)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
+parseWith :: ParserState -> Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
+parseWith s p x = evalState (runParserT p "test" x) s
+
 parse' :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
-parse' p x = evalState (runParserT p "test" x) initialState
+parse' = parseWith initialState
 
 spec :: Spec
 spec = describe "parser" $ do
@@ -44,6 +47,14 @@ spec = describe "parser" $ do
             RulePlural (pure $ PluralCase One (
               pure . Interpolation . Arg "i" . Plural . Cardinal $
                 RulePlural (pure $ PluralCase One i) (PluralWildcard i)
+            )) (PluralWildcard n))
+
+      it "parses as arg nested inside other interpolation" $ do
+        let n = pure . Interpolation $ Arg "n" Number
+        parse' msg "{n, plural, one {<f>#</f>} other {#}}" `shouldParse`
+          (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
+            RulePlural (pure $ PluralCase One (
+              pure . Interpolation . Arg "f" . Callback $ n
             )) (PluralWildcard n))
 
     describe "escaping" $ do
@@ -118,45 +129,45 @@ spec = describe "parser" $ do
 
   describe "plural" $ do
     it "disallows wildcard not at the end" $ do
-      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=1 {foo} other {bar}"
-      parse' (cardinalPluralCases "any") `shouldFailOn` "other {bar} =1 {foo}"
+      parse' cardinalPluralCases `shouldSucceedOn` "=1 {foo} other {bar}"
+      parse' cardinalPluralCases `shouldFailOn` "other {bar} =1 {foo}"
 
     it "tolerates empty cases" $ do
-      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=1 {} other {}"
+      parse' cardinalPluralCases `shouldSucceedOn` "=1 {} other {}"
 
     it "requires at least one non-wildcard case" $ do
-      parse' (cardinalPluralCases "any") `shouldFailOn` "other {foo}"
-      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=0 {foo} other {bar}"
-      parse' (cardinalPluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
+      parse' cardinalPluralCases `shouldFailOn` "other {foo}"
+      parse' cardinalPluralCases `shouldSucceedOn` "=0 {foo} other {bar}"
+      parse' cardinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
 
     it "requires a wildcard if there are any rule cases" $ do
-      parse' (cardinalPluralCases "any") `shouldFailOn`    "=0 {foo} one {bar}"
-      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
-      parse' (cardinalPluralCases "any") `shouldSucceedOn` "=0 {foo} =1 {bar}"
+      parse' cardinalPluralCases `shouldFailOn`    "=0 {foo} one {bar}"
+      parse' cardinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse' cardinalPluralCases `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parse' (cardinalPluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (ParserState ["xyz"]) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "selectordinal" $ do
     it "disallows wildcard not at the end" $ do
-      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
-      parse' (ordinalPluralCases "any") `shouldFailOn` "other {bar} one {foo}"
+      parse' ordinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
+      parse' ordinalPluralCases `shouldFailOn` "other {bar} one {foo}"
 
     it "tolerates empty cases" $ do
-      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {} other {}"
+      parse' ordinalPluralCases `shouldSucceedOn` "one {} other {}"
 
     it "requires at least one rule" $ do
-      parse' (ordinalPluralCases "any") `shouldFailOn` "other {foo}"
-      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {foo} other {bar}"
-      parse' (ordinalPluralCases "any") `shouldSucceedOn` "one {foo} two {bar} other {baz}"
+      parse' ordinalPluralCases `shouldFailOn` "other {foo}"
+      parse' ordinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
+      parse' ordinalPluralCases `shouldSucceedOn` "one {foo} two {bar} other {baz}"
 
     it "requires a wildcard" $ do
-      parse' (ordinalPluralCases "any") `shouldFailOn`    "=0 {foo} one {bar}"
-      parse' (ordinalPluralCases "any") `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse' ordinalPluralCases `shouldFailOn`    "=0 {foo} one {bar}"
+      parse' ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parse' (cardinalPluralCases "xyz") "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (ParserState ["xyz"]) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "select" $ do
