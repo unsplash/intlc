@@ -3,8 +3,6 @@
 import * as A from "fp-ts/Array";
 import * as ChildProcess from "child_process";
 import * as E from "fp-ts/Either";
-import * as Fs from "fs";
-import * as Https from "https";
 import * as IOE from "fp-ts/IOEither";
 import * as O from "fp-ts/Option";
 import * as OS from "os";
@@ -12,10 +10,11 @@ import * as Path from "path";
 import * as TE from "fp-ts/TaskEither";
 import * as Util from "util";
 import * as t from "io-ts";
+import fetch from "node-fetch";
 
 import { apply, flow, pipe } from "fp-ts/function";
 
-import { PathReporter } from "io-ts/PathReporter";
+import { failure } from "io-ts/PathReporter";
 import download from "download";
 
 const Asset = t.type(
@@ -66,30 +65,11 @@ const execChildProcess = (command: string) =>
 
 const decode =
   <A>(codec: t.Decoder<unknown, A>) =>
-  (input: string): E.Either<Error, A> => {
-    return pipe(
-      E.tryCatch(
-        () => JSON.parse(input),
-        (_error) => new Error(`Failed at decoding ${codec.name}: ${input}`)
-      ),
-      E.chain((input) => {
-        const decoded = codec.decode(input);
-
-        // very strange stuff here...
-        if (E.isLeft(decoded)) {
-          return E.left(
-            pipe(
-              PathReporter.report(decoded),
-              (messages) => messages.join("\n"),
-              (message) => new Error(message)
-            )
-          );
-        } else {
-          return decoded;
-        }
-      })
+  (input: unknown): E.Either<Error, A> =>
+    pipe(
+      codec.decode(input),
+      E.mapLeft((errors) => new Error(failure(errors).join("\n")))
     );
-  };
 
 const getOSFromPlatform = (platform: NodeJS.Platform): O.Option<OS> => {
   const isWindows = platform === "win32";
@@ -107,51 +87,31 @@ const getOSFromPlatform = (platform: NodeJS.Platform): O.Option<OS> => {
 };
 
 const fetchAssetFromRelease = (tag: string, os: OS) =>
-  TE.tryCatch((): Promise<Asset> => {
-    return new Promise((resolve, reject) => {
-      let body: string = "";
-      const request = Https.get(
-        {
-          host: "api.github.com",
-          protocol: "https:",
-          path: `/repos/unsplash/intlc/releases/tags/${tag}`,
-          headers: {
-            "user-agent": userAgent,
-          },
-        },
-        (response) => {
-          response.setEncoding("utf8");
-
-          // Urgh...
-          response.on("data", (chunk) => {
-            body += chunk;
-          });
-
-          response.on("end", () =>
-            pipe(
-              body,
-              decode(Release),
-              E.chain(
-                flow(
-                  (release) => release.assets,
-                  A.findFirst((asset) => asset.name === `intlc_${os}`),
-                  E.fromOption(
-                    () => new Error(`Could not find binary for OS: ${os}`)
-                  )
-                )
-              ),
-              E.fold(reject, resolve)
-            )
-          );
-        }
-      );
-
-      request.on(
-        "error",
-        flow(getErrorOrElse("Requesting release failed"), reject)
-      );
-    });
-  }, getErrorOrElse("Unknown error: could not fetch release"));
+  pipe(
+    TE.tryCatch(
+      () =>
+        fetch(
+          `https://api.github.com/repos/unsplash/intlc/releases/tags/${tag}`,
+          {
+            headers: { "user-agent": userAgent },
+          }
+          // We should probably check if the response is JSON but in this case it doesn't matter too much, the promise will reject and task will hold a `left`.
+        ).then((r) => r.json()),
+      getErrorOrElse("Could not fetch release from Github")
+    ),
+    TE.chainEitherK(
+      flow(
+        decode(Release),
+        E.chain(
+          flow(
+            (release) => release.assets,
+            A.findFirst((asset) => asset.name === `intlc_${os}`),
+            E.fromOption(() => new Error(`Could not find binary for OS: ${os}`))
+          )
+        )
+      )
+    )
+  );
 
 const downloadAsset = (asset: Asset) =>
   pipe(
