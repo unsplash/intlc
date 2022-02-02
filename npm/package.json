@@ -1,6 +1,6 @@
 {
   "name": "@unsplash/intlc",
-  "version": "0.2.0-0",
+  "version": "0.2.1-0",
   "description": "intlc wrapper that makes it available as a local dependency",
   "license": "MIT",
   "scripts": {
