@@ -14,7 +14,7 @@ import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)
 
 prependOptionalReactImport :: Dataset Translation -> Text
-prependOptionalReactImport = maybe "" (<> "\n") . JS.buildReactImport
+prependOptionalReactImport = foldMap (<> "\n") . JS.buildReactImport
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `merge` prevents a spare newline, acting like
