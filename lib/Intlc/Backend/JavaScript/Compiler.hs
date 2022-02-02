@@ -137,10 +137,8 @@ dateTimeFmt ICU.Long   = "long"
 dateTimeFmt ICU.Full   = "full"
 
 isTypeScriptReact :: Translation -> Bool
-isTypeScriptReact (Translation _m  be) = case be of
-  TypeScript      -> False
-  TypeScriptReact -> True
-
+isTypeScriptReact (Translation _ TypeScriptReact) = True
+isTypeScriptReact _                               = False
 
 buildReactImport :: Dataset Translation -> Maybe Text
 buildReactImport = fmap (const "import React, { ReactElement } from 'react'") . find isTypeScriptReact
