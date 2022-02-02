@@ -2,6 +2,9 @@
 --   * Consume all whitespace after tokens where possible.
 --   * Therefore, assume no whitespace before tokens.
 
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+
 module Intlc.Parser where
 
 import qualified Control.Applicative.Combinators.NonEmpty as NE
@@ -14,8 +17,9 @@ import           Data.Void                                ()
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude                                  hiding (ByteString)
-import           Text.Megaparsec                          hiding (Stream, Token,
-                                                           many, some, token)
+import           Text.Megaparsec                          hiding (State, Stream,
+                                                           Token, many, some,
+                                                           token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer               as L
 import           Text.Megaparsec.Error.Builder
@@ -56,11 +60,34 @@ validateKeys xs = toEither . nonEmpty . filter (not . isValidKey) . M.keys $ xs
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
 parseTranslationFor name (UnparsedTranslation umsg be) =
-  flip Translation be <$> parse msg (T.unpack name) umsg
+  flip Translation be <$> evalState (runParserT msg (T.unpack name) umsg) initialState
 
 type ParseErr = ParseErrorBundle Text MessageParseErr
 
-type Parser = Parsec MessageParseErr Text
+data ParserState = ParserState
+  -- FIFO. The head is the most recent addition to the stack.
+  { pluralArgNameStack :: [Text]
+  }
+
+initialState :: ParserState
+initialState = ParserState mempty
+
+peekPluralArgName :: ParserState -> Maybe Text
+peekPluralArgName = listToMaybe . pluralArgNameStack
+
+pushPluralArgName :: Text -> ParserState -> ParserState
+pushPluralArgName n x = x { pluralArgNameStack = n : pluralArgNameStack x }
+
+popPluralArgName :: ParserState -> (Maybe Text, ParserState)
+popPluralArgName x =
+  case pluralArgNameStack x of
+    []     -> (Nothing, x)
+    (y:ys) -> (Just y, x { pluralArgNameStack = ys })
+
+popPluralArgName_ :: ParserState -> ParserState
+popPluralArgName_ = snd . popPluralArgName
+
+type Parser = ParsecT MessageParseErr Text (State ParserState)
 
 ident :: Parser Text
 ident = T.pack <$> some letterChar
@@ -72,10 +99,18 @@ msg = f . mergePlaintext <$> manyTill token eof
         f (x:xs)        = Dynamic (x :| xs)
 
 token :: Parser Token
-token = choice
-  [ Interpolation <$> (interp <|> callback)
-  , Plaintext     <$> (try escaped <|> plaintext)
-  ]
+token = do
+  marg <- gets peekPluralArgName
+  choice
+    [ Interpolation <$> (interp <|> callback)
+    -- Plural cases support interpolating the number/argument in context with
+    -- `#`. When there's no such context, fail the parse in effect treating it
+    -- as plaintext.
+    , case marg of
+        Just n  -> Interpolation (Arg n Number) <$ string "#"
+        Nothing -> empty
+    , Plaintext <$> (try escaped <|> plaintext)
+    ]
 
 plaintext :: Parser Text
 plaintext = T.singleton <$> L.charLiteral
@@ -121,10 +156,13 @@ interp = do
           [ Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
-          , Plural <$> (string "plural" *> sep *> cardinalPluralCases n)
-          , Plural <$> (string "selectordinal" *> sep *> ordinalPluralCases n)
+          , Plural <$> withPluralCtx n (string "plural" *> sep *> cardinalPluralCases)
+          , Plural <$> withPluralCtx n (string "selectordinal" *> sep *> ordinalPluralCases)
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
+        withPluralCtx n p = pushPluralCtx n *> p <* popPluralCtx
+        pushPluralCtx = modify . pushPluralArgName
+        popPluralCtx = modify popPluralArgName_
 
 dateTimeFmt :: Parser DateTimeFmt
 dateTimeFmt = choice
@@ -142,25 +180,25 @@ selectCases = (,) <$> cases <*> optional wildcard
         body = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
         wildcardName = "other"
 
-cardinalPluralCases :: Text -> Parser Plural
-cardinalPluralCases n = fmap Cardinal . tryClassify =<< p
+cardinalPluralCases :: Parser Plural
+cardinalPluralCases = fmap Cardinal . tryClassify =<< p
     where tryClassify = maybe empty pure . uncurry classifyCardinal
-          p = (,) <$> disorderedPluralCases n <*> optional (pluralWildcard n)
+          p = (,) <$> disorderedPluralCases <*> optional pluralWildcard
 
-ordinalPluralCases :: Text -> Parser Plural
-ordinalPluralCases n = fmap Ordinal . tryClassify =<< p
+ordinalPluralCases :: Parser Plural
+ordinalPluralCases = fmap Ordinal . tryClassify =<< p
     where tryClassify = maybe empty pure . uncurry classifyOrdinal
-          p = (,) <$> disorderedPluralCases n <*> pluralWildcard n
+          p = (,) <$> disorderedPluralCases <*> pluralWildcard
 
 -- Need to lift parsed plural cases into this type to make the list homogeneous.
 data ParsedPluralCase
   = ParsedExact (PluralCase PluralExact)
   | ParsedRule (PluralCase PluralRule)
 
-disorderedPluralCases :: Text -> Parser (NonEmpty ParsedPluralCase)
-disorderedPluralCases n = flip NE.sepEndBy1 hspace1 $ choice
-  [ (ParsedExact .) . PluralCase <$> pluralExact <* hspace1 <*> pluralBody n
-  , (ParsedRule .)  . PluralCase <$> pluralRule  <* hspace1 <*> pluralBody n
+disorderedPluralCases :: Parser (NonEmpty ParsedPluralCase)
+disorderedPluralCases = flip NE.sepEndBy1 hspace1 $ choice
+  [ (ParsedExact .) . PluralCase <$> pluralExact <* hspace1 <*> pluralBody
+  , (ParsedRule .)  . PluralCase <$> pluralRule  <* hspace1 <*> pluralBody
   ]
 
 pluralExact :: Parser PluralExact
@@ -175,13 +213,11 @@ pluralRule = choice
   , Many <$ string "many"
   ]
 
-pluralWildcard :: Text -> Parser PluralWildcard
-pluralWildcard n = PluralWildcard <$> (string "other" *> hspace1 *> pluralBody n)
+pluralWildcard :: Parser PluralWildcard
+pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> pluralBody)
 
-pluralBody :: Text -> Parser Stream
-pluralBody n = mergePlaintext <$> (string "{" *> manyTill pluralToken (string "}"))
-  -- Plural cases support interpolating the number/argument in context with `#`.
-  where pluralToken = Interpolation (Arg n Number) <$ string "#" <|> token
+pluralBody :: Parser Stream
+pluralBody = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
 
 -- | To simplify parsing cases we validate after-the-fact here. This achieves
 -- two purposes. Firstly it enables us to fail the parse if the cases are not
