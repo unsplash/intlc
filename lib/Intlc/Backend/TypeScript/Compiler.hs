@@ -25,14 +25,14 @@ compileNamedExport x l k v =
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
 
-isTsx :: Translation -> Bool
-isTsx (Translation _m  be) = case be of
+isTypeScriptReact :: Translation -> Bool
+isTypeScriptReact (Translation _m  be) = case be of
   TypeScript      -> False
   TypeScriptReact -> True
 
 
-buildReactImport :: Dataset Translation -> Text
-buildReactImport =  maybe "" (const ("import React, { ReactElement } from 'react'" <> "\n")) . find isTsx
+buildReactImport :: Dataset Translation -> Maybe Text
+buildReactImport = fmap (const "import React, { ReactElement } from 'react'") . find isTypeScriptReact
 
 fromStrat :: InterpStrat -> Out
 fromStrat TemplateLit = TUniOut TStr

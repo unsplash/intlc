@@ -13,11 +13,14 @@ import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)
 
+prependOptionalReactImport :: Dataset Translation -> Text
+prependOptionalReactImport = maybe "" (<> "\n") . TS.buildReactImport
+
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `merge` prevents a spare newline, acting like
 -- intercalation.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
-compileDataset l d = fmap (TS.buildReactImport d <>) . M.foldrWithKey ((merge .) . translation l) (Right mempty) $ d
+compileDataset l d = fmap (prependOptionalReactImport d <>) . M.foldrWithKey ((merge .) . translation l) (Right mempty) $ d
   where
         -- Merge two `Right`s, essentially intercalating with newlines (hence
         -- the empty accumulator base case).
