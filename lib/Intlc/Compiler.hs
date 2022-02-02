@@ -7,17 +7,20 @@ import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
 import           Intlc.Backend.Common              (validateArgs)
 import           Intlc.Backend.ICU.Compiler        (compileMsg)
-import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
+import           Intlc.Backend.JavaScript.Compiler as JS
 import qualified Intlc.Backend.TypeScript.Compiler as TS
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)
 
+prependOptionalReactImport :: Dataset Translation -> Text
+prependOptionalReactImport = foldMap (<> "\n") . JS.buildReactImport
+
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `merge` prevents a spare newline, acting like
 -- intercalation.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
-compileDataset l = fmap ((TS.reactImport <> "\n") <>) . M.foldrWithKey ((merge .) . translation l) (Right mempty)
+compileDataset l d = fmap (prependOptionalReactImport d <>) . M.foldrWithKey ((merge .) . translation l) (Right mempty) $ d
   where
         -- Merge two `Right`s, essentially intercalating with newlines (hence
         -- the empty accumulator base case).
