@@ -1,7 +1,9 @@
-module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces) where
+module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport) where
 
 import           Intlc.Backend.JavaScript.Language
-import           Intlc.Core                        (Locale (Locale))
+import           Intlc.Core                        (Backend (..),
+                                                    Dataset, Locale (Locale),
+                                                    Translation (Translation))
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (Type, fromList)
 import           Utils                             ((<>^))
@@ -133,3 +135,12 @@ dateTimeFmt ICU.Short  = "short"
 dateTimeFmt ICU.Medium = "medium"
 dateTimeFmt ICU.Long   = "long"
 dateTimeFmt ICU.Full   = "full"
+
+isTypeScriptReact :: Translation -> Bool
+isTypeScriptReact (Translation _m  be) = case be of
+  TypeScript      -> False
+  TypeScriptReact -> True
+
+
+buildReactImport :: Dataset Translation -> Maybe Text
+buildReactImport = fmap (const "import React, { ReactElement } from 'react'") . find isTypeScriptReact

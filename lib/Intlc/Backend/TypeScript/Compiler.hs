@@ -2,7 +2,7 @@
 -- look like. The value-level output is JavaScript and resides almost entirely
 -- in the corresponding module. They have been written with one-another in mind.
 
-module Intlc.Backend.TypeScript.Compiler (compileNamedExport, buildReactImport) where
+module Intlc.Backend.TypeScript.Compiler (compileNamedExport) where
 
 import           Data.List                         (nubBy)
 import qualified Data.Text                         as T
@@ -24,15 +24,6 @@ compileNamedExport x l k v =
 
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
-
-isTypeScriptReact :: Translation -> Bool
-isTypeScriptReact (Translation _m  be) = case be of
-  TypeScript      -> False
-  TypeScriptReact -> True
-
-
-buildReactImport :: Dataset Translation -> Maybe Text
-buildReactImport = fmap (const "import React, { ReactElement } from 'react'") . find isTypeScriptReact
 
 fromStrat :: InterpStrat -> Out
 fromStrat TemplateLit = TUniOut TStr

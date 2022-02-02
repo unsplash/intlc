@@ -7,14 +7,14 @@ import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
 import           Intlc.Backend.Common              (validateArgs)
 import           Intlc.Backend.ICU.Compiler        (compileMsg)
-import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
+import           Intlc.Backend.JavaScript.Compiler as JS
 import qualified Intlc.Backend.TypeScript.Compiler as TS
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)
 
 prependOptionalReactImport :: Dataset Translation -> Text
-prependOptionalReactImport = maybe "" (<> "\n") . TS.buildReactImport
+prependOptionalReactImport = maybe "" (<> "\n") . JS.buildReactImport
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `merge` prevents a spare newline, acting like
