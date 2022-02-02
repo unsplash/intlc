@@ -44,10 +44,12 @@ library
     , megaparsec           ^>=9.0
   exposed-modules:
     Intlc.Compiler
-    Intlc.Compiler.Backend.JavaScript
-    Intlc.Compiler.Backend.ICU
-    Intlc.Compiler.Backend.TypeScript
-    Intlc.Compiler.Common
+    Intlc.Backend.Common
+    Intlc.Backend.JavaScript.Language
+    Intlc.Backend.JavaScript.Compiler
+    Intlc.Backend.ICU.Compiler
+    Intlc.Backend.TypeScript.Language
+    Intlc.Backend.TypeScript.Compiler
     Intlc.Core
     Intlc.ICU
     Intlc.Parser

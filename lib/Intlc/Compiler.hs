@@ -5,10 +5,10 @@ import           Data.Aeson                        (encode)
 import           Data.ByteString.Lazy              (ByteString)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
-import           Intlc.Compiler.Backend.ICU        (compileMsg)
-import           Intlc.Compiler.Backend.JavaScript (InterpStrat (..))
-import qualified Intlc.Compiler.Backend.TypeScript as TS
-import           Intlc.Compiler.Common             (validateArgs)
+import           Intlc.Backend.Common              (validateArgs)
+import           Intlc.Backend.ICU.Compiler        (compileMsg)
+import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
+import qualified Intlc.Backend.TypeScript.Compiler as TS
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)

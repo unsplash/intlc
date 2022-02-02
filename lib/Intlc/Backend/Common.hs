@@ -1,4 +1,4 @@
-module Intlc.Compiler.Common (validateArgs) where
+module Intlc.Backend.Common (validateArgs) where
 
 import           Intlc.ICU
 import           Prelude   hiding (Type)
