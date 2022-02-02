@@ -1,8 +1,8 @@
 module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport) where
 
 import           Intlc.Backend.JavaScript.Language
-import           Intlc.Core                        (Backend (..),
-                                                    Dataset, Locale (Locale),
+import           Intlc.Core                        (Backend (..), Dataset,
+                                                    Locale (Locale),
                                                     Translation (Translation))
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (Type, fromList)
