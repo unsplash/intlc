@@ -1,5 +1,6 @@
 module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport) where
 
+import           Control.Monad.Extra               (pureIf)
 import           Intlc.Backend.JavaScript.Language
 import           Intlc.Core                        (Backend (..), Dataset,
                                                     Locale (Locale),
@@ -141,4 +142,5 @@ isTypeScriptReact (Translation _ TypeScriptReact) = True
 isTypeScriptReact _                               = False
 
 buildReactImport :: Dataset Translation -> Maybe Text
-buildReactImport = fmap (const "import React, { ReactElement } from 'react'") . find isTypeScriptReact
+buildReactImport = flip pureIf text . any isTypeScriptReact
+  where text = "import React, { ReactElement } from 'react'"
