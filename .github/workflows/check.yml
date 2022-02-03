@@ -68,7 +68,7 @@ jobs:
           ]
     runs-on: ${{ matrix.os.runner }}
     if: startsWith(github.event.ref, 'refs/tags/v')
-    needs: [build, test, lint]
+    needs: [build, test, lint, fmt]
     steps:
       - uses: actions/checkout@v2
       - uses: haskell/actions/setup@v1
