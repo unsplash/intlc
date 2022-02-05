@@ -12,7 +12,7 @@ import           Test.Hspec.Golden    (Golden (..), defaultGolden)
 import           Text.RawString.QQ    (r)
 
 parseAndCompileDataset :: ByteString -> Either (NonEmpty Text) Text
-parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset
+parseAndCompileDataset = fmap (compileDataset (Locale "en-US")) . first (pure . show) . parseDataset
 
 golden :: String -> ByteString -> Golden String
 golden name in' = baseCfg

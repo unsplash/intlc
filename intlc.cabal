@@ -44,7 +44,6 @@ library
     , megaparsec           ^>=9.0
   exposed-modules:
     Intlc.Compiler
-    Intlc.Backend.Common
     Intlc.Backend.JavaScript.Language
     Intlc.Backend.JavaScript.Compiler
     Intlc.Backend.ICU.Compiler
