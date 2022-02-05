@@ -7,12 +7,14 @@ import           Prelude
 -- little verbose split into these various sum types, but in doing so it's
 -- correct by construction.
 data TypeOf = Lambda Args Out
+  deriving (Show, Eq)
 
 -- Avoid `Map` due to its `Ord` constraint.
 type Args = [(Text, In)]
 
 data Uni
   = TStr
+  deriving (Show, Eq)
 
 data In
   = TUniIn Uni
@@ -23,10 +25,12 @@ data In
   -- An endomorphism on `Out`. Omitted as an argument to enforce that it's the
   -- same type as the output of the top-level `Lambda`.
   | TEndo
+  deriving (Show, Eq)
 
 data Out
   = TUniOut Uni
   | TFragment
+  deriving (Show, Eq)
 
 fromMsg :: Out -> ICU.Message -> TypeOf
 fromMsg x ICU.Static {}    = Lambda mempty x
