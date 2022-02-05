@@ -2,7 +2,7 @@
 -- look like. The value-level output is JavaScript and resides almost entirely
 -- in the corresponding module. They have been written with one-another in mind.
 
-module Intlc.Backend.TypeScript.Compiler (compileNamedExport) where
+module Intlc.Backend.TypeScript.Compiler (compileNamedExport, compileTypeof) where
 
 import           Data.List                         (nubBy)
 import qualified Data.Text                         as T

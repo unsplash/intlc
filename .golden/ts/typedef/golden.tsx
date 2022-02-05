@@ -1,0 +1,1 @@
+export type Test = (x: { bold: (x: ReactElement) => ReactElement; name: string; age: number; magicNumber: number; todayDate: Date; currTime: Date }) => ReactElement

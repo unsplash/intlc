@@ -73,6 +73,7 @@ test-suite test-intlc
   build-tool-depends:
       hspec-discover:hspec-discover
   other-modules:
+    Intlc.Backend.TypeScriptSpec
     Intlc.CompilerSpec
     Intlc.EndToEndSpec
     Intlc.ParserSpec
