@@ -36,10 +36,10 @@ data Out
   | TFragment
   deriving (Show, Eq)
 
-isUnion :: In -> Bool
-isUnion TStrLitUnion {} = True
-isUnion TNumLitUnion {} = True
-isUnion _               = False
+isMultiUnion :: In -> Bool
+isMultiUnion (TStrLitUnion xs) = length xs > 1
+isMultiUnion (TNumLitUnion xs) = length xs > 1
+isMultiUnion _                 = False
 
 -- Collate arguments with the same name.
 collateArgs :: Args -> Args

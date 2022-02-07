@@ -50,11 +50,11 @@ args xs = do
   pure $ "(" <> argName <> ": { " <> y <> " })"
     where arg k (v :| []) = ((k <> ": ") <>) <$> in' v
           arg k vs        = ((k <> ": ") <>) . intersect . toList <$> ins `mapM` vs
-          -- Unions need wrapping in disambiguating parentheses, other types do
-          -- not.
+          -- Unions with at least two members need wrapping in disambiguating
+          -- parentheses, other types do not.
           ins x
-            | isUnion x = parens <$> in' x
-            | otherwise = in' x
+            | isMultiUnion x = parens <$> in' x
+            | otherwise      = in' x
           intersect = T.intercalate " & "
           parens x = "(" <> x <> ")"
 
