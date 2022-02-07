@@ -57,6 +57,20 @@ jobs:
       - run: |
           curl -sL https://raw.github.com/haskell/stylish-haskell/master/scripts/latest.sh | sh -s 'lib/ src/ test/ -ri'
           git diff-index --exit-code HEAD
+  typecheck-ts:
+    name: Typecheck TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .golden/ts/
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          cache: yarn
+          cache-dependency-path: .golden/ts/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
   build_binary:
     name: Build Binary
     strategy:
@@ -68,7 +82,7 @@ jobs:
           ]
     runs-on: ${{ matrix.os.runner }}
     if: startsWith(github.event.ref, 'refs/tags/v')
-    needs: [build, test, lint, fmt]
+    needs: [build, test, lint, fmt, typecheck-ts]
     steps:
       - uses: actions/checkout@v2
       - uses: haskell/actions/setup@v1
