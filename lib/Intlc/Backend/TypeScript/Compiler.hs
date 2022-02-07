@@ -4,7 +4,6 @@
 
 module Intlc.Backend.TypeScript.Compiler (compileNamedExport, compileTypeof) where
 
-import           Data.List                         (nubBy)
 import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..),
                                                     compileStmtPieces)
@@ -42,15 +41,22 @@ typeof :: TypeOf -> Compiler Text
 typeof (Lambda as r) = lambda as r
 
 lambda :: Args -> Out -> Compiler Text
-lambda as r = args (dedupe as) <>^ pure " => " <>^ out r
-  where dedupe = nubBy ((==) `on` fst)
+lambda as r = args as <>^ pure " => " <>^ out r
 
 args :: Args -> Compiler Text
 args [] = pure "()"
 args xs = do
-  y <- T.intercalate "; " <$> mapM (uncurry arg) xs
+  y <- fmap (T.intercalate "; ") . mapM (uncurry arg) $ xs
   pure $ "(" <> argName <> ": { " <> y <> " })"
-    where arg k v = ((k <> ": ") <>) <$> in' v
+    where arg k (v :| []) = ((k <> ": ") <>) <$> in' v
+          arg k vs        = ((k <> ": ") <>) . intersect . toList <$> ins `mapM` vs
+          -- Unions need wrapping in disambiguating parentheses, other types do
+          -- not.
+          ins x
+            | isUnion x = parens <$> in' x
+            | otherwise = in' x
+          intersect = T.intercalate " & "
+          parens x = "(" <> x <> ")"
 
 uni :: Uni -> Compiler Text
 uni TStr = pure "string"

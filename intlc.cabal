@@ -19,6 +19,7 @@ common common
     , containers           ^>=0.6
     , extra                ^>=1.7
     , mtl                  ^>=2.2
+    , optics               ^>=0.4
     , relude               ^>=0.7
     , text                 ^>=1.2
   mixins:
