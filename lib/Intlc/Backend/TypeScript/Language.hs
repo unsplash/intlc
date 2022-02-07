@@ -1,10 +1,8 @@
 module Intlc.Backend.TypeScript.Language where
 
-import           Data.List          (findIndex)
 import           Data.List.NonEmpty (nub)
+import qualified Data.Map           as M
 import qualified Intlc.ICU          as ICU
-import           Optics             (ix)
-import           Optics.Operators
 import           Prelude
 
 -- | A representation of the type-level output we will be compiling. It's a
@@ -13,9 +11,8 @@ import           Prelude
 data TypeOf = Lambda Args Out
   deriving (Show, Eq)
 
--- Avoid `Map` due to its `Ord` constraint.
 type UncollatedArgs = [(Text, In)]
-type Args = [(Text, NonEmpty In)]
+type Args = Map Text (NonEmpty In)
 
 data Uni
   = TStr
@@ -44,12 +41,7 @@ isMultiUnion _                 = False
 
 -- Collate arguments with the same name.
 collateArgs :: UncollatedArgs -> Args
-collateArgs = reverse . fmap (second nub) . go [] where
-  go acc []         = acc
-  go acc ((n,t):xs) =
-    case findIndex ((== n) . fst) acc of
-      Nothing -> go ((n, pure t):acc) xs
-      Just i  -> go (acc & ix i %~ second (<> pure t)) xs
+collateArgs = fmap nub . M.fromListWith (<>) . fmap (second pure)
 
 fromMsg :: Out -> ICU.Message -> TypeOf
 fromMsg x ICU.Static {}    = Lambda mempty x
