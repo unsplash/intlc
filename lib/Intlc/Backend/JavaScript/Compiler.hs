@@ -143,4 +143,4 @@ isTypeScriptReact _                               = False
 
 buildReactImport :: Dataset Translation -> Maybe Text
 buildReactImport = flip pureIf text . any isTypeScriptReact
-  where text = "import React, { ReactElement } from 'react'"
+  where text = "import { ReactElement } from 'react'"
