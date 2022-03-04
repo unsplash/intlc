@@ -35,6 +35,7 @@ instance ToJSON Backend where
 data UnparsedTranslation = UnparsedTranslation
   { umessage :: UnparsedMessage
   , ubackend :: Backend
+  , umdesc   :: Maybe Text
   }
   deriving (Show, Eq, Generic)
 
@@ -43,15 +44,18 @@ instance FromJSON UnparsedTranslation where
     where decode x = UnparsedTranslation
             <$> x .: "message"
             <*> x .:? "backend" .!= TypeScript
+            <*> x .:? "description"
 
 instance ToJSON UnparsedTranslation where
-  toEncoding (UnparsedTranslation msg be) = pairs $
-       "message" .= msg
-    <> "backend" .= be
+  toEncoding (UnparsedTranslation msg be md) = pairs $
+       "message"     .= msg
+    <> "backend"     .= be
+    <> "description" .= md
 
 data Translation = Translation
   { message :: Message
   , backend :: Backend
+  , mdesc   :: Maybe Text
   }
   deriving (Show, Eq)
 

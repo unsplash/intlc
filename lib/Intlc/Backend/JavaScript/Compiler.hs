@@ -4,7 +4,7 @@ import           Control.Monad.Extra               (pureIf)
 import           Intlc.Backend.JavaScript.Language
 import           Intlc.Core                        (Backend (..), Dataset,
                                                     Locale (Locale),
-                                                    Translation (Translation))
+                                                    Translation (backend))
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (Type, fromList)
 import           Utils                             ((<>^))
@@ -137,10 +137,6 @@ dateTimeFmt ICU.Medium = "medium"
 dateTimeFmt ICU.Long   = "long"
 dateTimeFmt ICU.Full   = "full"
 
-isTypeScriptReact :: Translation -> Bool
-isTypeScriptReact (Translation _ TypeScriptReact) = True
-isTypeScriptReact _                               = False
-
 buildReactImport :: Dataset Translation -> Maybe Text
-buildReactImport = flip pureIf text . any isTypeScriptReact
+buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)
   where text = "import { ReactElement } from 'react'"
