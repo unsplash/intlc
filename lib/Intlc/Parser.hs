@@ -59,8 +59,9 @@ validateKeys xs = toEither . nonEmpty . filter (not . isValidKey) . M.keys $ xs
         isValidKey = T.all (liftA2 (||) isAlpha (== '_'))
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
-parseTranslationFor name (UnparsedTranslation umsg be) =
-  flip Translation be <$> evalState (runParserT msg (T.unpack name) umsg) initialState
+parseTranslationFor name (UnparsedTranslation umsg be md) = do
+  msg' <- evalState (runParserT msg (T.unpack name) umsg) initialState
+  pure $ Translation msg' be md
 
 type ParseErr = ParseErrorBundle Text MessageParseErr
 

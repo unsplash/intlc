@@ -33,7 +33,7 @@ compileDataset l d = fmap (prependOptionalReactImport d <>) . M.foldrWithKey ((m
         merge (Right _) es@(Left _) = es
 
 translation :: Locale -> Text -> Translation -> Either (NonEmpty Text) Text
-translation l k (Translation v be) = validateArgs (args v) $> case be of
+translation l k (Translation v be _) = validateArgs (args v) $> case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
@@ -49,7 +49,7 @@ compileFlattened :: Dataset Translation -> ByteString
 compileFlattened = encode . flattenDataset
 
 flattenDataset :: Dataset Translation -> Dataset UnparsedTranslation
-flattenDataset = fmap $ \(Translation msg be) -> UnparsedTranslation (compileMsg . flatten $ msg) be
+flattenDataset = fmap $ \(Translation msg be md) -> UnparsedTranslation (compileMsg . flatten $ msg) be md
 
 flatten :: ICU.Message -> ICU.Message
 flatten x@(ICU.Static _)      = x
