@@ -4,7 +4,7 @@
   "description": "intlc wrapper that makes it available as a local dependency",
   "license": "MIT",
   "scripts": {
-    "postinstall": "node dist/index.js v0.2.1",
+    "postinstall": "node dist/index.js v0.2.2",
     "prepublishOnly": "rm -rf ./dist && tsc && touch ./dist/intlc"
   },
   "bin": {
