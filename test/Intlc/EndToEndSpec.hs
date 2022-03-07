@@ -29,7 +29,7 @@ golden name in' = baseCfg
 x =*= y = parseAndCompileDataset x `shouldBe` Right y
 
 withReactImport :: Text -> Text
-withReactImport = ("import React, { ReactElement } from 'react'\n" <>)
+withReactImport = ("import { ReactElement } from 'react'\n" <>)
 
 spec :: Spec
 spec = describe "end-to-end" $ do
