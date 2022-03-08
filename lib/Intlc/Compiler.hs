@@ -15,7 +15,10 @@ import           Prelude                           hiding (ByteString)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 compileDataset :: Locale -> Dataset Translation -> Text
-compileDataset l d = T.intercalate "\n" stmts
+compileDataset l d =
+  case stmts of
+    []     -> JS.emptyModule
+    stmts' -> T.intercalate "\n" stmts'
   where stmts = imports <> exports
         imports = maybeToList $ JS.buildReactImport d
         exports = M.foldrWithKey translationCons mempty d

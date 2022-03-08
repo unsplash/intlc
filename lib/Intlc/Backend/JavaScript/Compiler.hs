@@ -1,4 +1,4 @@
-module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport) where
+module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport, emptyModule) where
 
 import           Control.Monad.Extra               (pureIf)
 import           Intlc.Backend.JavaScript.Language
@@ -136,6 +136,10 @@ dateTimeFmt ICU.Short  = "short"
 dateTimeFmt ICU.Medium = "medium"
 dateTimeFmt ICU.Long   = "long"
 dateTimeFmt ICU.Full   = "full"
+
+-- A no-op that clarifies a JS/TS file as an ES module.
+emptyModule :: Text
+emptyModule = "export {}"
 
 buildReactImport :: Dataset Translation -> Maybe Text
 buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)

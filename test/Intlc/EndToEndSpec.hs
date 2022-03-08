@@ -40,6 +40,10 @@ spec = describe "end-to-end" $ do
     parseDataset [r|{ "x bad key": { "message": "foo" }, "good_Key": { "message": "bar" }, "y-bad-key": { "message": "baz" }, "z_bad_key123": { "message": "biz" } }|] `shouldBe`
       Left (InvalidKeys $ "x bad key" :| ["y-bad-key", "z_bad_key123"])
 
+  it "compiles valid JS module format given empty input" $ do
+    [r|{}|]
+      =*= "export {}"
+
   it "parses and discards descriptions" $ do
     [r|{ "brand": { "message": "Unsplash", "description": "The company name" } }|]
       =*= "export const brand: () => string = () => 'Unsplash'"
