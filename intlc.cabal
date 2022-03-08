@@ -19,6 +19,7 @@ common common
     , containers           ^>=0.6
     , extra                ^>=1.7
     , mtl                  ^>=2.2
+    , optics               ^>=0.4
     , relude               ^>=0.7
     , text                 ^>=1.2
   mixins:
@@ -44,7 +45,6 @@ library
     , megaparsec           ^>=9.0
   exposed-modules:
     Intlc.Compiler
-    Intlc.Backend.Common
     Intlc.Backend.JavaScript.Language
     Intlc.Backend.JavaScript.Compiler
     Intlc.Backend.ICU.Compiler

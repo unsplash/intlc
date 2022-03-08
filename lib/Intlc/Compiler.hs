@@ -5,7 +5,6 @@ import           Data.Aeson                        (encode)
 import           Data.ByteString.Lazy              (ByteString)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
-import           Intlc.Backend.Common              (validateArgs)
 import           Intlc.Backend.ICU.Compiler        (compileMsg)
 import           Intlc.Backend.JavaScript.Compiler as JS
 import qualified Intlc.Backend.TypeScript.Compiler as TS
@@ -19,29 +18,15 @@ prependOptionalReactImport = foldMap (<> "\n") . JS.buildReactImport
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 -- The `""` base case in `merge` prevents a spare newline, acting like
 -- intercalation.
-compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
-compileDataset l d = fmap (prependOptionalReactImport d <>) . M.foldrWithKey ((merge .) . translation l) (Right mempty) $ d
-  where
-        -- Merge two `Right`s, essentially intercalating with newlines (hence
-        -- the empty accumulator base case).
-        merge (Right x) (Right "")  = Right x
-        merge (Right x) (Right acc) = Right $ x <> "\n" <> acc
-        -- Merge two `Left`s, or if one side is `Left` take that side,
-        -- discarding any `Right`.
-        merge (Left es) (Left acc)  = Left $ es <> acc
-        merge es@(Left _) (Right _) = es
-        merge (Right _) es@(Left _) = es
+compileDataset :: Locale -> Dataset Translation -> Text
+compileDataset l d = (prependOptionalReactImport d <>) . M.foldrWithKey merge mempty $ d
+  where merge k a "" = translation l k a
+        merge k a b  = translation l k a <> "\n" <> b
 
-translation :: Locale -> Text -> Translation -> Either (NonEmpty Text) Text
-translation l k (Translation v be _) = validateArgs (args v) $> case be of
+translation :: Locale -> Text -> Translation -> Text
+translation l k (Translation v be _) = case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
-
-args :: ICU.Message -> [ICU.Arg]
-args ICU.Static {}    = []
-args (ICU.Dynamic xs) = token `mapMaybe` toList xs
-  where token ICU.Plaintext {}      = Nothing
-        token (ICU.Interpolation x) = Just x
 
 type ICUSelect = (NonEmpty ICU.SelectCase, Maybe ICU.SelectWildcard)
 

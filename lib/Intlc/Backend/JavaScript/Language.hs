@@ -10,6 +10,7 @@ type ASTCompiler = Reader Locale
 -- split into these various sum types, but in doing so it's correct by
 -- construction.
 data Stmt = Stmt Text (NonEmpty Expr)
+  deriving (Show, Eq)
 
 data Expr
   = TPrint Text
@@ -19,23 +20,31 @@ data Expr
   | TTime Ref ICU.DateTimeFmt
   | TApply Ref [Expr]
   | TMatch Match
+  deriving (Show, Eq)
 
 data Match = Match Ref MatchCond MatchRet
+  deriving (Show, Eq)
 
 data MatchCond
   = LitCond
   | CardinalPluralRuleCond
   | OrdinalPluralRuleCond
+  deriving (Show, Eq)
 
 data MatchRet
   = LitMatchRet (NonEmpty Branch)
   | NonLitMatchRet (NonEmpty Branch) Wildcard
   | RecMatchRet (NonEmpty Branch) Match
+  deriving (Show, Eq)
 
 newtype Ref = Ref Text
+  deriving (Show, Eq)
 
 data Branch = Branch Text [Expr]
+  deriving (Show, Eq)
+
 newtype Wildcard = Wildcard [Expr]
+  deriving (Show, Eq)
 
 fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
 fromKeyedMsg n (ICU.Static x)   = pure $ Stmt n (pure $ TPrint x)
