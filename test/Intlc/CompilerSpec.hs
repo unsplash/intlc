@@ -1,18 +1,12 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Intlc.Backend.JavaScript.Compiler (emptyModule)
-import           Intlc.Compiler                    (compileDataset, flatten)
-import           Intlc.Core                        (Locale (Locale))
+import           Intlc.Compiler (flatten)
 import           Intlc.ICU
-import           Prelude                           hiding (one)
+import           Prelude        hiding (one)
 import           Test.Hspec
 
 spec :: Spec
 spec = describe "compiler" $ do
-  describe "compileDataset" $ do
-    it "compiles empty dataset to valid JS module format" $ do
-      compileDataset (Locale "foo") mempty `shouldBe` emptyModule
-
   describe "flatten" $ do
     it "no-ops static" $ do
       flatten (Static "xyz") `shouldBe` Static "xyz"
