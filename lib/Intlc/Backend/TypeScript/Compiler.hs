@@ -4,6 +4,7 @@
 
 module Intlc.Backend.TypeScript.Compiler (compileNamedExport, compileTypeof) where
 
+import qualified Data.Map                          as M
 import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..),
                                                     compileStmtPieces)
@@ -44,19 +45,20 @@ lambda :: Args -> Out -> Compiler Text
 lambda as r = args as <>^ pure " => " <>^ out r
 
 args :: Args -> Compiler Text
-args [] = pure "()"
-args xs = do
-  y <- fmap (T.intercalate "; ") . mapM (uncurry arg) $ xs
-  pure $ "(" <> argName <> ": { " <> y <> " })"
-    where arg k (v :| []) = ((k <> ": ") <>) <$> in' v
-          arg k vs        = ((k <> ": ") <>) . intersect . toList <$> ins `mapM` vs
-          -- Unions with at least two members need wrapping in disambiguating
-          -- parentheses, other types do not.
-          ins x
-            | isMultiUnion x = parens <$> in' x
-            | otherwise      = in' x
-          intersect = T.intercalate " & "
-          parens x = "(" <> x <> ")"
+args xs
+  | M.null xs = pure "()"
+  | otherwise = do
+    y <- fmap (T.intercalate "; " . M.elems) . M.traverseWithKey arg $ xs
+    pure $ "(" <> argName <> ": { " <> y <> " })"
+      where arg k (v :| []) = ((k <> ": ") <>) <$> in' v
+            arg k vs        = ((k <> ": ") <>) . intersect . toList <$> ins `mapM` vs
+            -- Unions with at least two members need wrapping in disambiguating
+            -- parentheses, other types do not.
+            ins x
+              | isMultiUnion x = parens <$> in' x
+              | otherwise      = in' x
+            intersect = T.intercalate " & "
+            parens x = "(" <> x <> ")"
 
 uni :: Uni -> Compiler Text
 uni TStr = pure "string"

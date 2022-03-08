@@ -5,6 +5,7 @@ import           Data.Aeson                        (encode)
 import           Data.ByteString.Lazy              (ByteString)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
+import qualified Data.Text                         as T
 import           Intlc.Backend.ICU.Compiler        (compileMsg)
 import           Intlc.Backend.JavaScript.Compiler as JS
 import qualified Intlc.Backend.TypeScript.Compiler as TS
@@ -12,16 +13,13 @@ import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)
 
-prependOptionalReactImport :: Dataset Translation -> Text
-prependOptionalReactImport = foldMap (<> "\n") . JS.buildReactImport
-
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
--- The `""` base case in `merge` prevents a spare newline, acting like
--- intercalation.
 compileDataset :: Locale -> Dataset Translation -> Text
-compileDataset l d = (prependOptionalReactImport d <>) . M.foldrWithKey merge mempty $ d
-  where merge k a "" = translation l k a
-        merge k a b  = translation l k a <> "\n" <> b
+compileDataset l d = T.intercalate "\n" stmts
+  where stmts = imports <> exports
+        imports = maybeToList $ JS.buildReactImport d
+        exports = M.foldrWithKey translationCons mempty d
+        translationCons k v acc = translation l k v : acc
 
 translation :: Locale -> Text -> Translation -> Text
 translation l k (Translation v be _) = case be of
