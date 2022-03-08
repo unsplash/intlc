@@ -1,2 +1,2 @@
 export const greeting: (x: { age: number; bold: (x: string) => string; name: string }) => string = x => `Hello ${x.bold(`${x.name}`)}, ${new Intl.NumberFormat('en-US').format(x.age)}!`
-export const title: () => string = () => 'Unsplash'
+export const title: () => string = () => `Unsplash`

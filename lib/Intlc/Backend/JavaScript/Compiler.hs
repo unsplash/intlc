@@ -77,8 +77,7 @@ stmt = fmap f . stmtPieces
   where f (n, r) = "export const " <> n <> " = " <> r
 
 stmtPieces :: Stmt -> Compiler (Text, Text)
-stmtPieces (Stmt n ((TPrint x):|[])) = pure (n, "'" <> x <> "'")
-stmtPieces (Stmt n xs)               = (n, ) <$> (wrap =<< exprs xs)
+stmtPieces (Stmt n xs) = (n, ) <$> (wrap =<< exprs xs)
 
 exprs :: Foldable f => f Expr -> Compiler Text
 exprs = foldMapM expr

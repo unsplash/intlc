@@ -42,11 +42,11 @@ spec = describe "end-to-end" $ do
 
   it "parses and discards descriptions" $ do
     [r|{ "brand": { "message": "Unsplash", "description": "The company name" } }|]
-      =*= "export const brand: () => string = () => 'Unsplash'"
+      =*= "export const brand: () => string = () => `Unsplash`"
 
   it "outputs in alphabetical order" $ do
     [r|{ "x": { "message": "" }, "A": { "message": "" }, "z": { "message": "" } }|]
-      =*= "export const A: () => string = () => ''\nexport const x: () => string = () => ''\nexport const z: () => string = () => ''"
+      =*= "export const A: () => string = () => ``\nexport const x: () => string = () => ``\nexport const z: () => string = () => ``"
 
   it "compiles plurals" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]
