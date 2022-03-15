@@ -22,6 +22,30 @@ For example:
 $ intlc compile ./translations.json -l en-US
 ```
 
+### Backends
+
+At present, the following backends (compilation targets) are supported:
+
+- TypeScript (`ts`, default)
+- TypeScript/React (`tsx`)
+
+### Schema
+
+Translation files should be encoded as JSON and might look something like this:
+
+```json
+{
+  "welcome": {
+    "message": "Hello {name}",
+    "backend": "ts"
+  }
+}
+```
+
+## ICU
+
+intlc intentially breaks with the ICU spec where there's high value in doing so and output type safety can be guaranteed. For example, `select` and `plural` interpolation types don't require an `other` fallback case.
+
 ## Contributing
 
 Check out `ARCHITECTURE.md`. Currently building against GHC 8.10.7.
