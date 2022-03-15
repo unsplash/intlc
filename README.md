@@ -22,8 +22,6 @@ For example:
 $ intlc compile ./translations.json -l en-US
 ```
 
----
-
 ## Publishing new release
 
 Pushing a git tag will trigger a build on github actions. It will build binaries for different OS and create a new release with them attached.
