@@ -21,7 +21,7 @@ spec = describe "parser" $ do
       parse msg `shouldFailOn` "a { b"
 
     it "does not tolerate interpolations with a bad type" $ do
-      parse msg `shouldFailOn` "a {n, bool} b"
+      parse msg `shouldFailOn` "a {n, badtype} b"
 
     it "does not tolerate empty braces" $ do
       parse msg `shouldFailOn` "a {} b"
