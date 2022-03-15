@@ -22,6 +22,10 @@ For example:
 $ intlc compile ./translations.json -l en-US
 ```
 
+## Contributing
+
+Check out `ARCHITECTURE.md`. Currently building against GHC 8.10.7.
+
 ## Publishing new release
 
 Pushing a git tag will trigger a build on github actions. It will build binaries for different OS and create a new release with them attached.
@@ -33,5 +37,3 @@ We don't fully have everything automated so here's what you should do whenever y
 - `git tag v{version} && git push {remote} v{version}`
 - Bump intlc version in `@unsplash/intlc` postinstall script to match the latest intlc https://github.com/unsplash/intlc/blob/master/npm/package.json#L7
 - Bump `@unsplash/intlc` package.json version and publish **only** when the brand new release is available on github.
-
-_Currently building against GHC 8.10.7._
