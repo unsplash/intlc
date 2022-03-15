@@ -100,15 +100,15 @@ spec = describe "parser" $ do
 
     describe "bool" $ do
       it "requires both bool cases" $ do
-        parse interp "{x, bool, true {y} false {z}}" `shouldParse` Arg "x" (Bool [Plaintext "y"] [Plaintext "z"])
-        parse interp `shouldFailOn` "{x, bool, true {y}}"
-        parse interp `shouldFailOn` "{x, bool, false {y}}"
+        parse interp "{x, boolean, true {y} false {z}}" `shouldParse` Arg "x" (Bool [Plaintext "y"] [Plaintext "z"])
+        parse interp `shouldFailOn` "{x, boolean, true {y}}"
+        parse interp `shouldFailOn` "{x, boolean, false {y}}"
 
       it "enforces case order" $ do
-        parse interp `shouldFailOn` "{x, bool, false {y} true {z}}"
+        parse interp `shouldFailOn` "{x, boolean, false {y} true {z}}"
 
       it "disallows arbitrary cases" $ do
-        parse interp `shouldFailOn` "{x, bool, true {y} nottrue {z}}"
+        parse interp `shouldFailOn` "{x, boolean, true {y} nottrue {z}}"
 
     describe "date" $ do
       it "disallows bad formats" $ do

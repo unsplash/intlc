@@ -154,7 +154,7 @@ interp = do
     ]
   where sep = string "," <* hspace1
         body n = choice
-          [ uncurry Bool <$> (string "bool" *> sep *> boolCases)
+          [ uncurry Bool <$> (string "boolean" *> sep *> boolCases)
           , Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)

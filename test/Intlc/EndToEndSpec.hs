@@ -53,7 +53,7 @@ spec = describe "end-to-end" $ do
       =*= "export const A: () => string = () => ``\nexport const x: () => string = () => ``\nexport const z: () => string = () => ``"
 
   it "compiles bools" $ do
-    [r|{ "f": { "message": "{x, bool, true {y} false {z}}" } }|]
+    [r|{ "f": { "message": "{x, boolean, true {y} false {z}}" } }|]
       =*= "export const f: (x: { x: boolean }) => string = x => `${(() => { switch (x.x) { case true: return `y`; case false: return `z`; } })()}`"
 
   it "compiles plurals" $ do

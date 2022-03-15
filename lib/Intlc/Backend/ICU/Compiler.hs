@@ -25,7 +25,7 @@ token (Plaintext x)     = x
 token (Interpolation x) = arg x
 
 arg :: Arg -> Text
-arg (Arg n Bool { trueCase, falseCase }) = "{" <> n <> ", bool, true {" <> stream trueCase <> "} false {" <> stream falseCase <> "}}"
+arg (Arg n Bool { trueCase, falseCase }) = "{" <> n <> ", boolean, true {" <> stream trueCase <> "} false {" <> stream falseCase <> "}}"
 arg (Arg n String)                       = "{" <> n <> "}"
 arg (Arg n Number)                       = "{" <> n <> ", number}"
 arg (Arg n (Date fmt))                   = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
