@@ -4,7 +4,7 @@ import           Data.ByteString.Lazy (ByteString)
 import qualified Data.Text            as T
 import           Intlc.Compiler       (compileDataset)
 import           Intlc.Core           (Locale (Locale))
-import           Intlc.Parser         (ParseFailure (..), parseDataset)
+import           Intlc.Parser         (parseDataset)
 import           Prelude              hiding (ByteString)
 import           System.FilePath      ((<.>), (</>))
 import           Test.Hspec
@@ -12,7 +12,7 @@ import           Test.Hspec.Golden    (Golden (..), defaultGolden)
 import           Text.RawString.QQ    (r)
 
 parseAndCompileDataset :: ByteString -> Either (NonEmpty Text) Text
-parseAndCompileDataset = fmap (compileDataset (Locale "en-US")) . first (pure . show) . parseDataset
+parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset
 
 golden :: String -> ByteString -> Golden String
 golden name in' = baseCfg
@@ -35,10 +35,6 @@ spec :: Spec
 spec = describe "end-to-end" $ do
   it "example message" $ do
     golden "example" [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]
-
-  it "validates that keys are alphanumeric" $ do
-    parseDataset [r|{ "x bad key": { "message": "foo" }, "good_Key": { "message": "bar" }, "y-bad-key": { "message": "baz" }, "z_bad_key123": { "message": "biz" } }|] `shouldBe`
-      Left (InvalidKeys $ "x bad key" :| ["y-bad-key", "z_bad_key123"])
 
   it "compiles valid JS module format given empty input" $ do
     [r|{}|]

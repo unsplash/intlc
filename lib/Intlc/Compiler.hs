@@ -3,6 +3,7 @@ module Intlc.Compiler (compileDataset, compileFlattened, flatten) where
 import           Control.Applicative.Combinators   (choice)
 import           Data.Aeson                        (encode)
 import           Data.ByteString.Lazy              (ByteString)
+import           Data.Char                         (isAlpha)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
@@ -14,8 +15,8 @@ import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
-compileDataset :: Locale -> Dataset Translation -> Text
-compileDataset l d =
+compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
+compileDataset l d = validateKeys d $>
   case stmts of
     []     -> JS.emptyModule
     stmts' -> T.intercalate "\n" stmts'
@@ -23,6 +24,12 @@ compileDataset l d =
         imports = maybeToList $ JS.buildReactImport d
         exports = M.foldrWithKey translationCons mempty d
         translationCons k v acc = translation l k v : acc
+
+validateKeys :: Dataset a -> Either (NonEmpty Text) (Dataset a)
+validateKeys xs = toEither . nonEmpty . filter (not . isValidKey) . M.keys $ xs
+  where toEither Nothing   = Right xs
+        toEither (Just ks) = Left ks
+        isValidKey = T.all (liftA2 (||) isAlpha (== '_'))
 
 translation :: Locale -> Text -> Translation -> Text
 translation l k (Translation v be _) = case be of

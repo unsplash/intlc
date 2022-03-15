@@ -1,12 +1,21 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Intlc.Compiler (flatten)
+import           Intlc.Compiler (compileDataset, flatten)
+import           Intlc.Core     (Backend (TypeScript), Locale (Locale),
+                                 Translation (Translation))
 import           Intlc.ICU
 import           Prelude        hiding (one)
 import           Test.Hspec
 
 spec :: Spec
 spec = describe "compiler" $ do
+  describe "compile" $ do
+    let f = compileDataset (Locale "any") . fromList . fmap (, Translation (Static "any") TypeScript Nothing)
+
+    it "validates keys don't contain invalid chars" $ do
+      f ["goodKey"] `shouldSatisfy` isRight
+      f ["bad key"] `shouldSatisfy` isLeft
+
   describe "flatten" $ do
     it "no-ops static" $ do
       flatten (Static "xyz") `shouldBe` Static "xyz"
