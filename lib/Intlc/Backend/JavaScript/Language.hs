@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Intlc.Backend.JavaScript.Language where
 
 import           Intlc.Core (Locale)
@@ -57,6 +59,10 @@ fromToken (ICU.Interpolation x) = fromArg x
 fromArg :: ICU.Arg -> ASTCompiler Expr
 fromArg (ICU.Arg nraw t) =
   case t of
+    ICU.Bool { ICU.trueCase, ICU.falseCase } -> do
+      x <- fromBoolCase True trueCase
+      y <- fromBoolCase False falseCase
+      pure . TMatch . Match n LitCond . LitMatchRet $ x :| [y]
     ICU.String             -> pure $ TStr n
     ICU.Number             -> pure $ TNum n
     ICU.Date x             -> pure $ TDate n x
@@ -104,3 +110,7 @@ fromSelectCase (ICU.SelectCase x ys) = Branch ("'" <> x <> "'") <$> (fromToken `
 
 fromSelectWildcard :: ICU.SelectWildcard -> ASTCompiler Wildcard
 fromSelectWildcard (ICU.SelectWildcard xs) = Wildcard <$> (fromToken `mapM` xs)
+
+fromBoolCase :: Bool -> ICU.Stream -> ASTCompiler Branch
+fromBoolCase b xs = Branch b' <$> (fromToken `mapM` xs)
+  where b' = if b then "true" else "false"

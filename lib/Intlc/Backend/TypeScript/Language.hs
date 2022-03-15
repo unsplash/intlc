@@ -23,6 +23,7 @@ data In
   | TStrLitUnion (NonEmpty Text)
   | TNumLitUnion (NonEmpty Text)
   | TNum
+  | TBool
   | TDate
   -- An endomorphism on `Out`. Omitted as an argument to enforce that it's the
   -- same type as the output of the top-level `Lambda`.
@@ -52,6 +53,7 @@ fromToken ICU.Plaintext {}      = mempty
 fromToken (ICU.Interpolation x) = fromArg x
 
 fromArg :: ICU.Arg -> UncollatedArgs
+fromArg (ICU.Arg n ICU.Bool {})        = pure (n, TBool)
 fromArg (ICU.Arg n ICU.String)         = pure (n, TUniIn TStr)
 fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
 fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)

@@ -154,7 +154,8 @@ interp = do
     ]
   where sep = string "," <* hspace1
         body n = choice
-          [ Number <$ string "number"
+          [ uncurry Bool <$> (string "bool" *> sep *> boolCases)
+          , Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
           , Plural <$> withPluralCtx n (string "plural" *> sep *> cardinalPluralCases)
@@ -175,6 +176,12 @@ dateTimeFmt = choice
 
 caseBody :: Parser Stream
 caseBody = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
+
+boolCases :: Parser (Stream, Stream)
+boolCases = (,)
+  <$> (string "true"  *> hspace1 *> caseBody)
+   <* hspace1
+  <*> (string "false" *> hspace1 *> caseBody)
 
 selectCases :: Parser (NonEmpty SelectCase, Maybe SelectWildcard)
 selectCases = (,) <$> cases <*> optional wildcard

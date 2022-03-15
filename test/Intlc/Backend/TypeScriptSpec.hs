@@ -51,6 +51,11 @@ spec = describe "TypeScript compiler" $ do
             , ICU.SelectCase "Ashley" [ICU.Plaintext "fairly good"]
             ]
           ) Nothing))
+        , ICU.Plaintext ". Finally, you are "
+        , ICU.Interpolation (ICU.Arg "isDev" (ICU.Bool
+          { ICU.trueCase = [ICU.Plaintext "a software engineer"]
+          , ICU.falseCase = [ICU.Plaintext "something less fun"]
+          }))
         , ICU.Plaintext "."
         ]
 

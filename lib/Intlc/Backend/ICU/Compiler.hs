@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 -- This module is essentially the inverse of the parsing we perform; it's
 -- semantically reversible in that respect if not precisely due to formatting,
 -- no preservation of the presence of defaults, etc.
@@ -23,14 +25,15 @@ token (Plaintext x)     = x
 token (Interpolation x) = arg x
 
 arg :: Arg -> Text
-arg (Arg n String)                = "{" <> n <> "}"
-arg (Arg n Number)                = "{" <> n <> ", number}"
-arg (Arg n (Date fmt))            = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
-arg (Arg n (Time fmt))            = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-arg (Arg n (Plural (Cardinal p))) = "{" <> n <> ", plural, "        <> cardinalPlural p <> "}"
-arg (Arg n (Plural (Ordinal p)))  = "{" <> n <> ", selectordinal, " <> ordinalPlural p  <> "}"
-arg (Arg n (Select xs y))         = "{" <> n <> ", select, "        <> select xs y      <> "}"
-arg (Arg n (Callback xs))         = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
+arg (Arg n Bool { trueCase, falseCase }) = "{" <> n <> ", bool, true {" <> stream trueCase <> "} false {" <> stream falseCase <> "}}"
+arg (Arg n String)                       = "{" <> n <> "}"
+arg (Arg n Number)                       = "{" <> n <> ", number}"
+arg (Arg n (Date fmt))                   = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
+arg (Arg n (Time fmt))                   = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
+arg (Arg n (Plural (Cardinal p)))        = "{" <> n <> ", plural, "        <> cardinalPlural p <> "}"
+arg (Arg n (Plural (Ordinal p)))         = "{" <> n <> ", selectordinal, " <> ordinalPlural p  <> "}"
+arg (Arg n (Select xs y))                = "{" <> n <> ", select, "        <> select xs y      <> "}"
+arg (Arg n (Callback xs))                = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"

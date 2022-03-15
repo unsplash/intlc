@@ -95,8 +95,20 @@ spec = describe "parser" $ do
       parse interp `shouldFailOn` "{x y}"
 
     it "disallows bad types" $ do
-      parse msg `shouldFailOn` "{n, bool}"
+      parse msg `shouldFailOn` "{n, enum}"
       parse msg `shouldFailOn` "{n, int, one {x} other {y}}"
+
+    describe "bool" $ do
+      it "requires both bool cases" $ do
+        parse interp "{x, bool, true {y} false {z}}" `shouldParse` Arg "x" (Bool [Plaintext "y"] [Plaintext "z"])
+        parse interp `shouldFailOn` "{x, bool, true {y}}"
+        parse interp `shouldFailOn` "{x, bool, false {y}}"
+
+      it "enforces case order" $ do
+        parse interp `shouldFailOn` "{x, bool, false {y} true {z}}"
+
+      it "disallows arbitrary cases" $ do
+        parse interp `shouldFailOn` "{x, bool, true {y} nottrue {z}}"
 
     describe "date" $ do
       it "disallows bad formats" $ do
