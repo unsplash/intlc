@@ -148,6 +148,85 @@ buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)
 
 validateKey :: Text -> Either Text ()
 validateKey k
-  | T.all isValidChar k = Right ()
-  | otherwise           = Left $ k <> ": invalid character(s) present."
+  | k `elem` reservedWords      = Left $ k <> ": reserved word."
+  | T.any (not . isValidChar) k = Left $ k <> ": invalid character(s) present."
+  | otherwise                   = Right ()
   where isValidChar = liftA2 (||) isAlpha (== '_')
+
+-- Useful docs:
+--   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#keywords
+reservedWords :: [Text]
+reservedWords = es2015 <> future <> module' <> legacy <> literals where
+  es2015 =
+    [ "break"
+    , "case"
+    , "catch"
+    , "class"
+    , "const"
+    , "continue"
+    , "debugger"
+    , "default"
+    , "delete"
+    , "do"
+    , "else"
+    , "export"
+    , "extends"
+    , "finally"
+    , "for"
+    , "function"
+    , "if"
+    , "import"
+    , "in"
+    , "instanceof"
+    , "new"
+    , "return"
+    , "super"
+    , "switch"
+    , "this"
+    , "throw"
+    , "try"
+    , "typeof"
+    , "var"
+    , "void"
+    , "while"
+    , "with"
+    , "yield"
+    ]
+  future =
+    [ "enum"
+    , "implements"
+    , "interface"
+    , "let"
+    , "package"
+    , "private"
+    , "protected"
+    , "public"
+    , "static"
+    , "yield"
+    ]
+  module' =
+    [ "await"
+    ]
+  legacy =
+    [ "abstract"
+    , "boolean"
+    , "byte"
+    , "char"
+    , "double"
+    , "final"
+    , "float"
+    , "goto"
+    , "int"
+    , "long"
+    , "native"
+    , "short"
+    , "synchronized"
+    , "throws"
+    , "transient"
+    , "volatile"
+    ]
+  literals =
+    [ "null"
+    , "true"
+    , "false"
+    ]

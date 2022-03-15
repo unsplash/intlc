@@ -16,6 +16,9 @@ spec = describe "compiler" $ do
       f ["goodKey"] `shouldSatisfy` isRight
       f ["bad key"] `shouldSatisfy` isLeft
 
+    it "validates keys aren't reserved words" $ do
+      f ["delete"] `shouldSatisfy` isLeft
+
   describe "flatten" $ do
     it "no-ops static" $ do
       flatten (Static "xyz") `shouldBe` Static "xyz"
