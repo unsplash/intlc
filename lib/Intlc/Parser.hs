@@ -154,7 +154,8 @@ interp = do
     ]
   where sep = string "," <* hspace1
         body n = choice
-          [ Number <$ string "number"
+          [ uncurry Bool <$> (string "boolean" *> sep *> boolCases)
+          , Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
           , Plural <$> withPluralCtx n (string "plural" *> sep *> cardinalPluralCases)
@@ -173,12 +174,20 @@ dateTimeFmt = choice
   , Full   <$ string "full"
   ]
 
+caseBody :: Parser Stream
+caseBody = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
+
+boolCases :: Parser (Stream, Stream)
+boolCases = (,)
+  <$> (string "true"  *> hspace1 *> caseBody)
+   <* hspace1
+  <*> (string "false" *> hspace1 *> caseBody)
+
 selectCases :: Parser (NonEmpty SelectCase, Maybe SelectWildcard)
 selectCases = (,) <$> cases <*> optional wildcard
-  where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> body) hspace1
-        wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> body)
+  where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> caseBody) hspace1
+        wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> caseBody)
         name = try $ mfilter (/= wildcardName) ident
-        body = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
         wildcardName = "other"
 
 cardinalPluralCases :: Parser Plural
@@ -198,8 +207,8 @@ data ParsedPluralCase
 
 disorderedPluralCases :: Parser (NonEmpty ParsedPluralCase)
 disorderedPluralCases = flip NE.sepEndBy1 hspace1 $ choice
-  [ (ParsedExact .) . PluralCase <$> pluralExact <* hspace1 <*> pluralBody
-  , (ParsedRule .)  . PluralCase <$> pluralRule  <* hspace1 <*> pluralBody
+  [ (ParsedExact .) . PluralCase <$> pluralExact <* hspace1 <*> caseBody
+  , (ParsedRule .)  . PluralCase <$> pluralRule  <* hspace1 <*> caseBody
   ]
 
 pluralExact :: Parser PluralExact
@@ -215,10 +224,7 @@ pluralRule = choice
   ]
 
 pluralWildcard :: Parser PluralWildcard
-pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> pluralBody)
-
-pluralBody :: Parser Stream
-pluralBody = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
+pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> caseBody)
 
 -- | To simplify parsing cases we validate after-the-fact here. This achieves
 -- two purposes. Firstly it enables us to fail the parse if the cases are not

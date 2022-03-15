@@ -21,7 +21,7 @@ spec = describe "parser" $ do
       parse msg `shouldFailOn` "a { b"
 
     it "does not tolerate interpolations with a bad type" $ do
-      parse msg `shouldFailOn` "a {n, bool} b"
+      parse msg `shouldFailOn` "a {n, badtype} b"
 
     it "does not tolerate empty braces" $ do
       parse msg `shouldFailOn` "a {} b"
@@ -95,8 +95,20 @@ spec = describe "parser" $ do
       parse interp `shouldFailOn` "{x y}"
 
     it "disallows bad types" $ do
-      parse msg `shouldFailOn` "{n, bool}"
+      parse msg `shouldFailOn` "{n, enum}"
       parse msg `shouldFailOn` "{n, int, one {x} other {y}}"
+
+    describe "bool" $ do
+      it "requires both bool cases" $ do
+        parse interp "{x, boolean, true {y} false {z}}" `shouldParse` Arg "x" (Bool [Plaintext "y"] [Plaintext "z"])
+        parse interp `shouldFailOn` "{x, boolean, true {y}}"
+        parse interp `shouldFailOn` "{x, boolean, false {y}}"
+
+      it "enforces case order" $ do
+        parse interp `shouldFailOn` "{x, boolean, false {y} true {z}}"
+
+      it "disallows arbitrary cases" $ do
+        parse interp `shouldFailOn` "{x, boolean, true {y} nottrue {z}}"
 
     describe "date" $ do
       it "disallows bad formats" $ do

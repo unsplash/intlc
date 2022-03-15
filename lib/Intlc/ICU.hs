@@ -30,9 +30,11 @@ mergePlaintext (x:ys)                           = x : mergePlaintext ys
 data Arg = Arg Text Type
   deriving (Show, Eq)
 
--- We diverge from icu4j by not necessarily requiring wildcard cases.
+-- We diverge from icu4j by supporting a boolean type, and not necessarily
+-- requiring wildcard cases.
 data Type
-  = String
+  = Bool { trueCase :: Stream, falseCase :: Stream }
+  | String
   | Number
   | Date DateTimeFmt
   | Time DateTimeFmt

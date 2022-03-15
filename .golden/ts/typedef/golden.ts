@@ -1,1 +1,1 @@
-export type Test = (x: { age: number; bold: (x: string) => string; currTime: Date; magicNumber: number; name: ('Sam' | 'Ashley') & string; todayDate: Date }) => string
+export type Test = (x: { age: number; bold: (x: string) => string; currTime: Date; isDev: boolean; magicNumber: number; name: ('Sam' | 'Ashley') & string; todayDate: Date }) => string

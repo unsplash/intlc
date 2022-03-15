@@ -1,1 +1,1 @@
-export type Test = (x: { age: number; bold: (x: ReactElement) => ReactElement; currTime: Date; magicNumber: number; name: ('Sam' | 'Ashley') & string; todayDate: Date }) => ReactElement
+export type Test = (x: { age: number; bold: (x: ReactElement) => ReactElement; currTime: Date; isDev: boolean; magicNumber: number; name: ('Sam' | 'Ashley') & string; todayDate: Date }) => ReactElement

@@ -69,6 +69,7 @@ in' (TStrLitUnion xs) = pure . union $ qts <$> xs
   where qts x = "'" <> x <> "'"
 in' (TNumLitUnion xs) = pure . union $ xs
 in' TNum              = pure "number"
+in' TBool             = pure "boolean"
 in' TDate             = pure "Date"
 in' TEndo             = endo
 
