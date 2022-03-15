@@ -21,8 +21,8 @@ compileDataset l d = validateKeys d $>
     stmts' -> T.intercalate "\n" stmts'
   where stmts = imports <> exports
         imports = maybeToList $ JS.buildReactImport d
-        exports = M.foldrWithKey translationCons mempty d
-        translationCons k v acc = translation l k v : acc
+        exports = M.foldrWithKey buildCompiledTranslations mempty d
+        buildCompiledTranslations k v acc = compileTranslation l k v : acc
 
 validateKeys :: Dataset Translation -> Either (NonEmpty Text) ()
 validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
@@ -32,8 +32,8 @@ validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
           TypeScript      -> TS.validateKey
           TypeScriptReact -> TS.validateKey
 
-translation :: Locale -> Text -> Translation -> Text
-translation l k (Translation v be _) = case be of
+compileTranslation :: Locale -> Text -> Translation -> Text
+compileTranslation l k (Translation v be _) = case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
