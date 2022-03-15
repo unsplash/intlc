@@ -1,7 +1,7 @@
 module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport, emptyModule, validateKey) where
 
 import           Control.Monad.Extra               (pureIf)
-import           Data.Char                         (isAlpha)
+import           Data.Char                         (isAlpha, isDigit)
 import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Language
 import           Intlc.Core                        (Backend (..), Dataset,
@@ -148,10 +148,15 @@ buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)
 
 validateKey :: Text -> Either Text ()
 validateKey k
-  | k `elem` reservedWords      = Left $ k <> ": reserved word."
-  | T.any (not . isValidChar) k = Left $ k <> ": invalid character(s) present."
-  | otherwise                   = Right ()
-  where isValidChar = liftA2 (||) isAlpha (== '_')
+  | T.null k                        = Left "[Empty identifier found.]"
+  | k `elem` reservedWords          = Left $ k <> ": reserved word."
+  | not (isValidIdent (T.unpack k)) = Left $ k <> ": invalid identifier."
+  | otherwise                       = Right ()
+  -- https://developer.mozilla.org/en-US/docs/Glossary/identifier
+  where isValidIdent []     = False -- Technically already caught by `T.null`.
+        isValidIdent (c:cs) = isValidIdentHeadChar c && all isValidIdentTailChar cs
+        isValidIdentHeadChar = liftA2 (||) isAlpha (`elem` ['$', '_'])
+        isValidIdentTailChar = liftA2 (||) isValidIdentHeadChar isDigit
 
 -- Useful docs:
 --   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#keywords
