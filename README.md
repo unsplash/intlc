@@ -2,6 +2,8 @@
 
 **Disclaimer**: Currently for internal use but feedback/external usage welcome.
 
+## Usage
+
 Compile ICU messages into code.
 
 ```
