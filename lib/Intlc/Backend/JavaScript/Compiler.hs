@@ -1,6 +1,8 @@
-module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport, emptyModule) where
+module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport, emptyModule, validateKey) where
 
 import           Control.Monad.Extra               (pureIf)
+import           Data.Char                         (isAlpha)
+import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Language
 import           Intlc.Core                        (Backend (..), Dataset,
                                                     Locale (Locale),
@@ -143,3 +145,9 @@ emptyModule = "export {}"
 buildReactImport :: Dataset Translation -> Maybe Text
 buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)
   where text = "import { ReactElement } from 'react'"
+
+validateKey :: Text -> Either Text ()
+validateKey k
+  | T.all isValidChar k = Right ()
+  | otherwise           = Left $ k <> ": invalid character(s) present."
+  where isValidChar = liftA2 (||) isAlpha (== '_')

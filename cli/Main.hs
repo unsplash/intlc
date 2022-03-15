@@ -13,7 +13,7 @@ main = getOpts >>= \case
   Flatten path -> either parserDie (putLBSLn . compileFlattened) =<< getParsed path
   where tryCompile l = either parserDie (either compilerDie putTextLn . compileDataset l)
         parserDie = die . printErr
-        compilerDie = die . T.unpack . ("Invalid keys: " <>) . T.intercalate ", " . toList
+        compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
 
 getParsed :: FilePath -> IO (Either ParseFailure (Dataset Translation))
 getParsed = fmap parseDataset . readFileLBS

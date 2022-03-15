@@ -3,7 +3,6 @@ module Intlc.Compiler (compileDataset, compileFlattened, flatten) where
 import           Control.Applicative.Combinators   (choice)
 import           Data.Aeson                        (encode)
 import           Data.ByteString.Lazy              (ByteString)
-import           Data.Char                         (isAlpha)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
@@ -25,11 +24,11 @@ compileDataset l d = validateKeys d $>
         exports = M.foldrWithKey translationCons mempty d
         translationCons k v acc = translation l k v : acc
 
-validateKeys :: Dataset a -> Either (NonEmpty Text) (Dataset a)
-validateKeys xs = toEither . nonEmpty . filter (not . isValidKey) . M.keys $ xs
-  where toEither Nothing   = Right xs
-        toEither (Just ks) = Left ks
-        isValidKey = T.all (liftA2 (||) isAlpha (== '_'))
+validateKeys :: Dataset a -> Either (NonEmpty Text) ()
+validateKeys = toEither . lefts . fmap JS.validateKey . M.keys
+  where toEither []     = Right ()
+        toEither (e:es) = Left $ e :| es
+
 
 translation :: Locale -> Text -> Translation -> Text
 translation l k (Translation v be _) = case be of
