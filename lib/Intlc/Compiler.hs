@@ -24,11 +24,13 @@ compileDataset l d = validateKeys d $>
         exports = M.foldrWithKey translationCons mempty d
         translationCons k v acc = translation l k v : acc
 
-validateKeys :: Dataset a -> Either (NonEmpty Text) ()
-validateKeys = toEither . lefts . fmap JS.validateKey . M.keys
+validateKeys :: Dataset Translation -> Either (NonEmpty Text) ()
+validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
   where toEither []     = Right ()
         toEither (e:es) = Left $ e :| es
-
+        validate k t = k & case backend t of
+          TypeScript      -> TS.validateKey
+          TypeScriptReact -> TS.validateKey
 
 translation :: Locale -> Text -> Translation -> Text
 translation l k (Translation v be _) = case be of
