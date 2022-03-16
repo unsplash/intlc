@@ -10,7 +10,6 @@ module Intlc.Parser where
 import qualified Control.Applicative.Combinators.NonEmpty as NE
 import           Data.Aeson                               (decode)
 import           Data.ByteString.Lazy                     (ByteString)
-import           Data.Char                                (isAlpha)
 import qualified Data.Map                                 as M
 import qualified Data.Text                                as T
 import           Data.Void                                ()
@@ -26,7 +25,6 @@ import           Text.Megaparsec.Error.Builder
 
 data ParseFailure
   = FailedJsonParse
-  | InvalidKeys (NonEmpty Text)
   | FailedMessageParse ParseErr
   deriving (Show, Eq)
 
@@ -44,19 +42,12 @@ pos `failingWith` e = parseError . errFancy pos . fancy . ErrorCustom $ e
 
 printErr :: ParseFailure -> String
 printErr FailedJsonParse        = "Failed to parse JSON"
-printErr (InvalidKeys ks)       = T.unpack $ "Invalid keys: " <> T.intercalate ", " (toList ks)
 printErr (FailedMessageParse e) = errorBundlePretty e
 
 parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
-parseDataset = parse' <=< validateKeys <=< decode'
+parseDataset = parse' <=< decode'
   where decode' = maybeToRight FailedJsonParse . decode
         parse' = M.traverseWithKey ((first FailedMessageParse .) . parseTranslationFor)
-
-validateKeys :: Dataset a -> Either ParseFailure (Dataset a)
-validateKeys xs = toEither . nonEmpty . filter (not . isValidKey) . M.keys $ xs
-  where toEither Nothing   = Right xs
-        toEither (Just ks) = Left . InvalidKeys $ ks
-        isValidKey = T.all (liftA2 (||) isAlpha (== '_'))
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
 parseTranslationFor name (UnparsedTranslation umsg be md) = do

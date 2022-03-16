@@ -1,6 +1,8 @@
-module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport, emptyModule) where
+module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport, emptyModule, validateKey) where
 
 import           Control.Monad.Extra               (pureIf)
+import           Data.Char                         (isAlpha, isDigit)
+import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Language
 import           Intlc.Core                        (Backend (..), Dataset,
                                                     Locale (Locale),
@@ -143,3 +145,93 @@ emptyModule = "export {}"
 buildReactImport :: Dataset Translation -> Maybe Text
 buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)
   where text = "import { ReactElement } from 'react'"
+
+validateKey :: Text -> Either Text ()
+validateKey k
+  | T.null k                        = Left "[Empty identifier found.]"
+  | k `elem` reservedWords          = Left $ k <> ": reserved word."
+  | not (isValidIdent (T.unpack k)) = Left $ k <> ": invalid identifier."
+  | otherwise                       = Right ()
+  -- https://developer.mozilla.org/en-US/docs/Glossary/identifier
+  where isValidIdent []     = False -- Technically already caught by `T.null`.
+        isValidIdent (c:cs) = isValidIdentHeadChar c && all isValidIdentTailChar cs
+        isValidIdentHeadChar = liftA2 (||) isAlpha (`elem` ['$', '_'])
+        isValidIdentTailChar = liftA2 (||) isValidIdentHeadChar isDigit
+
+-- Useful docs:
+--   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#keywords
+reservedWords :: [Text]
+reservedWords = es2015 <> future <> module' <> legacy <> literals where
+  es2015 =
+    [ "break"
+    , "case"
+    , "catch"
+    , "class"
+    , "const"
+    , "continue"
+    , "debugger"
+    , "default"
+    , "delete"
+    , "do"
+    , "else"
+    , "export"
+    , "extends"
+    , "finally"
+    , "for"
+    , "function"
+    , "if"
+    , "import"
+    , "in"
+    , "instanceof"
+    , "new"
+    , "return"
+    , "super"
+    , "switch"
+    , "this"
+    , "throw"
+    , "try"
+    , "typeof"
+    , "var"
+    , "void"
+    , "while"
+    , "with"
+    , "yield"
+    ]
+  future =
+    [ "enum"
+    , "implements"
+    , "interface"
+    , "let"
+    , "package"
+    , "private"
+    , "protected"
+    , "public"
+    , "static"
+    , "yield"
+    ]
+  module' =
+    [ "await"
+    ]
+  legacy =
+    [ "abstract"
+    , "boolean"
+    , "byte"
+    , "char"
+    , "double"
+    , "final"
+    , "float"
+    , "goto"
+    , "int"
+    , "long"
+    , "native"
+    , "short"
+    , "synchronized"
+    , "throws"
+    , "transient"
+    , "volatile"
+    ]
+  literals =
+    [ "null"
+    , "true"
+    , "false"
+    ]

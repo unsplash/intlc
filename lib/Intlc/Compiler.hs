@@ -14,18 +14,26 @@ import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (ByteString)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
-compileDataset :: Locale -> Dataset Translation -> Text
-compileDataset l d =
+compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
+compileDataset l d = validateKeys d $>
   case stmts of
     []     -> JS.emptyModule
     stmts' -> T.intercalate "\n" stmts'
   where stmts = imports <> exports
         imports = maybeToList $ JS.buildReactImport d
-        exports = M.foldrWithKey translationCons mempty d
-        translationCons k v acc = translation l k v : acc
+        exports = M.foldrWithKey buildCompiledTranslations mempty d
+        buildCompiledTranslations k v acc = compileTranslation l k v : acc
 
-translation :: Locale -> Text -> Translation -> Text
-translation l k (Translation v be _) = case be of
+validateKeys :: Dataset Translation -> Either (NonEmpty Text) ()
+validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
+  where toEither []     = Right ()
+        toEither (e:es) = Left $ e :| es
+        validate k t = k & case backend t of
+          TypeScript      -> TS.validateKey
+          TypeScriptReact -> TS.validateKey
+
+compileTranslation :: Locale -> Text -> Translation -> Text
+compileTranslation l k (Translation v be _) = case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 

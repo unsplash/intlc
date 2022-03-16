@@ -2,12 +2,12 @@
 -- look like. The value-level output is JavaScript and resides almost entirely
 -- in the corresponding module. They have been written with one-another in mind.
 
-module Intlc.Backend.TypeScript.Compiler (compileNamedExport, compileTypeof) where
+module Intlc.Backend.TypeScript.Compiler (compileNamedExport, compileTypeof, validateKey) where
 
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
-import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..),
-                                                    compileStmtPieces)
+import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
+import qualified Intlc.Backend.JavaScript.Compiler as JS
 import           Intlc.Backend.TypeScript.Language
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
@@ -16,7 +16,7 @@ import           Utils                             ((<>^))
 
 compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
 compileNamedExport x l k v =
-  let (n, r) = compileStmtPieces x l k v
+  let (n, r) = JS.compileStmtPieces x l k v
       arg = case v of
         ICU.Static {}  -> "()"
         ICU.Dynamic {} -> "x"
@@ -81,3 +81,9 @@ endo :: Compiler Text
 endo = do
   x <- out =<< ask
   pure $ "(" <> argName <> ": " <> x <> ") => " <> x
+
+-- Words like `namespace` and `type` aren't reserved at the value-level. `enum`
+-- is already reserved in JS spec. As such, we can directly reuse JS key
+-- validation.
+validateKey :: Text -> Either Text ()
+validateKey = JS.validateKey
