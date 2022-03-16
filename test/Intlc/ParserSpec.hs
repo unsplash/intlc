@@ -32,6 +32,9 @@ spec = describe "parser" $ do
     describe "plural hash" $ do
       it "parses as plaintext outside of plurals" $ do
         parse msg "#" `shouldParse` Static "#"
+        parse msg "{x, select, y {#}}" `shouldParse`
+          (Dynamic . pure . Interpolation . Arg "x" $
+            Select (pure $ SelectCase "y" (pure $ Plaintext "#")) Nothing)
 
       it "parses as arg inside shallow plural" $ do
         let n = pure . Interpolation $ Arg "n" Number
