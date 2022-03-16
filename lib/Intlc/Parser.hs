@@ -149,9 +149,11 @@ interp = do
           , Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
-          , Plural <$> withPluralCtx n (string "plural" *> sep *> cardinalPluralCases)
-          , Plural <$> withPluralCtx n (string "selectordinal" *> sep *> ordinalPluralCases)
-          , uncurry Select <$> (string "select" *> sep *> selectCases)
+          , try $ uncurry Select <$> (string "select" *> sep *> selectCases)
+          , Plural <$> withPluralCtx n (
+                  string "plural" *> sep *> cardinalPluralCases
+              <|> string "selectordinal" *> sep *> ordinalPluralCases
+            )
           ]
         withPluralCtx n p = pushPluralCtx n *> p <* popPluralCtx
         pushPluralCtx = modify . pushPluralArgName
