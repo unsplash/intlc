@@ -84,13 +84,11 @@ exprs :: Foldable f => f Expr -> Compiler Text
 exprs = foldMapM expr
 
 expr :: Expr -> Compiler Text
-expr (TPrint x)    = do
-  q <- asks (open . fromStrat . interp)
-  let escape c
-        | c' == q   = "\\" <> c'
-        | otherwise =         c'
-        where c' = T.singleton c
-  pure . T.concatMap escape $ x
+expr (TPrint x)    = asks interp <&> \case
+  TemplateLit -> T.concatMap escape x
+  _           -> x
+  where escape '`' = "\\`"
+        escape c   = T.singleton c
 expr (TStr x)      = interpc (prop x)
 expr (TNum x)      = do
   (Locale l) <- asks locale
