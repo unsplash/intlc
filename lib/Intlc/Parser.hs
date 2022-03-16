@@ -51,7 +51,7 @@ parseDataset = parse' <=< decode'
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
 parseTranslationFor name (UnparsedTranslation umsg be md) = do
-  msg' <- evalState (runParserT msg (T.unpack name) umsg) initialState
+  msg' <- runParser (runReaderT msg initialState) (T.unpack name) umsg
   pure $ Translation msg' be md
 
 type ParseErr = ParseErrorBundle Text MessageParseErr
@@ -70,16 +70,7 @@ peekPluralArgName = listToMaybe . pluralArgNameStack
 pushPluralArgName :: Text -> ParserState -> ParserState
 pushPluralArgName n x = x { pluralArgNameStack = n : pluralArgNameStack x }
 
-popPluralArgName :: ParserState -> (Maybe Text, ParserState)
-popPluralArgName x =
-  case pluralArgNameStack x of
-    []     -> (Nothing, x)
-    (y:ys) -> (Just y, x { pluralArgNameStack = ys })
-
-popPluralArgName_ :: ParserState -> ParserState
-popPluralArgName_ = snd . popPluralArgName
-
-type Parser = ParsecT MessageParseErr Text (State ParserState)
+type Parser = ReaderT ParserState (Parsec MessageParseErr Text)
 
 ident :: Parser Text
 ident = T.pack <$> some letterChar
@@ -92,7 +83,7 @@ msg = f . mergePlaintext <$> manyTill token eof
 
 token :: Parser Token
 token = do
-  marg <- gets peekPluralArgName
+  marg <- asks peekPluralArgName
   choice
     [ Interpolation <$> (interp <|> callback)
     -- Plural cases support interpolating the number/argument in context with
@@ -149,15 +140,13 @@ interp = do
           , Number <$ string "number"
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
-          , try $ uncurry Select <$> (string "select" *> sep *> selectCases)
           , Plural <$> withPluralCtx n (
                   string "plural" *> sep *> cardinalPluralCases
               <|> string "selectordinal" *> sep *> ordinalPluralCases
             )
+          , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
-        withPluralCtx n p = pushPluralCtx n *> p <* popPluralCtx
-        pushPluralCtx = modify . pushPluralArgName
-        popPluralCtx = modify popPluralArgName_
+        withPluralCtx n p = withReaderT (pushPluralArgName n) p
 
 dateTimeFmt :: Parser DateTimeFmt
 dateTimeFmt = choice

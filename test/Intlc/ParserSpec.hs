@@ -5,11 +5,11 @@ import           Intlc.Parser
 import           Prelude               hiding (ByteString)
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
-import           Text.Megaparsec       (ParseErrorBundle, runParserT)
+import           Text.Megaparsec       (ParseErrorBundle, runParser)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
 parseWith :: ParserState -> Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
-parseWith s p x = evalState (runParserT p "test" x) s
+parseWith s p = runParser (runReaderT p s) "test"
 
 parse :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
 parse = parseWith initialState
