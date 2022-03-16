@@ -57,18 +57,11 @@ parseTranslationFor name (UnparsedTranslation umsg be md) = do
 type ParseErr = ParseErrorBundle Text MessageParseErr
 
 data ParserState = ParserState
-  -- FIFO. The head is the most recent addition to the stack.
-  { pluralArgNameStack :: [Text]
+  { pluralCtxName :: Maybe Text
   }
 
 initialState :: ParserState
 initialState = ParserState mempty
-
-peekPluralArgName :: ParserState -> Maybe Text
-peekPluralArgName = listToMaybe . pluralArgNameStack
-
-pushPluralArgName :: Text -> ParserState -> ParserState
-pushPluralArgName n x = x { pluralArgNameStack = n : pluralArgNameStack x }
 
 type Parser = ReaderT ParserState (Parsec MessageParseErr Text)
 
@@ -83,7 +76,7 @@ msg = f . mergePlaintext <$> manyTill token eof
 
 token :: Parser Token
 token = do
-  marg <- asks peekPluralArgName
+  marg <- asks pluralCtxName
   choice
     [ Interpolation <$> (interp <|> callback)
     -- Plural cases support interpolating the number/argument in context with
@@ -146,7 +139,7 @@ interp = do
             )
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
-        withPluralCtx n p = withReaderT (pushPluralArgName n) p
+        withPluralCtx n p = withReaderT (const . ParserState . pure $ n) p
 
 dateTimeFmt :: Parser DateTimeFmt
 dateTimeFmt = choice

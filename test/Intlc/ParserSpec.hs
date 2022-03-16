@@ -161,7 +161,7 @@ spec = describe "parser" $ do
       parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (ParserState ["xyz"]) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "selectordinal" $ do
@@ -182,7 +182,7 @@ spec = describe "parser" $ do
       parse ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (ParserState ["xyz"]) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "select" $ do
