@@ -127,7 +127,7 @@ escaped = apos *> choice
 
 callback :: Parser Arg
 callback = do
-  oname <- string "<" *> ident <* ">"
+  oname <- string "<" *> ident <* string ">"
   mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
     Left _  -> 1 `failingWith` NoClosingCallbackTag oname
