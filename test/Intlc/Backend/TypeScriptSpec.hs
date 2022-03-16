@@ -56,7 +56,7 @@ spec = describe "TypeScript compiler" $ do
           { ICU.trueCase = [ICU.Plaintext "a software engineer"]
           , ICU.falseCase = [ICU.Plaintext "something less fun"]
           }))
-        , ICU.Plaintext "."
+        , ICU.Plaintext ". Bonus: Some characters that might need escaping! ` ``"
         ]
 
   describe "with template literal strategy" $ do

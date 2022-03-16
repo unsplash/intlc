@@ -15,7 +15,7 @@ type Compiler = Reader Cfg
 
 data Cfg = Cfg
   { locale :: Locale
-  , interp :: Interp
+  , interp :: InterpStrat
   }
 
 compileStmt :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
@@ -27,9 +27,8 @@ compileStmtPieces = compileWith stmtPieces
 
 compileWith :: (Stmt -> Compiler a) -> InterpStrat -> Locale -> Text -> ICU.Message -> a
 compileWith f o l k m = f' fromKeyedMsg'
-  where f' = flip runReader cfg . f
+  where f' = flip runReader (Cfg l o) . f
         fromKeyedMsg' = runReader (fromKeyedMsg k m) l
-        cfg = Cfg l (fromStrat o)
 
 data InterpStrat
   = TemplateLit
@@ -66,12 +65,12 @@ prop (Ref x) = argName <> "." <> x
 
 wrap :: Text -> Compiler Text
 wrap x = do
-  (o, c) <- asks ((open &&& close) . interp)
+  (o, c) <- asks ((open &&& close) . fromStrat . interp)
   pure $ o <> x <> c
 
 interpc :: Text -> Compiler Text
 interpc x = do
-  (o, c) <- asks ((interpOpen &&& interpClose) . interp)
+  (o, c) <- asks ((interpOpen &&& interpClose) . fromStrat . interp)
   pure $ o <> x <> c
 
 stmt :: Stmt -> Compiler Text
@@ -85,7 +84,11 @@ exprs :: Foldable f => f Expr -> Compiler Text
 exprs = foldMapM expr
 
 expr :: Expr -> Compiler Text
-expr (TPrint x)    = pure x
+expr (TPrint x)    = asks interp <&> \case
+  TemplateLit -> T.concatMap escape x
+  _           -> x
+  where escape '`' = "\\`"
+        escape c   = T.singleton c
 expr (TStr x)      = interpc (prop x)
 expr (TNum x)      = do
   (Locale l) <- asks locale
