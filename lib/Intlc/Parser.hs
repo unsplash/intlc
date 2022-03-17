@@ -75,18 +75,16 @@ msg = f . mergePlaintext <$> manyTill token eof
         f (x:xs)        = Dynamic (x :| xs)
 
 token :: Parser Token
-token = do
-  marg <- asks pluralCtxName
-  choice
-    [ Interpolation <$> (interp <|> callback)
-    -- Plural cases support interpolating the number/argument in context with
-    -- `#`. When there's no such context, fail the parse in effect treating it
-    -- as plaintext.
-    , case marg of
-        Just n  -> Interpolation (Arg n Number) <$ string "#"
-        Nothing -> empty
-    , Plaintext <$> (try escaped <|> plaintext)
-    ]
+token = choice
+  [ Interpolation <$> (interp <|> callback)
+  -- Plural cases support interpolating the number/argument in context with
+  -- `#`. When there's no such context, fail the parse in effect treating it
+  -- as plaintext.
+  , asks pluralCtxName >>= \case
+      Just n  -> Interpolation (Arg n PluralRef) <$ string "#"
+      Nothing -> empty
+  , Plaintext <$> (try escaped <|> plaintext)
+  ]
 
 plaintext :: Parser Text
 plaintext = T.singleton <$> L.charLiteral

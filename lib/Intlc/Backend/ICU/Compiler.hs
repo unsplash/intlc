@@ -32,6 +32,7 @@ arg (Arg n (Date fmt))                   = "{" <> n <> ", date, "          <> da
 arg (Arg n (Time fmt))                   = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
 arg (Arg n (Plural (Cardinal p)))        = "{" <> n <> ", plural, "        <> cardinalPlural p <> "}"
 arg (Arg n (Plural (Ordinal p)))         = "{" <> n <> ", selectordinal, " <> ordinalPlural p  <> "}"
+arg (Arg _ PluralRef)                    = "#"
 arg (Arg n (Select xs y))                = "{" <> n <> ", select, "        <> select xs y      <> "}"
 arg (Arg n (Callback xs))                = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
 

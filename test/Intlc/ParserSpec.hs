@@ -37,14 +37,14 @@ spec = describe "parser" $ do
             Select (pure $ SelectCase "y" (pure $ Plaintext "#")) Nothing)
 
       it "parses as arg inside shallow plural" $ do
-        let n = pure . Interpolation $ Arg "n" Number
+        let n = pure . Interpolation $ Arg "n" PluralRef
         parse msg "{n, plural, one {#} other {#}}" `shouldParse`
           (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
             RulePlural (pure $ PluralCase One n) (PluralWildcard n))
 
       it "parses as nearest arg inside deep plural" $ do
-        let n = pure . Interpolation $ Arg "n" Number
-        let i = pure . Interpolation $ Arg "i" Number
+        let n = pure . Interpolation $ Arg "n" PluralRef
+        let i = pure . Interpolation $ Arg "i" PluralRef
         parse msg "{n, plural, one {{i, plural, one {#} other {#}}} other {#}}" `shouldParse`
           (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
             RulePlural (pure $ PluralCase One (
@@ -53,7 +53,7 @@ spec = describe "parser" $ do
             )) (PluralWildcard n))
 
       it "parses as arg nested inside other interpolation" $ do
-        let n = pure . Interpolation $ Arg "n" Number
+        let n = pure . Interpolation $ Arg "n" PluralRef
         parse msg "{n, plural, one {<f>#</f>} other {#}}" `shouldParse`
           (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
             RulePlural (pure $ PluralCase One (
@@ -162,7 +162,7 @@ spec = describe "parser" $ do
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
       parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
+        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" PluralRef)]))
 
   describe "selectordinal" $ do
     it "disallows wildcard not at the end" $ do
@@ -183,7 +183,7 @@ spec = describe "parser" $ do
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
       parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
+        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" PluralRef)]))
 
   describe "select" $ do
     it "disallows wildcard not at the end" $ do

@@ -39,6 +39,9 @@ data Type
   | Date DateTimeFmt
   | Time DateTimeFmt
   | Plural Plural
+  -- Plural hash references have their own distinct type rather than merely
+  -- taking on `Number` to allow compilers to infer appropriately.
+  | PluralRef
   | Select (NonEmpty SelectCase) (Maybe SelectWildcard)
   | Callback Stream
   deriving (Show, Eq)
