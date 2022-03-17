@@ -59,6 +59,8 @@ fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
 fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)
 fromArg (ICU.Arg n ICU.Time {})        = pure (n, TDate)
 fromArg (ICU.Arg n (ICU.Plural x))     = fromPlural n x
+-- Plural references are treated as a no-op.
+fromArg (ICU.Arg _ ICU.PluralRef)      = mempty
 fromArg (ICU.Arg n (ICU.Select cs mw)) = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
   -- When there's no wildcard case we can compile to a union of string literals.
   where t = case mw of

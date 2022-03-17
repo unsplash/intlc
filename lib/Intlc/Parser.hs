@@ -83,7 +83,7 @@ token = do
     -- `#`. When there's no such context, fail the parse in effect treating it
     -- as plaintext.
     , case marg of
-        Just n  -> Interpolation (Arg n Number) <$ string "#"
+        Just n  -> Interpolation (Arg n PluralRef) <$ string "#"
         Nothing -> empty
     , Plaintext <$> (try escaped <|> plaintext)
     ]

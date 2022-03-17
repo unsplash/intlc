@@ -68,6 +68,7 @@ fromArg (ICU.Arg nraw t) =
     ICU.Date x             -> pure $ TDate n x
     ICU.Time x             -> pure $ TTime n x
     ICU.Plural x           -> TMatch <$> fromPlural n x
+    ICU.PluralRef          -> pure $ TNum n
     ICU.Select cs (Just w) -> ((TMatch . Match n LitCond) .) . NonLitMatchRet <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
     ICU.Select cs Nothing  -> TMatch . Match n LitCond . LitMatchRet <$> (fromSelectCase `mapM` cs)
     ICU.Callback xs        -> TApply n <$> (fromToken `mapM` xs)
