@@ -5,11 +5,11 @@ import           Intlc.Parser
 import           Prelude               hiding (ByteString)
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
-import           Text.Megaparsec       (ParseErrorBundle, runParserT)
+import           Text.Megaparsec       (ParseErrorBundle, runParser)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
 parseWith :: ParserState -> Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
-parseWith s p x = evalState (runParserT p "test" x) s
+parseWith s p = runParser (runReaderT p s) "test"
 
 parse :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
 parse = parseWith initialState
@@ -161,7 +161,7 @@ spec = describe "parser" $ do
       parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (ParserState ["xyz"]) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "selectordinal" $ do
@@ -182,7 +182,7 @@ spec = describe "parser" $ do
       parse ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (ParserState ["xyz"]) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation (Arg "xyz" Number)]))
 
   describe "select" $ do
