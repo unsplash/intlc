@@ -53,7 +53,7 @@ fromToken ICU.Plaintext {}      = mempty
 fromToken (ICU.Interpolation x) = fromArg x
 
 fromArg :: ICU.Arg -> UncollatedArgs
-fromArg (ICU.Arg n ICU.Bool {})        = pure (n, TBool)
+fromArg (ICU.Arg n (ICU.Bool xs ys))   = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
 fromArg (ICU.Arg n ICU.String)         = pure (n, TUniIn TStr)
 fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
 fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)
