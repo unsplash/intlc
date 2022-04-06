@@ -55,9 +55,10 @@ flatten (ICU.Dynamic xs)      = ICU.Dynamic . fromList . flattenStream . toList 
           , mapSelect <$> extractFirstSelect ys
           , mapPlural <$> extractFirstPlural ys
           ]
-        mapBool (n, ls, boo, rs) = streamFromArg n . uncurry ICU.Bool $ mapBoolStreams (flattenStream . ICU.mergePlaintext . surround ls rs) boo
-        mapSelect (n, ls, sel, rs) = streamFromArg n . uncurry ICU.Select $ mapSelectStreams (flattenStream . ICU.mergePlaintext . surround ls rs) sel
-        mapPlural (n, ls, plu, rs) = streamFromArg n .         ICU.Plural $ mapPluralStreams (flattenStream . ICU.mergePlaintext . surround ls rs) plu
+        mapBool (n, ls, boo, rs) = streamFromArg n . uncurry ICU.Bool $ mapBoolStreams (around ls rs) boo
+        mapSelect (n, ls, sel, rs) = streamFromArg n . uncurry ICU.Select $ mapSelectStreams (around ls rs) sel
+        mapPlural (n, ls, plu, rs) = streamFromArg n .         ICU.Plural $ mapPluralStreams (around ls rs) plu
+        around ls rs = flattenStream . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
         streamFromArg n = pure . ICU.Interpolation . ICU.Arg n
 
