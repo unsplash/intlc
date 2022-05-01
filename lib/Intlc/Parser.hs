@@ -23,6 +23,8 @@ import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer               as L
 import           Text.Megaparsec.Error.Builder
 
+type ParseErr = ParseErrorBundle Text MessageParseErr
+
 data ParseFailure
   = FailedJsonParse
   | FailedMessageParse ParseErr
@@ -53,8 +55,6 @@ parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translatio
 parseTranslationFor name (UnparsedTranslation umsg be md) = do
   msg' <- runParser (runReaderT msg initialState) (T.unpack name) umsg
   pure $ Translation msg' be md
-
-type ParseErr = ParseErrorBundle Text MessageParseErr
 
 data ParserState = ParserState
   { pluralCtxName :: Maybe Text
