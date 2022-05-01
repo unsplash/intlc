@@ -137,7 +137,7 @@ interp = do
             )
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
-        withPluralCtx n p = withReaderT (const . ParserState . pure $ n) p
+        withPluralCtx n = withReaderT (const . ParserState . pure $ n)
 
 dateTimeFmt :: Parser DateTimeFmt
 dateTimeFmt = choice
