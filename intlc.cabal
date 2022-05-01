@@ -20,7 +20,7 @@ common common
     , extra                ^>=1.7
     , mtl                  ^>=2.2
     , optics               ^>=0.4
-    , relude               ^>=0.7
+    , relude               ^>=1.0
     , text                 ^>=1.2
   mixins:
       base hiding (Prelude)
