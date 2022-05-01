@@ -54,7 +54,7 @@ library
     Intlc.Backend.TypeScript.Compiler
     Intlc.Core
     Intlc.ICU
-    Intlc.Parser
+    Intlc.Parser.ICU
     Utils
 
 test-suite test-intlc
@@ -78,4 +78,4 @@ test-suite test-intlc
     Intlc.Backend.TypeScriptSpec
     Intlc.CompilerSpec
     Intlc.EndToEndSpec
-    Intlc.ParserSpec
+    Intlc.Parser.ICUSpec

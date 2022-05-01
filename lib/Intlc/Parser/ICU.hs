@@ -5,7 +5,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
 
-module Intlc.Parser where
+module Intlc.Parser.ICU where
 
 import qualified Control.Applicative.Combinators.NonEmpty as NE
 import           Data.Aeson                               (decode)

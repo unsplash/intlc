@@ -4,7 +4,7 @@ import           CLI            (Opts (..), getOpts)
 import qualified Data.Text      as T
 import           Intlc.Compiler (compileDataset, compileFlattened)
 import           Intlc.Core
-import           Intlc.Parser   (ParseFailure, parseDataset, printErr)
+import           Intlc.Parser.ICU   (ParseFailure, parseDataset, printErr)
 import           Prelude
 
 main :: IO ()

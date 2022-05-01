@@ -4,7 +4,7 @@ import           Data.ByteString.Lazy (ByteString)
 import qualified Data.Text            as T
 import           Intlc.Compiler       (compileDataset)
 import           Intlc.Core           (Locale (Locale))
-import           Intlc.Parser         (parseDataset)
+import           Intlc.Parser.ICU         (parseDataset)
 import           Prelude              hiding (ByteString)
 import           System.FilePath      ((<.>), (</>))
 import           Test.Hspec
