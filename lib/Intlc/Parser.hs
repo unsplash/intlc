@@ -27,7 +27,7 @@ type ParseErr = ParseErrorBundle Text MessageParseErr
 
 data ParseFailure
   = FailedJsonParse
-  | FailedMessageParse ParseErr
+  | FailedDatasetParse (NonEmpty ParseErr)
   deriving (Show, Eq)
 
 data MessageParseErr
@@ -43,13 +43,13 @@ failingWith :: MonadParsec e s m => Int -> e -> m a
 pos `failingWith` e = parseError . errFancy pos . fancy . ErrorCustom $ e
 
 printErr :: ParseFailure -> String
-printErr FailedJsonParse        = "Failed to parse JSON"
-printErr (FailedMessageParse e) = errorBundlePretty e
+printErr FailedJsonParse         = "Failed to parse JSON"
+printErr (FailedDatasetParse es) = intercalate "\n" . toList . fmap errorBundlePretty $ es
 
 parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
 parseDataset = parse' <=< decode'
   where decode' = maybeToRight FailedJsonParse . decode
-        parse' = M.traverseWithKey ((first FailedMessageParse .) . parseTranslationFor)
+        parse' = M.traverseWithKey ((first (FailedDatasetParse . pure) .) . parseTranslationFor)
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
 parseTranslationFor name (UnparsedTranslation umsg be md) = do
