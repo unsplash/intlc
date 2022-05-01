@@ -90,9 +90,7 @@ expr (TPrint x)    = asks interp <&> \case
   where escape '`' = "\\`"
         escape c   = T.singleton c
 expr (TStr x)      = interpc (prop x)
-expr (TNum x)      = do
-  (Locale l) <- asks locale
-  interpc $ "new Intl.NumberFormat('" <> l <> "').format(" <> prop x <> ")"
+expr (TNum x sk)   = interpc =<< num x sk
 expr (TDate x fmt) = interpc =<< date x fmt
 expr (TTime x fmt) = interpc =<< time x fmt
 expr (TApply x ys) = interpc =<< apply x ys
@@ -124,6 +122,20 @@ matchCond n CardinalPluralRuleCond = f <$> asks locale
   where f (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop n <> ")"
 matchCond n OrdinalPluralRuleCond  = f <$> asks locale
   where f (Locale l) = "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop n <> ")"
+
+num :: Ref -> Maybe ICU.NumberSkeleton -> Compiler Text
+num x sk = do
+  (Locale l) <- asks locale
+  pure $ "new Intl.NumberFormat('" <> l <> "'" <> numSkeletonOpts sk <>").format(" <> prop x <> ")"
+
+numSkeletonOpts :: Maybe ICU.NumberSkeleton -> Text
+numSkeletonOpts Nothing                       = mempty
+numSkeletonOpts (Just (ICU.NumberSkeleton x)) = case x of
+  ICU.Currency code -> ", { style: 'currency', currency: '" <> show code <> "' }"
+  ICU.Measure unit  -> ", { style: 'unit', unit: '" <> unit' <> "' }"
+    where unit' = case unit of
+                ICU.Megabyte -> "megabyte"
+  ICU.Percent       -> ", { style: 'percent' }"
 
 date :: Ref -> ICU.DateTimeFmt -> Compiler Text
 date n d = do

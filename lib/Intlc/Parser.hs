@@ -10,6 +10,7 @@ module Intlc.Parser where
 import qualified Control.Applicative.Combinators.NonEmpty as NE
 import           Data.Aeson                               (decode)
 import           Data.ByteString.Lazy                     (ByteString)
+import           Data.Char                                (isUpper)
 import qualified Data.Map                                 as M
 import qualified Data.Text                                as T
 import           Data.Void                                ()
@@ -31,11 +32,15 @@ data ParseFailure
 data MessageParseErr
   = NoClosingCallbackTag Text
   | BadClosingCallbackTag Text Text
+  | InvalidCurrencyCode Text
+  | UnsupportedCurrencyCode Text
   deriving (Show, Eq, Ord)
 
 instance ShowErrorComponent MessageParseErr where
   showErrorComponent (NoClosingCallbackTag x)    = "Callback tag <" <> T.unpack x <> "> not closed"
   showErrorComponent (BadClosingCallbackTag x y) = "Callback tag <" <> T.unpack x <> "> not closed, instead found </" <> T.unpack y <> ">"
+  showErrorComponent (InvalidCurrencyCode x)     = "Currency code \"" <> T.unpack x <> "\" is invalid. Expected an ISO 4217 alpha code e.g. \"USD\""
+  showErrorComponent (UnsupportedCurrencyCode x) = "Currency code \"" <> T.unpack x <> "\" is not supported"
 
 failingWith :: MonadParsec e s m => Int -> e -> m a
 pos `failingWith` e = parseError . errFancy pos . fancy . ErrorCustom $ e
@@ -128,7 +133,7 @@ interp = do
   where sep = string "," <* hspace1
         body n = choice
           [ uncurry Bool <$> (string "boolean" *> sep *> boolCases)
-          , Number <$ string "number"
+          , Number <$> (string "number" *> optional (sep *> numberSkeleton))
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
           , Plural <$> withPluralCtx n (
@@ -138,6 +143,27 @@ interp = do
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
         withPluralCtx n = withReaderT (const . ParserState . pure $ n)
+
+numberSkeleton :: Parser NumberSkeleton
+numberSkeleton = (NumberSkeleton <$>) $ string "::" *> hspace *> choice
+  [ Currency <$> (string "currency" *> delim *> currCode)
+  , Measure  <$> (string "unit"     *> delim *> unit)
+  , Percent  <$   string "percent"
+  ]
+  where currCode :: Parser CurrencyCode
+        currCode = do
+          -- First parse as flexibly as possible to maximise the chance that we
+          -- can display a custom error.
+          i <- getOffset
+          code <- T.pack <$> some (alphaNumChar <|> char '-' <|> char '_' <|> char '/')
+          case isValidCurrCode code of
+            False -> i `failingWith` InvalidCurrencyCode code
+            True  -> case readMaybe (T.unpack code) of
+              Nothing -> i `failingWith` UnsupportedCurrencyCode code
+              Just x  -> pure x
+          where isValidCurrCode xs = T.length xs == 3 && T.all isUpper xs
+        unit = Megabyte <$ string "megabyte"
+        delim = char '/'
 
 dateTimeFmt :: Parser DateTimeFmt
 dateTimeFmt = choice

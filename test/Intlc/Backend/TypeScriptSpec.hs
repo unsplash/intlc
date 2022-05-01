@@ -42,7 +42,7 @@ spec = describe "TypeScript compiler" $ do
               )
             )))
           , ICU.Plaintext ". Regardless, the magic number is most certainly "
-          , ICU.Interpolation (ICU.Arg "magicNumber" ICU.Number)
+          , ICU.Interpolation (ICU.Arg "magicNumber" (ICU.Number Nothing))
           , ICU.Plaintext "! The date is "
           , ICU.Interpolation (ICU.Arg "todayDate" (ICU.Date ICU.Short))
           , ICU.Plaintext ", and the time is "
@@ -115,7 +115,7 @@ spec = describe "TypeScript compiler" $ do
       let x = ICU.Plural . ICU.Ordinal $ ICU.OrdinalPlural
                 [ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation $ ICU.Arg "foo" (ICU.Date ICU.Short)]]
                 (pure $ ICU.PluralCase ICU.Few [ICU.Interpolation $ ICU.Arg "bar" ICU.String])
-                (ICU.PluralWildcard [ICU.Interpolation $ ICU.Arg "baz" ICU.Number])
+                (ICU.PluralWildcard [ICU.Interpolation $ ICU.Arg "baz" (ICU.Number Nothing)])
       let ys =
               [ ("x", pure TS.TNum)
               , ("foo", pure TS.TDate)
@@ -127,7 +127,7 @@ spec = describe "TypeScript compiler" $ do
     it "in boolean" $ do
       let x = ICU.Bool
                 [ICU.Interpolation $ ICU.Arg "y" ICU.String]
-                [ICU.Interpolation $ ICU.Arg "z" ICU.Number]
+                [ICU.Interpolation $ ICU.Arg "z" (ICU.Number Nothing)]
       let ys =
               [ ("x", pure TS.TBool)
               , ("y", pure TS.TStr)
