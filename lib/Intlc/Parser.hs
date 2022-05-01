@@ -12,6 +12,8 @@ import           Data.Aeson                               (decode)
 import           Data.ByteString.Lazy                     (ByteString)
 import qualified Data.Map                                 as M
 import qualified Data.Text                                as T
+import           Data.Validation                          (toEither,
+                                                           validationNel)
 import           Data.Void                                ()
 import           Intlc.Core
 import           Intlc.ICU
@@ -49,7 +51,7 @@ printErr (FailedDatasetParse es) = intercalate "\n" . toList . fmap errorBundleP
 parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
 parseDataset = parse' <=< decode'
   where decode' = maybeToRight FailedJsonParse . decode
-        parse' = M.traverseWithKey ((first (FailedDatasetParse . pure) .) . parseTranslationFor)
+        parse' = toEither . first FailedDatasetParse . M.traverseWithKey ((validationNel .) . parseTranslationFor)
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
 parseTranslationFor name (UnparsedTranslation umsg be md) = do
