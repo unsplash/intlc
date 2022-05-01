@@ -25,6 +25,7 @@ common common
   mixins:
       base hiding (Prelude)
     , relude (Relude as Prelude)
+    , relude
 
 executable intlc
   import:                  common
