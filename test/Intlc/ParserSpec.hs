@@ -6,13 +6,16 @@ import           Prelude               hiding (ByteString)
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
 import           Text.Megaparsec       (ParseErrorBundle, runParser)
-import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
+import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom), ParseError)
 
 parseWith :: ParserState -> Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
 parseWith s p = runParser (runReaderT p s) "test"
 
 parse :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
 parse = parseWith initialState
+
+e :: Int -> e -> ParseError s e
+e i = errFancy i . fancy . ErrorCustom
 
 spec :: Spec
 spec = describe "parser" $ do
@@ -133,8 +136,6 @@ spec = describe "parser" $ do
       parse callback `shouldFailOn` "<hello></there>"
 
     it "reports friendly error for bad closing tag" $ do
-      let e i = errFancy i . fancy . ErrorCustom
-
       parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
       parse callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
 
