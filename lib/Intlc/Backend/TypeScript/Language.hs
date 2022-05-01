@@ -14,12 +14,8 @@ data TypeOf = Lambda Args Out
 type UncollatedArgs = [(Text, In)]
 type Args = Map Text (NonEmpty In)
 
-data Uni
-  = TStr
-  deriving (Show, Eq)
-
 data In
-  = TUniIn Uni
+  = TStr
   | TStrLitUnion (NonEmpty Text)
   | TNumLitUnion (NonEmpty Text)
   | TNum
@@ -31,7 +27,7 @@ data In
   deriving (Show, Eq)
 
 data Out
-  = TUniOut Uni
+  = TTemplate
   | TFragment
   deriving (Show, Eq)
 
@@ -54,7 +50,7 @@ fromToken (ICU.Interpolation x) = fromArg x
 
 fromArg :: ICU.Arg -> UncollatedArgs
 fromArg (ICU.Arg n (ICU.Bool xs ys))   = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
-fromArg (ICU.Arg n ICU.String)         = pure (n, TUniIn TStr)
+fromArg (ICU.Arg n ICU.String)         = pure (n, TStr)
 fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
 fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)
 fromArg (ICU.Arg n ICU.Time {})        = pure (n, TDate)
@@ -64,7 +60,7 @@ fromArg (ICU.Arg _ ICU.PluralRef)      = mempty
 fromArg (ICU.Arg n (ICU.Select cs mw)) = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
   -- When there's no wildcard case we can compile to a union of string literals.
   where t = case mw of
-              Just _  -> TUniIn TStr
+              Just _  -> TStr
               Nothing -> TStrLitUnion $ caseLit <$> cs
         caseLit (ICU.SelectCase x _) = x
 fromArg (ICU.Arg n (ICU.Callback xs))  = (n, TEndo) : (fromToken =<< xs)

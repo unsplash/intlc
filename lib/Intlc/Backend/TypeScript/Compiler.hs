@@ -26,7 +26,7 @@ compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
 
 fromStrat :: InterpStrat -> Out
-fromStrat TemplateLit = TUniOut TStr
+fromStrat TemplateLit = TTemplate
 fromStrat JSX         = TFragment
 
 type Compiler = Reader Out
@@ -60,11 +60,8 @@ args xs
             intersect = T.intercalate " & "
             parens x = "(" <> x <> ")"
 
-uni :: Uni -> Compiler Text
-uni TStr = pure "string"
-
 in' :: In -> Compiler Text
-in' (TUniIn x)        = uni x
+in' TStr              = pure "string"
 in' (TStrLitUnion xs) = pure . union $ qts <$> xs
   where qts x = "'" <> x <> "'"
 in' (TNumLitUnion xs) = pure . union $ xs
@@ -74,8 +71,8 @@ in' TDate             = pure "Date"
 in' TEndo             = endo
 
 out :: Out -> Compiler Text
-out (TUniOut x) = uni x
-out TFragment   = pure "ReactElement"
+out TTemplate = pure "string"
+out TFragment = pure "ReactElement"
 
 endo :: Compiler Text
 endo = do

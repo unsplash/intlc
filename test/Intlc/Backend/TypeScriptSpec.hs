@@ -98,7 +98,7 @@ spec = describe "TypeScript compiler" $ do
       let x = flip ICU.Select Nothing . pure $ ICU.SelectCase "foo" [ICU.Interpolation $ ICU.Arg "y" ICU.String]
       let ys =
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
-              , ("y", pure (TS.TUniIn TS.TStr))
+              , ("y", pure TS.TStr)
               ]
       fromToken x `shouldBe` fromArgs ys
 
@@ -107,7 +107,7 @@ spec = describe "TypeScript compiler" $ do
                 ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation $ ICU.Arg "y" ICU.String]
       let ys =
               [ ("x", pure (TS.TNumLitUnion (pure "42")))
-              , ("y", pure (TS.TUniIn TS.TStr))
+              , ("y", pure TS.TStr)
               ]
       fromToken x `shouldBe` fromArgs ys
 
@@ -119,7 +119,7 @@ spec = describe "TypeScript compiler" $ do
       let ys =
               [ ("x", pure TS.TNum)
               , ("foo", pure TS.TDate)
-              , ("bar", pure (TS.TUniIn TS.TStr))
+              , ("bar", pure TS.TStr)
               , ("baz", pure TS.TNum)
               ]
       fromToken x `shouldBe` fromArgs ys
@@ -130,7 +130,7 @@ spec = describe "TypeScript compiler" $ do
                 [ICU.Interpolation $ ICU.Arg "z" ICU.Number]
       let ys =
               [ ("x", pure TS.TBool)
-              , ("y", pure (TS.TUniIn TS.TStr))
+              , ("y", pure TS.TStr)
               , ("z", pure TS.TNum)
               ]
       fromToken x `shouldBe` fromArgs ys
