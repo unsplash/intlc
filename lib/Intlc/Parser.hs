@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+
 module Intlc.Parser where
 
 import qualified Data.Text             as T
@@ -20,10 +23,8 @@ parseTranslationFor name (UnparsedTranslation umsg be md) = do
 type ParseErr = ParseErrorBundle Text MessageParseErr
 
 data ParseFailure
-  = FailedJsonParse
-  | FailedDatasetParse (NonEmpty ParseErr)
+  = FailedDatasetParse (NonEmpty ParseErr)
   deriving (Show, Eq)
 
 printErr :: ParseFailure -> String
-printErr FailedJsonParse         = "Failed to parse JSON"
 printErr (FailedDatasetParse es) = intercalate "\n" . toList . fmap errorBundlePretty $ es
