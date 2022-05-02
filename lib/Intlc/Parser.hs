@@ -12,7 +12,7 @@ import           Text.Megaparsec       (runParser)
 import           Text.Megaparsec.Error
 
 parseDataset :: FilePath -> Text -> Either ParseFailure (Dataset Translation)
-parseDataset name contents = first (FailedDatasetParse . pure) parsed
+parseDataset name contents = first FailedMsgParse parsed
   where parsed = runParser dataset name contents
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
@@ -23,8 +23,8 @@ parseTranslationFor name (UnparsedTranslation umsg be md) = do
 type ParseErr = ParseErrorBundle Text MessageParseErr
 
 data ParseFailure
-  = FailedDatasetParse (NonEmpty ParseErr)
+  = FailedMsgParse ParseErr
   deriving (Show, Eq)
 
 printErr :: ParseFailure -> String
-printErr (FailedDatasetParse es) = intercalate "\n" . toList . fmap errorBundlePretty $ es
+printErr (FailedMsgParse e) = errorBundlePretty e
