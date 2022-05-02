@@ -7,7 +7,7 @@ import qualified Data.Text             as T
 import           Intlc.Core
 import           Intlc.Parser.ICU      (MessageParseErr, initialState, msg)
 import           Intlc.Parser.JSON     (dataset)
-import           Prelude               hiding (ByteString)
+import           Prelude
 import           Text.Megaparsec       (runParser)
 import           Text.Megaparsec.Error
 

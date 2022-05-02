@@ -16,7 +16,7 @@ import           Intlc.Core
 import qualified Intlc.ICU                        as ICU
 import           Intlc.Parser.ICU                 (MessageParseErr,
                                                    initialState, toMsg, token)
-import           Prelude                          hiding (ByteString, null)
+import           Prelude                          hiding (null)
 import           Text.Megaparsec                  hiding (State, Stream, Token,
                                                    many, some, token)
 import           Text.Megaparsec.Char

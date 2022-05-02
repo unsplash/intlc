@@ -3,7 +3,7 @@ module Intlc.Parser.JSONSpec (spec) where
 import           Intlc.Core
 import           Intlc.Parser.ICU      (MessageParseErr)
 import           Intlc.Parser.JSON     (dataset)
-import           Prelude               hiding (ByteString)
+import           Prelude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
 import           Text.Megaparsec       (ParseErrorBundle, runParser)

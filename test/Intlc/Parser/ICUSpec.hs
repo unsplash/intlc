@@ -2,7 +2,7 @@ module Intlc.Parser.ICUSpec (spec) where
 
 import           Intlc.ICU
 import           Intlc.Parser.ICU
-import           Prelude               hiding (ByteString)
+import           Prelude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
 import           Text.Megaparsec       (ParseErrorBundle, runParser)

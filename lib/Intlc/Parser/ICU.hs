@@ -11,7 +11,7 @@ import qualified Control.Applicative.Combinators.NonEmpty as NE
 import qualified Data.Text                                as T
 import           Data.Void                                ()
 import           Intlc.ICU
-import           Prelude                                  hiding (ByteString)
+import           Prelude
 import           Text.Megaparsec                          hiding (State, Stream,
                                                            Token, many, some,
                                                            token)
