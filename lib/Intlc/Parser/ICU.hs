@@ -43,11 +43,14 @@ type Parser = ReaderT ParserState (Parsec MessageParseErr Text)
 ident :: Parser Text
 ident = T.pack <$> some letterChar
 
+toMsg :: Stream -> Message
+toMsg = mergePlaintext >>> \case
+  []            -> Static ""
+  [Plaintext x] -> Static x
+  (x:xs)        -> Dynamic (x :| xs)
+
 msg :: Parser Message
-msg = f . mergePlaintext <$> manyTill token eof
-  where f []            = Static ""
-        f [Plaintext x] = Static x
-        f (x:xs)        = Dynamic (x :| xs)
+msg = toMsg <$> manyTill token eof
 
 token :: Parser Token
 token = choice

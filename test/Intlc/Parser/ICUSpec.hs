@@ -1,7 +1,6 @@
 module Intlc.Parser.ICUSpec (spec) where
 
 import           Intlc.ICU
-import           Intlc.Parser
 import           Intlc.Parser.ICU
 import           Prelude               hiding (ByteString)
 import           Test.Hspec
@@ -16,7 +15,7 @@ parse :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
 parse = parseWith initialState
 
 spec :: Spec
-spec = describe "parser" $ do
+spec = describe "ICU parser" $ do
   describe "message" $ do
     it "does not tolerate unclosed braces" $ do
       parse msg `shouldFailOn` "a { b"

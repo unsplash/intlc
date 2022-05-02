@@ -16,5 +16,4 @@ main = getOpts >>= \case
         compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
 
 getParsed :: FilePath -> IO (Either ParseFailure (Dataset Translation))
-getParsed = fmap parseDataset . readFileLBS
-
+getParsed x = parseDataset x <$> readFileText x

@@ -1,20 +1,16 @@
 module Intlc.Parser where
 
-import           Data.Aeson            (decode)
-import           Data.ByteString.Lazy  (ByteString)
-import qualified Data.Map              as M
 import qualified Data.Text             as T
-import           Data.Validation       (toEither, validationNel)
 import           Intlc.Core
 import           Intlc.Parser.ICU      (MessageParseErr, initialState, msg)
+import           Intlc.Parser.JSON     (dataset)
 import           Prelude               hiding (ByteString)
 import           Text.Megaparsec       (runParser)
 import           Text.Megaparsec.Error
 
-parseDataset :: ByteString -> Either ParseFailure (Dataset Translation)
-parseDataset = parse' <=< decode'
-  where decode' = maybeToRight FailedJsonParse . decode
-        parse' = toEither . first FailedDatasetParse . M.traverseWithKey ((validationNel .) . parseTranslationFor)
+parseDataset :: FilePath -> Text -> Either ParseFailure (Dataset Translation)
+parseDataset name contents = first (FailedDatasetParse . pure) parsed
+  where parsed = runParser dataset name contents
 
 parseTranslationFor :: Text -> UnparsedTranslation -> Either ParseErr Translation
 parseTranslationFor name (UnparsedTranslation umsg be md) = do
