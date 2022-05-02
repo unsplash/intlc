@@ -54,6 +54,7 @@ library
     Intlc.Backend.TypeScript.Compiler
     Intlc.Core
     Intlc.ICU
+    Intlc.Parser
     Intlc.Parser.ICU
     Utils
 

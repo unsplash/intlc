@@ -1,6 +1,7 @@
 module Intlc.Parser.ICUSpec (spec) where
 
 import           Intlc.ICU
+import           Intlc.Parser
 import           Intlc.Parser.ICU
 import           Prelude               hiding (ByteString)
 import           Test.Hspec
