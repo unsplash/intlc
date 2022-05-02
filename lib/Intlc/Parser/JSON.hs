@@ -41,7 +41,12 @@ translation = obj $ intercalateEffect objSep $ Translation
   <*> toPermutationWithDefault Nothing    (objPair' "description" (Just <$> strLit <|> Nothing <$ null))
 
 msg :: Parser ICU.Message
-msg = toMsg <$> runReaderT (char '"' *> manyTill token (char '"')) initialState
+msg = withRecovery recover p
+  where p = toMsg <$> runReaderT (char '"' *> manyTill token (char '"')) initialState
+        recover e = error "absurd" <$ consume <* registerParseError e
+        -- Once we've recovered we need to consume the rest of the message
+        -- string so that parsing can continue beyond it.
+        consume = void $ manyTill L.charLiteral (char '"')
 
 backendp :: Parser Backend
 backendp = choice
