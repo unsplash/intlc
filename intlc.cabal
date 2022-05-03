@@ -83,4 +83,3 @@ test-suite test-intlc
     Intlc.EndToEndSpec
     Intlc.Parser.JSONSpec
     Intlc.Parser.ICUSpec
-    Intlc.UtilsSpec
