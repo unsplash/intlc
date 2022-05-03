@@ -21,7 +21,7 @@ data ParseErr
   deriving (Show, Eq, Ord)
 
 data JSONParseErr
-  = DuplicateKeys (NonEmpty Text)
+  = DuplicateKey Text
   deriving (Show, Eq, Ord)
 
 data MessageParseErr
@@ -34,7 +34,7 @@ instance ShowErrorComponent ParseErr where
   showErrorComponent (FailedMsgParse e)  = showErrorComponent e
 
 instance ShowErrorComponent JSONParseErr where
-  showErrorComponent (DuplicateKeys xs) = "Duplicate keys: " <> T.unpack (T.intercalate ", " (toList xs))
+  showErrorComponent (DuplicateKey k) = "Duplicate key: \"" <> T.unpack k <> "\""
 
 instance ShowErrorComponent MessageParseErr where
   showErrorComponent (NoClosingCallbackTag x)    = "Callback tag <" <> T.unpack x <> "> not closed"

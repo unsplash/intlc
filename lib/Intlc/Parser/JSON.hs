@@ -14,6 +14,8 @@
 module Intlc.Parser.JSON where
 
 import           Control.Applicative.Permutations
+import qualified Data.Map                         as M
+import qualified Data.Set                         as Set
 import qualified Data.Text                        as T
 import           Data.Void                        ()
 import           Intlc.Core
@@ -27,9 +29,13 @@ import           Text.Megaparsec                  hiding (State, Stream, Token,
                                                    many, some, token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer       as L
-import           Utils                            (toNubMap)
+import           Text.Megaparsec.Error.Builder    (errFancy, fancy)
 
-type Parser = Parsec ParseErr Text
+type Parser = StateT ParserState (Parsec ParseErr Text)
+
+data ParserState = ParserState
+  { keys :: Set Text
+  }
 
 failingWith' :: MonadParsec ParseErr s m => Int -> JSONParseErr -> m a
 i `failingWith'` e = i `failingWith` FailedJSONParse e
@@ -51,7 +57,7 @@ translation = obj $ intercalateEffect objSep $ Translation
   <*> toPermutationWithDefault Nothing    (objPair' "description" (Just <$> strLit <|> Nothing <$ null))
 
 msg :: Parser ICU.Message
-msg = withRecovery recover p
+msg = lift $ withRecovery recover p
   where p = toMsg <$> runReaderT (char '"' *> manyTill token (char '"')) initialState
         recover e = error "absurd" <$ consume <* registerParseError e
         -- Once we've recovered we need to consume the rest of the message
@@ -76,11 +82,18 @@ dblqtsp = between (char '"') (char '"')
 dblqts :: Text -> Text
 dblqts x = "\"" <> x <> "\""
 
--- Parse a homogeneous object of arbitrary keys, failing upon the presence of
--- duplicate keys.
+-- Parse a homogeneous object of arbitrary keys, failing with recovery upon the
+-- presence of duplicate keys.
 objMap :: Parser a -> Parser (Map Text a)
-objMap v = obj $ toNubMap' =<< sepEndBy (objPair strLit v) objSep
-  where toNubMap' = toNubMap (failingWith' 1 . DuplicateKeys)
+objMap v = fmap M.fromList . obj $ sepEndBy (objPair newKey v) objSep
+  where newKey = do
+          i <- getOffset
+          k <- strLit
+          prev <- gets keys
+          if Set.member k prev
+             then registerParseError . errFancy i . fancy . ErrorCustom . FailedJSONParse . DuplicateKey $ k
+             else modify (\x -> x { keys = Set.insert k prev })
+          pure k
 
 obj :: Parser a -> Parser a
 obj p = string "{" *> space *> p <* space <* string "}"
