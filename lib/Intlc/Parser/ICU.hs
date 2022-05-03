@@ -2,6 +2,8 @@
 --   * Consume all whitespace after tokens where possible.
 --   * Therefore, assume no whitespace before tokens.
 
+{-# LANGUAGE FlexibleContexts #-}
+
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
 
@@ -11,25 +13,18 @@ import qualified Control.Applicative.Combinators.NonEmpty as NE
 import qualified Data.Text                                as T
 import           Data.Void                                ()
 import           Intlc.ICU
+import           Intlc.Parser.Error                       (MessageParseErr (..),
+                                                           ParseErr (FailedMsgParse),
+                                                           failingWith)
 import           Prelude
 import           Text.Megaparsec                          hiding (State, Stream,
                                                            Token, many, some,
                                                            token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer               as L
-import           Text.Megaparsec.Error.Builder
 
-data MessageParseErr
-  = NoClosingCallbackTag Text
-  | BadClosingCallbackTag Text Text
-  deriving (Show, Eq, Ord)
-
-instance ShowErrorComponent MessageParseErr where
-  showErrorComponent (NoClosingCallbackTag x)    = "Callback tag <" <> T.unpack x <> "> not closed"
-  showErrorComponent (BadClosingCallbackTag x y) = "Callback tag <" <> T.unpack x <> "> not closed, instead found </" <> T.unpack y <> ">"
-
-failingWith :: MonadParsec e s m => Int -> e -> m a
-pos `failingWith` e = parseError . errFancy pos . fancy . ErrorCustom $ e
+failingWith' :: MonadParsec ParseErr s m => Int -> MessageParseErr -> m a
+i `failingWith'` e = i `failingWith` FailedMsgParse e
 
 data ParserState = ParserState
   { pluralCtxName :: Maybe Text
@@ -38,7 +33,7 @@ data ParserState = ParserState
 initialState :: ParserState
 initialState = ParserState mempty
 
-type Parser = ReaderT ParserState (Parsec MessageParseErr Text)
+type Parser = ReaderT ParserState (Parsec ParseErr Text)
 
 ident :: Parser Text
 ident = T.pack <$> some letterChar
@@ -90,10 +85,10 @@ callback = do
   oname <- string "<" *> ident <* string ">"
   mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
-    Left _  -> 1 `failingWith` NoClosingCallbackTag oname
+    Left _  -> 1 `failingWith'` NoClosingCallbackTag oname
     Right (ch, pos, cname) -> if oname == cname
        then pure (Arg oname ch)
-       else pos `failingWith` BadClosingCallbackTag oname cname
+       else pos `failingWith'` BadClosingCallbackTag oname cname
     where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ string "</")
 
 interp :: Parser Arg

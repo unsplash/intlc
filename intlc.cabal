@@ -55,6 +55,7 @@ library
     Intlc.Core
     Intlc.ICU
     Intlc.Parser
+    Intlc.Parser.Error
     Intlc.Parser.JSON
     Intlc.Parser.ICU
     Utils

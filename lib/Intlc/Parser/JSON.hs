@@ -6,6 +6,11 @@
 --   * Consume all whitespace after tokens where possible.
 --   * Therefore, assume no whitespace before tokens.
 
+{-# LANGUAGE FlexibleContexts #-}
+
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+
 module Intlc.Parser.JSON where
 
 import           Control.Applicative.Permutations
@@ -14,15 +19,15 @@ import qualified Data.Text                        as T
 import           Data.Void                        ()
 import           Intlc.Core
 import qualified Intlc.ICU                        as ICU
-import           Intlc.Parser.ICU                 (MessageParseErr,
-                                                   initialState, toMsg, token)
+import           Intlc.Parser.Error               (ParseErr)
+import           Intlc.Parser.ICU                 (initialState, toMsg, token)
 import           Prelude                          hiding (null)
 import           Text.Megaparsec                  hiding (State, Stream, Token,
                                                    many, some, token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer       as L
 
-type Parser = Parsec MessageParseErr Text
+type Parser = Parsec ParseErr Text
 
 dataset :: Parser (Dataset Translation)
 dataset = space *> objMap translation <* space <* eof
