@@ -92,12 +92,9 @@ callback = do
     where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ string "</")
 
 interp :: Parser Arg
-interp = do
-  n <- string "{" *> ident
-  Arg n <$> choice
-    [ String <$ string "}"
-    , sep *> body n <* string "}"
-    ]
+interp = between (char '{') (char '}') $ do
+  n <- ident
+  Arg n <$> option String (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice
           [ uncurry Bool <$> (string "boolean" *> sep *> boolCases)
