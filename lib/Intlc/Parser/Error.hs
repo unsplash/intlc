@@ -16,7 +16,12 @@ import           Text.Megaparsec.Error.Builder
 type ParseFailure = ParseErrorBundle Text ParseErr
 
 data ParseErr
-  = FailedMsgParse MessageParseErr
+  = FailedJSONParse JSONParseErr
+  | FailedMsgParse MessageParseErr
+  deriving (Show, Eq, Ord)
+
+data JSONParseErr
+  = DuplicateKeys (NonEmpty Text)
   deriving (Show, Eq, Ord)
 
 data MessageParseErr
@@ -25,7 +30,11 @@ data MessageParseErr
   deriving (Show, Eq, Ord)
 
 instance ShowErrorComponent ParseErr where
+  showErrorComponent (FailedJSONParse e) = showErrorComponent e
   showErrorComponent (FailedMsgParse e)  = showErrorComponent e
+
+instance ShowErrorComponent JSONParseErr where
+  showErrorComponent (DuplicateKeys xs) = "Duplicate keys: " <> T.unpack (T.intercalate ", " (toList xs))
 
 instance ShowErrorComponent MessageParseErr where
   showErrorComponent (NoClosingCallbackTag x)    = "Callback tag <" <> T.unpack x <> "> not closed"

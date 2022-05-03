@@ -14,20 +14,25 @@
 module Intlc.Parser.JSON where
 
 import           Control.Applicative.Permutations
-import qualified Data.Map                         as M
 import qualified Data.Text                        as T
 import           Data.Void                        ()
 import           Intlc.Core
 import qualified Intlc.ICU                        as ICU
-import           Intlc.Parser.Error               (ParseErr)
+import           Intlc.Parser.Error               (JSONParseErr (..),
+                                                   ParseErr (FailedJSONParse),
+                                                   failingWith)
 import           Intlc.Parser.ICU                 (initialState, toMsg, token)
 import           Prelude                          hiding (null)
 import           Text.Megaparsec                  hiding (State, Stream, Token,
                                                    many, some, token)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer       as L
+import           Utils                            (toNubMap)
 
 type Parser = Parsec ParseErr Text
+
+failingWith' :: MonadParsec ParseErr s m => Int -> JSONParseErr -> m a
+i `failingWith'` e = i `failingWith` FailedJSONParse e
 
 dataset :: Parser (Dataset Translation)
 dataset = space *> objMap translation <* space <* eof
@@ -71,9 +76,11 @@ dblqtsp = between (char '"') (char '"')
 dblqts :: Text -> Text
 dblqts x = "\"" <> x <> "\""
 
--- Parse a homogeneous object of arbitrary keys.
+-- Parse a homogeneous object of arbitrary keys, failing upon the presence of
+-- duplicate keys.
 objMap :: Parser a -> Parser (Map Text a)
-objMap v = fmap M.fromList . obj $ sepEndBy (objPair strLit v) objSep
+objMap v = obj $ toNubMap' =<< sepEndBy (objPair strLit v) objSep
+  where toNubMap' = toNubMap (failingWith' 1 . DuplicateKeys)
 
 obj :: Parser a -> Parser a
 obj p = string "{" *> space *> p <* space <* string "}"

@@ -1,12 +1,13 @@
 module Intlc.Parser.JSONSpec (spec) where
 
 import           Intlc.Core
-import           Intlc.Parser.Error    (ParseFailure)
+import           Intlc.Parser.Error    (JSONParseErr (..), ParseErr (..),
+                                        ParseFailure)
 import           Intlc.Parser.JSON     (dataset)
 import           Prelude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
-import           Text.Megaparsec       (runParser)
+import           Text.Megaparsec       (ErrorFancy (ErrorCustom), runParser)
 import           Text.RawString.QQ     (r)
 
 parse :: Text -> Either ParseFailure (Dataset Translation)
@@ -35,3 +36,16 @@ spec = describe "JSON parser" $ do
   it "accepts null or absence for optional keys" $ do
     succeedsOn [r|{ "f": { "message": "{foo}", "backend": null, "description": null } }|]
     succeedsOn [r|{ "f": { "message": "{foo}" } }|]
+
+  it "rejects duplicate keys" $ do
+    let e i = errFancy i . fancy . ErrorCustom . FailedJSONParse
+    parse [r|{
+      "a": { "message": "{foo}" },
+      "b": { "message": "{foo}" },
+      "c": { "message": "{foo}" },
+      "b": { "message": "{foo}" },
+      "b": { "message": "{foo}" },
+      "d": { "message": "{foo}" },
+      "e": { "message": "{foo}" },
+      "e": { "message": "{foo}" }
+    }|] `shouldFailWith` e 1 (DuplicateKeys $ "b" :| ["e"])
