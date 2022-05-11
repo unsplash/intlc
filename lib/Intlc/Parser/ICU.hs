@@ -47,6 +47,9 @@ toMsg = mergePlaintext >>> \case
 msg :: Parser Message
 msg = toMsg <$> manyTill token eof
 
+eom :: Parser ()
+eom = void $ char '"'
+
 token :: Parser Token
 token = choice
   [ Interpolation <$> (interp <|> callback)
