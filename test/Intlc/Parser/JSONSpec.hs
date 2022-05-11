@@ -55,3 +55,26 @@ spec = describe "JSON parser" $ do
       , e 148 (FailedJSONParse $ DuplicateKey "b")
       , e 253 (FailedJSONParse $ DuplicateKey "e")
       ]
+
+  it "reports all custom error types simultaneously" $ do
+    parse [r|{
+      "dupeKey": {
+        "message": ""
+      },
+      "noClosing": {
+        "message": "<foo>bar"
+      },
+      "wrongClosing": {
+        "message": "<foo></bar>"
+      },
+      "dupeKey": {
+        "message": ""
+      },
+      "ok": {
+        "message": "<f>{n, number}</f>"
+      }
+    }|] `shouldFailWithM`
+      [ e 94 (FailedMsgParse $ NoClosingCallbackTag "foo")
+      , e 163 (FailedMsgParse $ BadClosingCallbackTag "foo" "bar")
+      , e 184 (FailedJSONParse $ DuplicateKey "dupeKey")
+      ]
