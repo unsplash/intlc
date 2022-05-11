@@ -92,7 +92,7 @@ callback = do
     Right (ch, closePos, cname) -> if oname == cname
        then pure (Arg oname ch)
        else closePos `failingWith'` BadClosingCallbackTag oname cname
-    where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ string "</")
+    where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ void (string "</") <|> eom)
 
 interp :: Parser Arg
 interp = between (char '{') (char '}') $ do
