@@ -82,13 +82,13 @@ escaped = apos *> choice
 
 callback :: Parser Arg
 callback = do
-  oname <- string "<" *> ident <* string ">"
+  (openPos, oname) <- (,) <$> (string "<" *> getOffset) <*> ident <* string ">"
   mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
-    Left _  -> 1 `failingWith'` NoClosingCallbackTag oname
-    Right (ch, pos, cname) -> if oname == cname
+    Left _  -> openPos `failingWith'` NoClosingCallbackTag oname
+    Right (ch, closePos, cname) -> if oname == cname
        then pure (Arg oname ch)
-       else pos `failingWith'` BadClosingCallbackTag oname cname
+       else closePos `failingWith'` BadClosingCallbackTag oname cname
     where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ string "</")
 
 interp :: Parser Arg
