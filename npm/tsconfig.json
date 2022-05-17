@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "strict": true,
-    "outDir": "./dist",
-    "esModuleInterop": true
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["./dist"]
-}

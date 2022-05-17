@@ -61,5 +61,3 @@ We don't fully have everything automated so here's what you should do whenever y
 
 - Bump `intlc.cabal`
 - `git tag v{version} && git push {remote} v{version}`
-- Bump intlc version in `@unsplash/intlc` postinstall script to match the latest intlc https://github.com/unsplash/intlc/blob/master/npm/package.json#L7
-- Bump `@unsplash/intlc` package.json version and publish **only** when the brand new release is available on github.
