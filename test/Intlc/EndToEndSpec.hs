@@ -52,6 +52,10 @@ spec = describe "end-to-end" $ do
     [r|{ "f": { "message": "{x, boolean, true {y} false {z}}" } }|]
       =*= "export const f: (x: { x: boolean }) => string = x => `${(() => { switch (x.x) { case true: return `y`; case false: return `z`; } })()}`"
 
+  it "compiles numbers" $ do
+    [r|{ "f": { "message": "{n, number} {mb, number, ::unit/megabyte}" } }|]
+      =*= "export const f: (x: { mb: number; n: number }) => string = x => `${new Intl.NumberFormat('en-US').format(x.n)} ${new Intl.NumberFormat('en-US', { style: 'unit', unit: 'megabyte' }).format(x.mb)}`"
+
   it "compiles plurals" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]
       =*= "export const prop: (x: { age: number; name: string }) => string = x => `Age: ${(() => { switch (x.age) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring ${new Intl.NumberFormat('en-US').format(x.age)}`; } })()}`"

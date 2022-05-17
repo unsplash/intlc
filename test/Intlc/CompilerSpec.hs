@@ -56,7 +56,7 @@ spec = describe "compiler" $ do
             [ Interpolation . Arg "count" . Plural . Cardinal $ RulePlural
               (pure $ PluralCase One [Plaintext "a dog"])
               (PluralWildcard
-                [ Interpolation $ Arg "count" Number
+                [ Interpolation $ Arg "count" (Number Nothing)
                 , Plaintext " dogs, the newest of which is "
                 , Interpolation . Arg "name" $ Select
                   (pure $ SelectCase "hodor" [Plaintext "Hodor"])
@@ -72,13 +72,13 @@ spec = describe "compiler" $ do
                 [ Interpolation . Arg "name" $ Select
                   (pure $ SelectCase "hodor"
                     [ Plaintext "I have "
-                    , Interpolation $ Arg "count" Number
+                    , Interpolation $ Arg "count" (Number Nothing)
                     , Plaintext " dogs, the newest of which is Hodor!"
                     ]
                   )
                   (pure $ SelectWildcard
                     [ Plaintext "I have "
-                    , Interpolation $ Arg "count" Number
+                    , Interpolation $ Arg "count" (Number Nothing)
                     , Plaintext " dogs, the newest of which is unknown!"
                     ]
                   )

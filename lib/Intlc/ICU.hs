@@ -35,7 +35,7 @@ data Arg = Arg Text Type
 data Type
   = Bool { trueCase :: Stream, falseCase :: Stream }
   | String
-  | Number
+  | Number (Maybe NumberSkeleton)
   | Date DateTimeFmt
   | Time DateTimeFmt
   | Plural Plural
@@ -44,6 +44,35 @@ data Type
   | PluralRef
   | Select (NonEmpty SelectCase) (Maybe SelectWildcard)
   | Callback Stream
+  deriving (Show, Eq)
+
+-- Only a small subset of the ICU number skeleton spec is currently
+-- implemented. This can be extended at any time.
+data NumberSkeleton = NumberSkeleton NumberToken
+  deriving (Show, Eq)
+
+data NumberToken
+  = Currency CurrencyCode
+  | Measure NumberMeasureUnit
+  | Percent
+  deriving (Show, Eq)
+
+-- For now we're listing these explicitly so that we can check for typos in the
+-- parser. At some point we may need to give up and replace this with unsafe
+-- plaintext.
+data CurrencyCode
+  = USD
+  | EUR
+  | GBP
+  | CNY
+  | JPY
+  | CAD
+  deriving (Show, Read, Eq)
+
+-- Refer to this list for units supported in JavaScript:
+--   https://tc39.es/proposal-unified-intl-numberformat/section6/locales-currencies-tz_proposed_out.html#sec-issanctionedsimpleunitidentifier
+data NumberMeasureUnit
+  = Megabyte
   deriving (Show, Eq)
 
 data DateTimeFmt

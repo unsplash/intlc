@@ -6,13 +6,16 @@ import           Prelude               hiding (ByteString)
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
 import           Text.Megaparsec       (ParseErrorBundle, runParser)
-import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
+import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom), ParseError)
 
 parseWith :: ParserState -> Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
 parseWith s p = runParser (runReaderT p s) "test"
 
 parse :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
 parse = parseWith initialState
+
+e :: Int -> e -> ParseError s e
+e i = errFancy i . fancy . ErrorCustom
 
 spec :: Spec
 spec = describe "parser" $ do
@@ -113,6 +116,35 @@ spec = describe "parser" $ do
       it "disallows arbitrary cases" $ do
         parse interp `shouldFailOn` "{x, boolean, true {y} nottrue {z}}"
 
+    describe "number" $ do
+      it "allows no skeleton" $ do
+        parse interp "{n, number}" `shouldParse` Arg "n" (Number Nothing)
+
+      it "allows valid skeleton" $ do
+        parse interp "{n, number, ::currency/USD}" `shouldParse`
+          Arg "n" (Number (Just (NumberSkeleton (Currency USD))))
+        parse interp "{n, number, ::unit/megabyte}" `shouldParse`
+          Arg "n" (Number (Just (NumberSkeleton (Measure Megabyte))))
+        parse interp "{n, number, ::percent}" `shouldParse`
+          Arg "n" (Number (Just (NumberSkeleton Percent)))
+
+      it "requires skeleton prefix" $ do
+        parse interp `shouldFailOn` "{n, number, percent}"
+
+      it "disallows unknown skeleton token" $ do
+        parse interp `shouldFailOn` "{n, number, ::magic}"
+
+      it "disallows invalid skeleton currency code" $ do
+        parse interp "{n, number, ::currency/gbp}" `shouldFailWith`
+          e 23 (InvalidCurrencyCode "gbp")
+
+      it "disallows unknown skeleton currency code" $ do
+        parse interp "{n, number, ::currency/ABC}" `shouldFailWith`
+          e 23 (UnsupportedCurrencyCode "ABC")
+
+      it "disallows unknown skeleton measure unit" $ do
+        parse interp `shouldFailOn` "{n, number, ::unit/kloc}"
+
     describe "date" $ do
       it "disallows bad formats" $ do
         parse interp "{x, date, short}" `shouldParse` Arg "x" (Date Short)
@@ -133,8 +165,6 @@ spec = describe "parser" $ do
       parse callback `shouldFailOn` "<hello></there>"
 
     it "reports friendly error for bad closing tag" $ do
-      let e i = errFancy i . fancy . ErrorCustom
-
       parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
       parse callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
 

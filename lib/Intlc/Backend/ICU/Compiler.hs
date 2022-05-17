@@ -25,16 +25,29 @@ token (Plaintext x)     = x
 token (Interpolation x) = arg x
 
 arg :: Arg -> Text
-arg (Arg n Bool { trueCase, falseCase }) = "{" <> n <> ", boolean, true {" <> stream trueCase <> "} false {" <> stream falseCase <> "}}"
+arg (Arg n Bool { trueCase, falseCase }) = "{" <> n <> ", boolean, true {" <> stream trueCase   <> "} false {" <> stream falseCase <> "}}"
 arg (Arg n String)                       = "{" <> n <> "}"
-arg (Arg n Number)                       = "{" <> n <> ", number}"
-arg (Arg n (Date fmt))                   = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
-arg (Arg n (Time fmt))                   = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-arg (Arg n (Plural (Cardinal p)))        = "{" <> n <> ", plural, "        <> cardinalPlural p <> "}"
-arg (Arg n (Plural (Ordinal p)))         = "{" <> n <> ", selectordinal, " <> ordinalPlural p  <> "}"
+arg (Arg n (Number Nothing))             = "{" <> n <> ", number}"
+arg (Arg n (Number (Just sk)))           = "{" <> n <> ", number, ::"      <> numberSkeleton sk <> "}"
+arg (Arg n (Date fmt))                   = "{" <> n <> ", date, "          <> dateTimeFmt fmt   <> "}"
+arg (Arg n (Time fmt))                   = "{" <> n <> ", time, "          <> dateTimeFmt fmt   <> "}"
+arg (Arg n (Plural (Cardinal p)))        = "{" <> n <> ", plural, "        <> cardinalPlural p  <> "}"
+arg (Arg n (Plural (Ordinal p)))         = "{" <> n <> ", selectordinal, " <> ordinalPlural p   <> "}"
 arg (Arg _ PluralRef)                    = "#"
-arg (Arg n (Select xs y))                = "{" <> n <> ", select, "        <> select xs y      <> "}"
-arg (Arg n (Callback xs))                = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
+arg (Arg n (Select xs y))                = "{" <> n <> ", select, "        <> select xs y       <> "}"
+arg (Arg n (Callback xs))                = "<" <> n <> ">"                 <> stream xs         <> "</" <> n <> ">"
+
+numberSkeleton :: NumberSkeleton -> Text
+numberSkeleton (NumberSkeleton x) = case x of
+  Currency code -> "currency/" <> currencyCode code
+  Measure unit  -> "unit/" <> numberMeasureUnit unit
+  Percent       -> "percent"
+
+currencyCode :: CurrencyCode -> Text
+currencyCode = show
+
+numberMeasureUnit :: NumberMeasureUnit -> Text
+numberMeasureUnit Megabyte = "megabyte"
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"

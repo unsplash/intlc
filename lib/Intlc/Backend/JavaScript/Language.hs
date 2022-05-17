@@ -17,7 +17,7 @@ data Stmt = Stmt Text (NonEmpty Expr)
 data Expr
   = TPrint Text
   | TStr Ref
-  | TNum Ref
+  | TNum Ref (Maybe ICU.NumberSkeleton)
   | TDate Ref ICU.DateTimeFmt
   | TTime Ref ICU.DateTimeFmt
   | TApply Ref [Expr]
@@ -64,11 +64,11 @@ fromArg (ICU.Arg nraw t) =
       y <- fromBoolCase False falseCase
       pure . TMatch . Match n LitCond . LitMatchRet $ x :| [y]
     ICU.String             -> pure $ TStr n
-    ICU.Number             -> pure $ TNum n
+    ICU.Number x           -> pure $ TNum n x
     ICU.Date x             -> pure $ TDate n x
     ICU.Time x             -> pure $ TTime n x
     ICU.Plural x           -> TMatch <$> fromPlural n x
-    ICU.PluralRef          -> pure $ TNum n
+    ICU.PluralRef          -> pure $ TNum n Nothing
     ICU.Select cs (Just w) -> ((TMatch . Match n LitCond) .) . NonLitMatchRet <$> (fromSelectCase `mapM` cs) <*> fromSelectWildcard w
     ICU.Select cs Nothing  -> TMatch . Match n LitCond . LitMatchRet <$> (fromSelectCase `mapM` cs)
     ICU.Callback xs        -> TApply n <$> (fromToken `mapM` xs)

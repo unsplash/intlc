@@ -51,7 +51,7 @@ fromToken (ICU.Interpolation x) = fromArg x
 fromArg :: ICU.Arg -> UncollatedArgs
 fromArg (ICU.Arg n (ICU.Bool xs ys))   = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
 fromArg (ICU.Arg n ICU.String)         = pure (n, TStr)
-fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
+fromArg (ICU.Arg n ICU.Number {})      = pure (n, TNum)
 fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)
 fromArg (ICU.Arg n ICU.Time {})        = pure (n, TDate)
 fromArg (ICU.Arg n (ICU.Plural x))     = fromPlural n x
