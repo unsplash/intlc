@@ -1,4 +1,2 @@
 /dist-newstyle/
-/npm/node_modules/
-/npm/dist/
 /.golden/**/*/actual*
