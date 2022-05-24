@@ -39,10 +39,10 @@ type ICUBool = (ICU.Stream, ICU.Stream)
 type ICUSelect = (NonEmpty ICU.SelectCase, Maybe ICU.SelectWildcard)
 
 compileFlattened :: Dataset Translation -> Text
-compileFlattened = JSON.compileDataset . flattenDataset
+compileFlattened = JSON.compileDataset . mapMsgs flatten
 
-flattenDataset :: Dataset Translation -> Dataset Translation
-flattenDataset = fmap $ \(Translation msg be md) -> Translation (flatten msg) be md
+mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
+mapMsgs f = fmap $ \x -> x { message = f (message x) }
 
 flatten :: ICU.Message -> ICU.Message
 flatten x@(ICU.Static _)      = x
