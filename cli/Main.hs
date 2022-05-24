@@ -1,10 +1,11 @@
 module Main where
 
-import           CLI            (Opts (..), getOpts)
-import qualified Data.Text      as T
-import           Intlc.Compiler (compileDataset, compileFlattened)
+import           CLI                (Opts (..), getOpts)
+import qualified Data.Text          as T
+import           Intlc.Compiler     (compileDataset, compileFlattened)
 import           Intlc.Core
-import           Intlc.Parser   (ParseFailure, parseDataset, printErr)
+import           Intlc.Parser       (parseDataset, printErr)
+import           Intlc.Parser.Error (ParseFailure)
 import           Prelude
 
 main :: IO ()
@@ -16,5 +17,4 @@ main = getOpts >>= \case
         compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
 
 getParsed :: FilePath -> IO (Either ParseFailure (Dataset Translation))
-getParsed = fmap parseDataset . readFileLBS
-
+getParsed x = parseDataset x <$> readFileText x

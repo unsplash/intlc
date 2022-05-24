@@ -55,6 +55,9 @@ library
     Intlc.Core
     Intlc.ICU
     Intlc.Parser
+    Intlc.Parser.Error
+    Intlc.Parser.JSON
+    Intlc.Parser.ICU
     Utils
 
 test-suite test-intlc
@@ -78,4 +81,5 @@ test-suite test-intlc
     Intlc.Backend.TypeScriptSpec
     Intlc.CompilerSpec
     Intlc.EndToEndSpec
-    Intlc.ParserSpec
+    Intlc.Parser.JSONSpec
+    Intlc.Parser.ICUSpec

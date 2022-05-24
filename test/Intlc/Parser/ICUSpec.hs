@@ -1,21 +1,23 @@
-module Intlc.ParserSpec (spec) where
+module Intlc.Parser.ICUSpec (spec) where
 
 import           Intlc.ICU
-import           Intlc.Parser
-import           Prelude               hiding (ByteString)
+import           Intlc.Parser.Error    (MessageParseErr (..),
+                                        ParseErr (FailedMsgParse), ParseFailure)
+import           Intlc.Parser.ICU
+import           Prelude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec hiding (initialState)
-import           Text.Megaparsec       (ParseErrorBundle, runParser)
+import           Text.Megaparsec       (runParser)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
-parseWith :: ParserState -> Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
+parseWith :: ParserState -> Parser a -> Text -> Either ParseFailure a
 parseWith s p = runParser (runReaderT p s) "test"
 
-parse :: Parser a -> Text -> Either (ParseErrorBundle Text MessageParseErr) a
+parse :: Parser a -> Text -> Either ParseFailure a
 parse = parseWith initialState
 
 spec :: Spec
-spec = describe "parser" $ do
+spec = describe "ICU parser" $ do
   describe "message" $ do
     it "does not tolerate unclosed braces" $ do
       parse msg `shouldFailOn` "a { b"
@@ -133,7 +135,7 @@ spec = describe "parser" $ do
       parse callback `shouldFailOn` "<hello></there>"
 
     it "reports friendly error for bad closing tag" $ do
-      let e i = errFancy i . fancy . ErrorCustom
+      let e i = errFancy i . fancy . ErrorCustom . FailedMsgParse
 
       parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
       parse callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")

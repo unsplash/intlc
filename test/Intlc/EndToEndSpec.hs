@@ -1,20 +1,19 @@
 module Intlc.EndToEndSpec (spec) where
 
-import           Data.ByteString.Lazy (ByteString)
-import qualified Data.Text            as T
-import           Intlc.Compiler       (compileDataset)
-import           Intlc.Core           (Locale (Locale))
-import           Intlc.Parser         (parseDataset)
-import           Prelude              hiding (ByteString)
-import           System.FilePath      ((<.>), (</>))
+import qualified Data.Text         as T
+import           Intlc.Compiler    (compileDataset)
+import           Intlc.Core        (Locale (Locale))
+import           Intlc.Parser      (parseDataset)
+import           Prelude
+import           System.FilePath   ((<.>), (</>))
 import           Test.Hspec
-import           Test.Hspec.Golden    (Golden (..), defaultGolden)
-import           Text.RawString.QQ    (r)
+import           Test.Hspec.Golden (Golden (..), defaultGolden)
+import           Text.RawString.QQ (r)
 
-parseAndCompileDataset :: ByteString -> Either (NonEmpty Text) Text
-parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset
+parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text
+parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset "test"
 
-golden :: String -> ByteString -> Golden String
+golden :: String -> Text -> Golden String
 golden name in' = baseCfg
   { goldenFile = goldenFile baseCfg <.> "ts"
   , actualFile = actualFile baseCfg <&> (<.> "ts")
@@ -25,7 +24,7 @@ golden name in' = baseCfg
         fromErrs (Right x) = x
         fromErrs (Left es) = T.intercalate "\n" . toList $ es
 
-(=*=) :: ByteString -> Text -> IO ()
+(=*=) :: Text -> Text -> IO ()
 x =*= y = parseAndCompileDataset x `shouldBe` Right y
 
 withReactImport :: Text -> Text

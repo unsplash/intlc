@@ -2,11 +2,8 @@
 
 module Intlc.Core where
 
-import           Data.Aeson          (FromJSON (..), ToJSON (toEncoding),
-                                      withObject, withText, (.!=), (.:), (.:?),
-                                      (.=))
+import           Data.Aeson          (ToJSON (toEncoding), (.=))
 import           Data.Aeson.Encoding (pairs, string)
-import qualified Data.Text           as T
 import           Intlc.ICU           (Message)
 import           Prelude
 
@@ -22,12 +19,6 @@ data Backend
   | TypeScriptReact
   deriving (Show, Eq, Generic)
 
-instance FromJSON Backend where
-  parseJSON = withText "Backend" decode
-    where decode "ts"  = pure TypeScript
-          decode "tsx" = pure TypeScriptReact
-          decode x     = fail $ "Unknown backend: " <> T.unpack x
-
 instance ToJSON Backend where
   toEncoding TypeScript      = string "ts"
   toEncoding TypeScriptReact = string "tsx"
@@ -38,13 +29,6 @@ data UnparsedTranslation = UnparsedTranslation
   , umdesc   :: Maybe Text
   }
   deriving (Show, Eq, Generic)
-
-instance FromJSON UnparsedTranslation where
-  parseJSON = withObject "UnparsedTranslation" decode
-    where decode x = UnparsedTranslation
-            <$> x .: "message"
-            <*> x .:? "backend" .!= TypeScript
-            <*> x .:? "description"
 
 instance ToJSON UnparsedTranslation where
   toEncoding (UnparsedTranslation msg be md) = pairs $

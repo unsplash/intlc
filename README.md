@@ -39,6 +39,7 @@ Translation files should be encoded as JSON and might look something like this:
 {
   "welcome": {
     "message": "Hello {name}",
+    "description": "Welcome message",
     "backend": "ts"
   }
 }

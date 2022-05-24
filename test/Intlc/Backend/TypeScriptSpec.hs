@@ -7,7 +7,7 @@ import           Intlc.Backend.TypeScript.Compiler (compileNamedExport,
 import qualified Intlc.Backend.TypeScript.Language as TS
 import           Intlc.Core                        (Locale (Locale))
 import qualified Intlc.ICU                         as ICU
-import           Prelude                           hiding (ByteString)
+import           Prelude
 import           System.FilePath                   ((<.>), (</>))
 import           Test.Hspec
 import           Test.Hspec.Golden                 (Golden (..), defaultGolden)
