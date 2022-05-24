@@ -1,17 +1,15 @@
 module Intlc.Compiler (compileDataset, compileFlattened, flatten) where
 
 import           Control.Applicative.Combinators   (choice)
-import           Data.Aeson                        (encode)
-import           Data.ByteString.Lazy              (ByteString)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
-import           Intlc.Backend.ICU.Compiler        (compileMsg)
 import           Intlc.Backend.JavaScript.Compiler as JS
+import qualified Intlc.Backend.JSON.Compiler       as JSON
 import qualified Intlc.Backend.TypeScript.Compiler as TS
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
-import           Prelude                           hiding (ByteString)
+import           Prelude
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
@@ -40,11 +38,11 @@ compileTranslation l k (Translation v be _) = case be of
 type ICUBool = (ICU.Stream, ICU.Stream)
 type ICUSelect = (NonEmpty ICU.SelectCase, Maybe ICU.SelectWildcard)
 
-compileFlattened :: Dataset Translation -> ByteString
-compileFlattened = encode . flattenDataset
+compileFlattened :: Dataset Translation -> Text
+compileFlattened = JSON.compileDataset . flattenDataset
 
-flattenDataset :: Dataset Translation -> Dataset UnparsedTranslation
-flattenDataset = fmap $ \(Translation msg be md) -> UnparsedTranslation (compileMsg . flatten $ msg) be md
+flattenDataset :: Dataset Translation -> Dataset Translation
+flattenDataset = fmap $ \(Translation msg be md) -> Translation (flatten msg) be md
 
 flatten :: ICU.Message -> ICU.Message
 flatten x@(ICU.Static _)      = x
