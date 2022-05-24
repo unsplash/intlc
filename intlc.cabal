@@ -8,6 +8,7 @@ common common
   default-language:        Haskell2010
   default-extensions:
     LambdaCase
+    NamedFieldPuns
     NoImplicitPrelude
     OverloadedStrings
     TupleSections

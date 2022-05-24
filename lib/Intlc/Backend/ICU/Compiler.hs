@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 -- This module is essentially the inverse of the parsing we perform; it's
 -- semantically reversible in that respect if not precisely due to formatting,
 -- no preservation of the presence of defaults, etc.
