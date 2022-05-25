@@ -31,7 +31,7 @@ lint m = case m of
   Static {}        -> Success
   Dynamic neStream -> (mkStatus . countInterpolations) neStream
     where
-      mkStatus n = if n > 2
+      mkStatus n = if n > 1
         then Failure "Too many interpolations. They will appear nested once flattened."
         else Success
 
