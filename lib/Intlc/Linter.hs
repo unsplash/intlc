@@ -34,6 +34,6 @@ lint x = case x of
   Dynamic neStream -> (mkStatus . (> 2) . countInterpolations) neStream
     where
       mkStatus = \case
-        True  -> Failure "Too many interpolations"
+        True  -> Failure "Too many interpolations. They will appear nested once flattened."
         False -> Success
 
