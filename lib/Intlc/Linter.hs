@@ -24,11 +24,11 @@ countInterpolations = foldr go 0
     go :: Token -> Int -> Int
     go t n = case t of
       Plaintext {}              -> n
-      Interpolation ((Arg _ y)) -> count y + n
+      Interpolation ((Arg _ x)) -> count x + n
 
 lint :: Message -> Status
-lint x = case x of
   Static _                              -> Success
+lint m = case m of
   Dynamic neStream -> (mkStatus . countInterpolations) neStream
     where
       mkStatus n = if n > 2
