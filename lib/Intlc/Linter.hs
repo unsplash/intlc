@@ -6,6 +6,7 @@ import           Prelude   hiding (Type)
 data Status
   = Success
   | Failure Text
+  deriving (Eq, Show)
 
 count :: Type -> Int
 count = \case
