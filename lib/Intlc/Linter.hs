@@ -29,9 +29,9 @@ countInterpolations = foldr go 0
 lint :: Message -> Status
 lint x = case x of
   Static _                              -> Success
-  Dynamic neStream -> (mkStatus . (> 2) . countInterpolations) neStream
+  Dynamic neStream -> (mkStatus . countInterpolations) neStream
     where
-      mkStatus = \case
-        True  -> Failure "Too many interpolations. They will appear nested once flattened."
-        False -> Success
+      mkStatus n = if n > 2
+        then Failure "Too many interpolations. They will appear nested once flattened."
+        else Success
 
