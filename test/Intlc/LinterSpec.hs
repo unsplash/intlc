@@ -16,15 +16,15 @@ spec = describe "linter" $ do
   it "lints dynamic streams with 2 or more plain text token" $ do
     lint (Dynamic (fromList [Plaintext "yay", Plaintext "Hello"])) `shouldBe` Success
 
-  it "lints dynamic streams with 1 dynamic simple interpolation" $ do
+  it "lints dynamic streams with 1 simple interpolation" $ do
     lint (Dynamic (fromList [Interpolation (Arg "Hello" String)])) `shouldBe` Success
 
-  it "lints dynamic streams with 1 dynamic complex interpolation" $ do
+  it "lints dynamic streams with 1 complex interpolation" $ do
     lint (Dynamic (fromList [Interpolation (Arg "Hello" (Callback []))])) `shouldBe` Success
 
-  it "lints dynamic streams with 1 dynamic complex interpolation and 1 simple interpolation" $ do
+  it "lints dynamic streams with 1 complex interpolation and 1 simple interpolation" $ do
     lint (Dynamic (fromList [Interpolation (Arg "Hello" (Callback [])), Plaintext "hello"])) `shouldBe` Success
 
-  it "does not lint dynamic streams with 2 or more dynamic complex interpolations" $ do
+  it "does not lint dynamic streams with 2 or more complex interpolations" $ do
     lint (Dynamic (fromList [Interpolation (Arg "Hello" (Callback [])), Interpolation (Arg "Hello" (Bool [] []))])) `shouldBe` Failure "Too many interpolations. They will appear nested once flattened."
 
