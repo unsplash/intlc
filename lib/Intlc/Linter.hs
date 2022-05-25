@@ -8,21 +8,19 @@ data Status
   | Failure Text
   deriving (Eq, Show)
 
-count :: Type -> Int
-count = \case
-  String      -> 0
-  Number      -> 0
-  Date {}     -> 0
-  Time {}     -> 0
-  PluralRef   -> 0
-  Bool {}     -> 1
-  Plural {}   -> 1
-  Select {}   -> 1
-  Callback {} -> 1
-
 countInterpolations :: NEStream -> Int
 countInterpolations = foldr go 0
   where
+    count = \case
+      String      -> 0
+      Number      -> 0
+      Date {}     -> 0
+      Time {}     -> 0
+      PluralRef   -> 0
+      Bool {}     -> 1
+      Plural {}   -> 1
+      Select {}   -> 1
+      Callback {} -> 1
     go :: Token -> Int -> Int
     go t n = case t of
       Plaintext {}              -> n
