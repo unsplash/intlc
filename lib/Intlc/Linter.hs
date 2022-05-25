@@ -27,8 +27,8 @@ countInterpolations = foldr go 0
       Interpolation ((Arg _ x)) -> count x + n
 
 lint :: Message -> Status
-  Static _                              -> Success
 lint m = case m of
+  Static {}        -> Success
   Dynamic neStream -> (mkStatus . countInterpolations) neStream
     where
       mkStatus n = if n > 2
