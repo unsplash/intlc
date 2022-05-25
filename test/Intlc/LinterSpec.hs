@@ -1,0 +1,1 @@
+module Intlc.LinterSpec where
