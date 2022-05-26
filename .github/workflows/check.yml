@@ -1,9 +1,8 @@
 name: Check
+
 on:
   pull_request:
   push:
-    tags:
-      - v*.*.*
     branches:
       - master
 
@@ -12,13 +11,13 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: haskell/actions/setup@v1
+      - uses: actions/checkout@v3
+      - uses: haskell/actions/setup@v2
         id: setup-haskell
         with:
           ghc-version: 8.10.7
       - run: cabal freeze
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ${{ steps.setup-haskell.outputs.cabal-store }}
           key: hashFiles('cabal.project.freeze')
@@ -27,13 +26,13 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: haskell/actions/setup@v1
+      - uses: actions/checkout@v3
+      - uses: haskell/actions/setup@v2
         id: setup-haskell
         with:
           ghc-version: 8.10.7
       - run: cabal freeze
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ${{ steps.setup-haskell.outputs.cabal-store }}
           key: hashFiles('cabal.project.freeze')
@@ -42,16 +41,16 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: haskell/actions/hlint-setup@v1
-      - uses: haskell/actions/hlint-run@v1
+      - uses: actions/checkout@v3
+      - uses: haskell/actions/hlint-setup@v2
+      - uses: haskell/actions/hlint-run@v2
         with:
           path: '["lib/", "cli/"]'
   fmt:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # stylish-haskell doesn't have a check/dry run option, so we'll run it
       # against files in place and test if there are any diffs with Git.
       - run: |
@@ -64,41 +63,10 @@ jobs:
       run:
         working-directory: .golden/ts/
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
           cache: yarn
           cache-dependency-path: .golden/ts/yarn.lock
       - run: yarn install --frozen-lockfile
       - run: yarn typecheck
-  build_binary:
-    name: Build Binary
-    strategy:
-      matrix:
-        os:
-          [
-            { name: "linux", runner: "ubuntu-latest" },
-            { name: "macos", runner: "macos-latest" },
-          ]
-    runs-on: ${{ matrix.os.runner }}
-    if: startsWith(github.event.ref, 'refs/tags/v')
-    needs: [build, test, lint, fmt, typecheck-ts]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: haskell/actions/setup@v1
-        id: setup-haskell
-        with:
-          ghc-version: 8.10.7
-      - run: cabal freeze
-      - uses: actions/cache@v2
-        with:
-          path: ${{ steps.setup-haskell.outputs.cabal-store }}
-          key: hashFiles('cabal.project.freeze')
-      - name: Build
-        run: |
-          cabal install exe:intlc --install-method=copy --overwrite-policy=always --installdir=dist-newstyle
-          mv dist-newstyle/intlc "dist-newstyle/intlc_${{ matrix.os.name }}"
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: "dist-newstyle/intlc_${{ matrix.os.name }}"
