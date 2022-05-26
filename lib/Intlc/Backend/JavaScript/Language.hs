@@ -52,11 +52,11 @@ fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
 fromKeyedMsg n (ICU.Message xs) = Stmt n <$> (fromToken `mapM` xs)
 
 fromToken :: ICU.Token -> ASTCompiler Expr
-fromToken (ICU.Plaintext x)     = pure $ TPrint x
-fromToken (ICU.Interpolation x) = fromArg x
+fromToken (ICU.Plaintext x)       = pure $ TPrint x
+fromToken (ICU.Interpolation x y) = fromInterp x y
 
-fromArg :: ICU.Arg -> ASTCompiler Expr
-fromArg (ICU.Arg nraw t) =
+fromInterp :: Text -> ICU.Type -> ASTCompiler Expr
+fromInterp nraw t =
   case t of
     ICU.Bool { ICU.trueCase, ICU.falseCase } -> do
       x <- fromBoolCase True trueCase

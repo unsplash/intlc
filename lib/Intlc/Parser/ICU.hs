@@ -16,7 +16,7 @@ import           Intlc.ICU
 import           Intlc.Parser.Error                       (MessageParseErr (..),
                                                            ParseErr (FailedMsgParse),
                                                            failingWith)
-import           Prelude
+import           Prelude                                  hiding (Type)
 import           Text.Megaparsec                          hiding (State, Stream,
                                                            Token, many, some,
                                                            token)
@@ -49,12 +49,12 @@ eom = void $ char '"'
 
 token :: Parser Token
 token = choice
-  [ Interpolation <$> (interp <|> callback)
+  [ uncurry Interpolation <$> (interp <|> callback)
   -- Plural cases support interpolating the number/argument in context with
   -- `#`. When there's no such context, fail the parse in effect treating it
   -- as plaintext.
   , asks pluralCtxName >>= \case
-      Just n  -> Interpolation (Arg n PluralRef) <$ string "#"
+      Just n  -> Interpolation n PluralRef <$ string "#"
       Nothing -> empty
   , Plaintext <$> (try escaped <|> plaintext)
   ]
@@ -80,21 +80,21 @@ escaped = apos *> choice
           where tryOne = (:) <$> p <*> go
                 go = ((:) <$> try (end <* end) <*> go) <|> (mempty <$ end) <|> tryOne
 
-callback :: Parser Arg
+callback :: Parser (Text, Type)
 callback = do
   (openPos, oname) <- (,) <$> (string "<" *> getOffset) <*> ident <* string ">"
   mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
     Left _  -> openPos `failingWith'` NoClosingCallbackTag oname
     Right (ch, closePos, cname) -> if oname == cname
-       then pure (Arg oname ch)
+       then pure (oname, ch)
        else closePos `failingWith'` BadClosingCallbackTag oname cname
     where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ void (string "</") <|> eom)
 
-interp :: Parser Arg
+interp :: Parser (Text, Type)
 interp = between (char '{') (char '}') $ do
   n <- ident
-  Arg n <$> option String (sep *> body n)
+  (n,) <$> option String (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice
           [ uncurry Bool <$> (string "boolean" *> sep *> boolCases)

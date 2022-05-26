@@ -30,34 +30,34 @@ spec = describe "TypeScript compiler" $ do
   describe "golden" $ do
     let msg = ICU.Message $
           [ ICU.Plaintext "Hello "
-          , ICU.Interpolation (ICU.Arg "bold" (ICU.Callback (pure $
-              ICU.Interpolation (ICU.Arg "name" ICU.String
-            ))))
+          , ICU.Interpolation "bold" (ICU.Callback (pure $
+              ICU.Interpolation "name" ICU.String
+            ))
           , ICU.Plaintext "! You are "
-          , ICU.Interpolation (ICU.Arg "age" (ICU.Plural (ICU.Cardinal
+          , ICU.Interpolation "age" (ICU.Plural (ICU.Cardinal
               (ICU.MixedPlural
               (pure (ICU.PluralCase (ICU.PluralExact "42") (pure (ICU.Plaintext "very cool"))))
               (pure (ICU.PluralCase ICU.Zero (pure (ICU.Plaintext "new around here"))))
               (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
               )
-            )))
+            ))
           , ICU.Plaintext ". Regardless, the magic number is most certainly "
-          , ICU.Interpolation (ICU.Arg "magicNumber" ICU.Number)
+          , ICU.Interpolation "magicNumber" ICU.Number
           , ICU.Plaintext "! The date is "
-          , ICU.Interpolation (ICU.Arg "todayDate" (ICU.Date ICU.Short))
+          , ICU.Interpolation "todayDate" (ICU.Date ICU.Short)
           , ICU.Plaintext ", and the time is "
-          , ICU.Interpolation (ICU.Arg "currTime" (ICU.Time ICU.Full))
+          , ICU.Interpolation "currTime" (ICU.Time ICU.Full)
           , ICU.Plaintext ". And just to recap, your name is "
-          , ICU.Interpolation (ICU.Arg "name" (ICU.Select (fromList
+          , ICU.Interpolation "name" (ICU.Select (fromList
               [ ICU.SelectCase "Sam" [ICU.Plaintext "undoubtedly excellent"]
               , ICU.SelectCase "Ashley" [ICU.Plaintext "fairly good"]
               ]
-            ) Nothing))
+            ) Nothing)
           , ICU.Plaintext ". Finally, you are "
-          , ICU.Interpolation (ICU.Arg "isDev" (ICU.Bool
+          , ICU.Interpolation "isDev" (ICU.Bool
             { ICU.trueCase = [ICU.Plaintext "a software engineer"]
             , ICU.falseCase = [ICU.Plaintext "something less fun"]
-            }))
+            })
           , ICU.Plaintext ". Bonus: Some characters that might need escaping! ` ``"
           ]
 
@@ -91,11 +91,11 @@ spec = describe "TypeScript compiler" $ do
 
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
-    let fromToken = args . TS.fromMsg TS.TFragment . ICU.Message . pure . ICU.Interpolation . ICU.Arg "x"
+    let fromToken = args . TS.fromMsg TS.TFragment . ICU.Message . pure . ICU.Interpolation "x"
     let fromArgs = fromList
 
     it "in select" $ do
-      let x = flip ICU.Select Nothing . pure $ ICU.SelectCase "foo" [ICU.Interpolation $ ICU.Arg "y" ICU.String]
+      let x = flip ICU.Select Nothing . pure $ ICU.SelectCase "foo" [ICU.Interpolation "y" ICU.String]
       let ys =
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
               , ("y", pure TS.TStr)
@@ -104,7 +104,7 @@ spec = describe "TypeScript compiler" $ do
 
     it "in cardinal plural" $ do
       let x = ICU.Plural . ICU.Cardinal . flip ICU.LitPlural Nothing . pure $
-                ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation $ ICU.Arg "y" ICU.String]
+                ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation "y" ICU.String]
       let ys =
               [ ("x", pure (TS.TNumLitUnion (pure "42")))
               , ("y", pure TS.TStr)
@@ -113,9 +113,9 @@ spec = describe "TypeScript compiler" $ do
 
     it "in ordinal plural" $ do
       let x = ICU.Plural . ICU.Ordinal $ ICU.OrdinalPlural
-                [ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation $ ICU.Arg "foo" (ICU.Date ICU.Short)]]
-                (pure $ ICU.PluralCase ICU.Few [ICU.Interpolation $ ICU.Arg "bar" ICU.String])
-                (ICU.PluralWildcard [ICU.Interpolation $ ICU.Arg "baz" ICU.Number])
+                [ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation "foo" (ICU.Date ICU.Short)]]
+                (pure $ ICU.PluralCase ICU.Few [ICU.Interpolation "bar" ICU.String])
+                (ICU.PluralWildcard [ICU.Interpolation "baz" ICU.Number])
       let ys =
               [ ("x", pure TS.TNum)
               , ("foo", pure TS.TDate)
@@ -126,8 +126,8 @@ spec = describe "TypeScript compiler" $ do
 
     it "in boolean" $ do
       let x = ICU.Bool
-                [ICU.Interpolation $ ICU.Arg "y" ICU.String]
-                [ICU.Interpolation $ ICU.Arg "z" ICU.Number]
+                [ICU.Interpolation "y" ICU.String]
+                [ICU.Interpolation "z" ICU.Number]
       let ys =
               [ ("x", pure TS.TBool)
               , ("y", pure TS.TStr)
