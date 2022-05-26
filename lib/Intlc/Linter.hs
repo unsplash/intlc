@@ -2,7 +2,7 @@ module Intlc.Linter where
 
 import           Data.List.NonEmpty ((!!))
 import           Intlc.ICU
-import           Prelude            hiding (Type, scanl, takeWhile)
+import           Prelude            hiding (Type)
 
 data LintingError
   = TooManyInterpolations
