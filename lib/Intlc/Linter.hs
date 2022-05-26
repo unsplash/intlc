@@ -31,7 +31,7 @@ countInterpolations = foldr go 0
 
 lint :: Message -> Status
 lint Static {} = Success
-lint (Dynamic stream) = (mkStatus . countInterpolations) stream
+lint (Dynamic stream) = mkStatus . countInterpolations $ stream
   where
     mkStatus n = if n > 1
       then Failure TooManyInterpolations
