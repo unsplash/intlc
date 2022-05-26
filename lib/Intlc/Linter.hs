@@ -26,16 +26,14 @@ countInterpolations = foldr go 0
       Select {}   -> 1
       Callback {} -> 1
     go :: Token -> Int -> Int
-    go t n = case t of
-      Plaintext {}              -> n
-      Interpolation ((Arg _ x)) -> count x + n
+    go Plaintext {} n              = n
+    go (Interpolation (Arg _ x)) n = count x + n
 
 lint :: Message -> Status
-lint m = case m of
-  Static {}        -> Success
-  Dynamic neStream -> (mkStatus . countInterpolations) neStream
-    where
-      mkStatus n = if n > 1
-        then Failure TooManyInterpolations
-        else Success
+lint Static {} = Success
+lint (Dynamic stream) = (mkStatus . countInterpolations) stream
+  where
+    mkStatus n = if n > 1
+      then Failure TooManyInterpolations
+      else Success
 
