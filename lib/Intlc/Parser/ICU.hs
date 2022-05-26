@@ -39,10 +39,7 @@ ident :: Parser Text
 ident = T.pack <$> some letterChar
 
 toMsg :: Stream -> Message
-toMsg = mergePlaintext >>> \case
-  []            -> Static ""
-  [Plaintext x] -> Static x
-  (x:xs)        -> Dynamic (x :| xs)
+toMsg = Message . mergePlaintext
 
 msg :: Parser Message
 msg = toMsg <$> manyTill token eof

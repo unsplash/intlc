@@ -11,7 +11,7 @@ type ASTCompiler = Reader Locale
 -- | A representation of the output we will be compiling. It's a little verbose
 -- split into these various sum types, but in doing so it's correct by
 -- construction.
-data Stmt = Stmt Text (NonEmpty Expr)
+data Stmt = Stmt Text [Expr]
   deriving (Show, Eq)
 
 data Expr
@@ -49,8 +49,7 @@ newtype Wildcard = Wildcard [Expr]
   deriving (Show, Eq)
 
 fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
-fromKeyedMsg n (ICU.Static x)   = pure $ Stmt n (pure $ TPrint x)
-fromKeyedMsg n (ICU.Dynamic ys) = Stmt n <$> (fromToken `mapM` ys)
+fromKeyedMsg n (ICU.Message xs) = Stmt n <$> (fromToken `mapM` xs)
 
 fromToken :: ICU.Token -> ASTCompiler Expr
 fromToken (ICU.Plaintext x)     = pure $ TPrint x

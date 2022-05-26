@@ -5,12 +5,12 @@ module Intlc.ICU where
 
 import           Prelude hiding (Type)
 
-data Message
-  = Static Text
-  | Dynamic NEStream
+newtype Message = Message Stream
   deriving (Show, Eq)
 
-type NEStream = NonEmpty Token
+unMessage :: Message -> Stream
+unMessage (Message xs) = xs
+
 type Stream = [Token]
 
 -- | A token is either an interpolation - some sort of identifier for input -

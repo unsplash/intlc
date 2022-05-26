@@ -14,8 +14,7 @@ import           Intlc.ICU
 import           Prelude
 
 compileMsg :: Message -> Text
-compileMsg (Static x)   = x
-compileMsg (Dynamic xs) = stream xs
+compileMsg (Message xs) = stream xs
 
 stream :: Foldable f => f Token -> Text
 stream = foldMap token

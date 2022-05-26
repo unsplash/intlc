@@ -41,8 +41,7 @@ collateArgs :: UncollatedArgs -> Args
 collateArgs = fmap nub . M.fromListWith (<>) . fmap (second pure)
 
 fromMsg :: Out -> ICU.Message -> TypeOf
-fromMsg x ICU.Static {}    = Lambda mempty x
-fromMsg x (ICU.Dynamic ys) = Lambda (collateArgs (fromToken =<< toList ys)) x
+fromMsg x (ICU.Message ys) = Lambda (collateArgs (fromToken =<< toList ys)) x
 
 fromToken :: ICU.Token -> UncollatedArgs
 fromToken ICU.Plaintext {}      = mempty

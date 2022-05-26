@@ -28,7 +28,7 @@ golden strat compiler name msg = baseCfg
 spec :: Spec
 spec = describe "TypeScript compiler" $ do
   describe "golden" $ do
-    let msg = ICU.Dynamic . fromList $
+    let msg = ICU.Message $
           [ ICU.Plaintext "Hello "
           , ICU.Interpolation (ICU.Arg "bold" (ICU.Callback (pure $
               ICU.Interpolation (ICU.Arg "name" ICU.String
@@ -91,7 +91,7 @@ spec = describe "TypeScript compiler" $ do
 
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
-    let fromToken = args . TS.fromMsg TS.TFragment . ICU.Dynamic . pure . ICU.Interpolation . ICU.Arg "x"
+    let fromToken = args . TS.fromMsg TS.TFragment . ICU.Message . pure . ICU.Interpolation . ICU.Arg "x"
     let fromArgs = fromList
 
     it "in select" $ do

@@ -33,22 +33,22 @@ spec = describe "ICU parser" $ do
 
     describe "plural hash" $ do
       it "parses as plaintext outside of plurals" $ do
-        parse msg "#" `shouldParse` Static "#"
+        parse msg "#" `shouldParse` Message [Plaintext "#"]
         parse msg "{x, select, y {#}}" `shouldParse`
-          (Dynamic . pure . Interpolation . Arg "x" $
+          (Message . pure . Interpolation . Arg "x" $
             Select (pure $ SelectCase "y" (pure $ Plaintext "#")) Nothing)
 
       it "parses as arg inside shallow plural" $ do
         let n = pure . Interpolation $ Arg "n" PluralRef
         parse msg "{n, plural, one {#} other {#}}" `shouldParse`
-          (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
+          (Message . pure . Interpolation . Arg "n" . Plural . Cardinal $
             RulePlural (pure $ PluralCase One n) (PluralWildcard n))
 
       it "parses as nearest arg inside deep plural" $ do
         let n = pure . Interpolation $ Arg "n" PluralRef
         let i = pure . Interpolation $ Arg "i" PluralRef
         parse msg "{n, plural, one {{i, plural, one {#} other {#}}} other {#}}" `shouldParse`
-          (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
+          (Message . pure . Interpolation . Arg "n" . Plural . Cardinal $
             RulePlural (pure $ PluralCase One (
               pure . Interpolation . Arg "i" . Plural . Cardinal $
                 RulePlural (pure $ PluralCase One i) (PluralWildcard i)
@@ -57,7 +57,7 @@ spec = describe "ICU parser" $ do
       it "parses as arg nested inside other interpolation" $ do
         let n = pure . Interpolation $ Arg "n" PluralRef
         parse msg "{n, plural, one {<f>#</f>} other {#}}" `shouldParse`
-          (Dynamic . pure . Interpolation . Arg "n" . Plural . Cardinal $
+          (Message . pure . Interpolation . Arg "n" . Plural . Cardinal $
             RulePlural (pure $ PluralCase One (
               pure . Interpolation . Arg "f" . Callback $ n
             )) (PluralWildcard n))
@@ -65,31 +65,31 @@ spec = describe "ICU parser" $ do
     describe "escaping" $ do
       it "escapes non-empty contents between single quotes" $ do
         parse msg "These are not interpolations: '{word1} {word2}'" `shouldParse`
-          Static "These are not interpolations: {word1} {word2}"
+          Message [Plaintext "These are not interpolations: {word1} {word2}"]
         parse msg "'<notATag>hello</notATag>'" `shouldParse`
-          Static "<notATag>hello</notATag>"
+          Message [Plaintext "<notATag>hello</notATag>"]
         parse msg "a {b} '{c}' {d} e" `shouldParse`
-          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " {c} ", Interpolation (Arg "d" String), Plaintext " e"])
-        parse msg "'<f>'" `shouldParse` Static "<f>"
-        parse msg "'<f>x</f>'" `shouldParse` Static "<f>x</f>"
-        parse msg "'<f>x</g>'" `shouldParse` Static "<f>x</g>"
+          Message [Plaintext "a ", Interpolation (Arg "b" String), Plaintext " {c} ", Interpolation (Arg "d" String), Plaintext " e"]
+        parse msg "'<f>'" `shouldParse` Message [Plaintext "<f>"]
+        parse msg "'<f>x</f>'" `shouldParse` Message [Plaintext "<f>x</f>"]
+        parse msg "'<f>x</g>'" `shouldParse` Message [Plaintext "<f>x</g>"]
 
       it "escapes next syntax character following one unclosed single quote" $ do
-        parse msg "This is not an interpolation: '{word}" `shouldParse` Static "This is not an interpolation: {word}"
-        parse msg "'<notATag>" `shouldParse` Static "<notATag>"
+        parse msg "This is not an interpolation: '{word}" `shouldParse` Message [Plaintext "This is not an interpolation: {word}"]
+        parse msg "'<notATag>" `shouldParse` Message [Plaintext "<notATag>"]
         parse msg "a {b} '{c} {d} e" `shouldParse`
-          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " {c} ", Interpolation (Arg "d" String), Plaintext " e"])
+          Message [Plaintext "a ", Interpolation (Arg "b" String), Plaintext " {c} ", Interpolation (Arg "d" String), Plaintext " e"]
         parse msg "a {b} 'c {d} e" `shouldParse`
-          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " 'c ", Interpolation (Arg "d" String), Plaintext " e"])
+          Message [Plaintext "a ", Interpolation (Arg "b" String), Plaintext " 'c ", Interpolation (Arg "d" String), Plaintext " e"]
 
       it "escapes two single quotes as one single quote" $ do
-        parse msg "This '{isn''t}' obvious." `shouldParse` Static "This {isn't} obvious."
+        parse msg "This '{isn''t}' obvious." `shouldParse` Message [Plaintext "This {isn't} obvious."]
         parse msg "a {b} ''{c}'' {d} e" `shouldParse`
-          Dynamic (Plaintext "a " :| [Interpolation (Arg "b" String), Plaintext " '", Interpolation (Arg "c" String), Plaintext "' ", Interpolation (Arg "d" String), Plaintext " e"])
+          Message [Plaintext "a ", Interpolation (Arg "b" String), Plaintext " '", Interpolation (Arg "c" String), Plaintext "' ", Interpolation (Arg "d" String), Plaintext " e"]
 
       it "ignores one single quote not immediately preceding a syntax character" $ do
-        parse msg "'" `shouldParse` Static "'"
-        parse msg "x'y" `shouldParse` Static "x'y"
+        parse msg "'" `shouldParse` Message [Plaintext "'"]
+        parse msg "x'y" `shouldParse` Message [Plaintext "x'y"]
 
   describe "interpolation" $ do
     it "interpolates appropriately" $ do
