@@ -3,9 +3,13 @@ module Intlc.Linter where
 import           Intlc.ICU
 import           Prelude   hiding (Type)
 
+data LintingError
+  = TooManyInterpolations
+  deriving (Eq, Show)
+
 data Status
   = Success
-  | Failure Text
+  | Failure LintingError
   deriving (Eq, Show)
 
 countInterpolations :: NEStream -> Int
@@ -32,6 +36,6 @@ lint m = case m of
   Dynamic neStream -> (mkStatus . countInterpolations) neStream
     where
       mkStatus n = if n > 1
-        then Failure "Too many interpolations. They will appear nested once flattened."
+        then Failure TooManyInterpolations
         else Success
 
