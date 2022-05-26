@@ -33,7 +33,7 @@ lint :: Message -> Status
 lint Static {} = Success
 lint (Dynamic stream) = mkStatus . countInterpolations $ stream
   where
-    mkStatus n = if n > 1
-      then Failure TooManyInterpolations
-      else Success
+    mkStatus n
+      | n > 1 = Failure TooManyInterpolations
+      | otherwise = Success
 
