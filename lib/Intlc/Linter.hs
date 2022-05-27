@@ -17,13 +17,9 @@ interpolationsRule :: Stream -> Status
 interpolationsRule = result 0
   where
     result :: Int -> Stream -> Status
-    result n []
-      | n > 1 = Failure TooManyInterpolations
-      | otherwise = Success
-
-    result n (x:xs)
-      | n > 1 = Failure TooManyInterpolations
-      | otherwise = result (count x + n) xs
+    result 2 _ = Failure TooManyInterpolations
+    result _ [] = Success
+    result n (x:xs) = result (count x + n) xs
 
 
     count :: Token -> Int
