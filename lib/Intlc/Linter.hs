@@ -17,14 +17,14 @@ interpolationsRule :: Stream -> Status
 interpolationsRule = result 0
   where
     result :: Int -> Stream -> Status
-    result n [] 
+    result n []
       | n > 1 = Failure TooManyInterpolations
       | otherwise = Success
 
     result n (x:xs)
       | n > 1 = Failure TooManyInterpolations
       | otherwise = result (count x + n) xs
-     
+
 
     count :: Token -> Int
     count = \case
