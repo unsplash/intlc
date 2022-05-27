@@ -1,8 +1,7 @@
 module Intlc.Linter where
 
-import           Data.List.NonEmpty ((!!))
 import           Intlc.ICU
-import           Prelude            hiding (Type)
+import           Prelude   hiding (Type)
 
 data LintingError
   = TooManyInterpolations
@@ -13,31 +12,36 @@ data Status
   | Failure LintingError
   deriving (Eq, Show)
 
-hasManyInterpolations :: NEStream -> Int -> Int -> Bool
-hasManyInterpolations xs i n
-  | n > 1 = True
-  | i < length xs = hasManyInterpolations xs (i+1) $ result (xs !! i)
-  | otherwise = False
+
+interpolationsRule :: Stream -> Status
+interpolationsRule = result 0
   where
-    result :: Token -> Int
-    result Plaintext {}              = n
-    result (Interpolation (Arg _ x)) = count x + n
-      where
-        count = \case
-            String      -> 0
-            Number      -> 0
-            Date {}     -> 0
-            Time {}     -> 0
-            PluralRef   -> 0
-            Bool {}     -> 1
-            Plural {}   -> 1
-            Select {}   -> 1
-            Callback {} -> 1
+    result :: Int -> Stream -> Status
+    result n [] 
+      | n > 1 = Failure TooManyInterpolations
+      | otherwise = Success
+
+    result n (x:xs)
+      | n > 1 = Failure TooManyInterpolations
+      | otherwise = result (count x + n) xs
+     
+
+    count :: Token -> Int
+    count = \case
+      Plaintext {}                      -> 0
+      Interpolation (Arg _ String)      -> 0
+      Interpolation (Arg _ Number)      -> 0
+      Interpolation (Arg _ Date {})     -> 0
+      Interpolation (Arg _ Time {})     -> 0
+      Interpolation (Arg _ PluralRef)   -> 0
+      Interpolation (Arg _ Bool {})     -> 1
+      Interpolation (Arg _ Plural {})   -> 1
+      Interpolation (Arg _ Select {})   -> 1
+      Interpolation (Arg _ Callback {}) -> 1
+
 
 
 lint :: Message -> Status
-lint Static {} = Success
-lint (Dynamic stream)
-  | hasManyInterpolations stream 0 0 = Failure TooManyInterpolations
-  | otherwise = Success
+lint Static {}        = Success
+lint (Dynamic stream) = interpolationsRule (toList stream)
 
