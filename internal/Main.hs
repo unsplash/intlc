@@ -1,7 +1,8 @@
 module Main where
 
 import           CLI                (Opts (..), getOpts)
-import           Data.Map           (filter, size, toAscList)
+import           Data.Map           (filter, foldrWithKey, size)
+import qualified Data.Text          as T
 import           Intlc.Core
 import           Intlc.Linter
 import           Intlc.Parser       (parseDataset, printErr)
@@ -23,8 +24,9 @@ main = getOpts >>= \case
 
     exit :: Dataset Status -> IO ()
     exit sts
-      | size sts > 0 = die ((show . toAscList) sts)
+      | size sts > 0 = (die . T.unpack . foldrWithKey mkLine mempty) sts
       | otherwise = putLTextLn "Success"
 
-
+    mkLine :: Text -> Status -> Text -> Text
+    mkLine k s acc = acc <> "\n" <> k <> ": " <> show s
 
