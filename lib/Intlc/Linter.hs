@@ -12,13 +12,16 @@ data Status
   | Failure LintingError
   deriving (Eq, Show)
 
+isFailure :: Status -> Bool
+isFailure Failure {} = True
+isFailure _          = False
 
 interpolationsRule :: Stream -> Status
 interpolationsRule = result 0
   where
     result :: Int -> Stream -> Status
-    result 2 _ = Failure TooManyInterpolations
-    result _ [] = Success
+    result 2 _      = Failure TooManyInterpolations
+    result _ []     = Success
     result n (x:xs) = result (count x + n) xs
 
 
