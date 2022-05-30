@@ -12,31 +12,43 @@ data Status
   | Failure LintingError
   deriving (Eq, Show)
 
+data InterpolationExit
+  = Stop
+  | Continue Int
+
 isFailure :: Status -> Bool
 isFailure Failure {} = True
 isFailure _          = False
 
 interpolationsRule :: Stream -> Status
-interpolationsRule = result 0
+interpolationsRule s = case result 0 s of
+  Continue {} -> Success
+  Stop        -> Failure TooManyInterpolations
+
   where
-    result :: Int -> Stream -> Status
-    result 2 _      = Failure TooManyInterpolations
-    result _ []     = Success
-    result n (x:xs) = result (count x + n) xs
+    result :: Int -> Stream -> InterpolationExit
+    result 2 _      = Stop
+    result n []     = Continue n
+    result n (x:xs) = case exit' x of
+      Continue inner -> result (inner + n) xs
+      Stop           -> Stop
+
+    exit' :: Token -> InterpolationExit
+    exit' Plaintext {} = Continue 0
+    exit' (Interpolation (Arg _ String))                                           = Continue 0
+    exit' (Interpolation (Arg _ Number))                                           = Continue 0
+    exit' (Interpolation (Arg _ Date {}))                                          = Continue 0
+    exit' (Interpolation (Arg _ Time {}))                                          = Continue 0
+    exit' (Interpolation (Arg _ PluralRef))                                        = Continue 0
+    exit' (Interpolation (Arg _ Bool {trueCase=trueXs, falseCase=falseXs}))        = (result 1 . (trueXs <>)) falseXs
+
+    -- TODO: plural cases are really complicated to pattern match, is there a better way to handle all of this?
+    exit' (Interpolation (Arg _ Plural {}))                                        = Continue 1
+    exit' (Interpolation (Arg _ (Select case' Nothing)))                           = (result 1 . concatMap (\(SelectCase _ xs) -> xs)) case'
+    exit' (Interpolation (Arg _ (Select case' (Just (SelectWildcard wildcards))))) = (result 1 . (wildcards <>) . concatMap (\(SelectCase _ xs) -> xs)) case'
+    exit' (Interpolation (Arg _ (Callback xs)))                                    = result 1 xs
 
 
-    count :: Token -> Int
-    count = \case
-      Plaintext {}                      -> 0
-      Interpolation (Arg _ String)      -> 0
-      Interpolation (Arg _ Number)      -> 0
-      Interpolation (Arg _ Date {})     -> 0
-      Interpolation (Arg _ Time {})     -> 0
-      Interpolation (Arg _ PluralRef)   -> 0
-      Interpolation (Arg _ Bool {})     -> 1
-      Interpolation (Arg _ Plural {})   -> 1
-      Interpolation (Arg _ Select {})   -> 1
-      Interpolation (Arg _ Callback {}) -> 1
 
 
 
