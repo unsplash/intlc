@@ -31,6 +31,6 @@ spec = describe "linter" $ do
   it "does not lint nested dynamic streams" $ do
     lint (Dynamic (fromList [Interpolation (Arg "outer" (Callback [Interpolation (Arg "inner" (Callback []))]))])) `shouldBe` Failure TooManyInterpolations
 
-  it "does not lint select interpolations with nested interpolations" $ do
+  it "does not lint complex interpolations with nested complex interpolations" $ do
     lint (Dynamic (fromList [Interpolation (Arg "outer" (Select (fromList [SelectCase "hello" [Interpolation (Arg "super_inner" (Callback []))]]) Nothing))])) `shouldBe` Failure TooManyInterpolations
 
