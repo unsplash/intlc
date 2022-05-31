@@ -12,9 +12,9 @@ data Status
   | Failure LintingError
   deriving (Eq, Show)
 
-isFailure :: Status -> Bool
-isFailure Failure {} = True
-isFailure _          = False
+statusToMaybe :: Status -> Maybe LintingError
+statusToMaybe Success     = Nothing
+statusToMaybe (Failure x) = Just x
 
 interpolationsRule :: Stream -> Status
 interpolationsRule = go 0

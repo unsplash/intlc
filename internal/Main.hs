@@ -19,12 +19,12 @@ main = getOpts >>= \case
     parserDie = die . printErr
 
     lint' :: Dataset Translation -> IO ()
-    lint' = exit . M.filter isFailure . fmap (lint . message)
+    lint' = exit . M.mapMaybe statusToMaybe . fmap (lint . message)
 
-    exit :: Dataset Status -> IO ()
+    exit :: Dataset LintingError -> IO ()
     exit sts
       | M.size sts > 0 = (die . T.unpack . ("Errors\n" <>) . M.foldrWithKey mkLine mempty) sts
       | otherwise = pure ()
 
-    mkLine :: Text -> Status -> Text -> Text
+    mkLine :: Text -> LintingError -> Text -> Text
     mkLine k s acc = acc <> "\n" <> k <> ": " <> show s
