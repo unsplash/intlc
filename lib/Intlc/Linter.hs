@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Intlc.Linter where
 
 import           Intlc.ICU
@@ -40,7 +42,7 @@ interpolationsRule s = case result 0 s of
     exit' (Interpolation (Arg _ Date {}))                                          = Continue 0
     exit' (Interpolation (Arg _ Time {}))                                          = Continue 0
     exit' (Interpolation (Arg _ PluralRef))                                        = Continue 0
-    exit' (Interpolation (Arg _ Bool {trueCase=trueXs, falseCase=falseXs}))        = (result 1 . (trueXs <>)) falseXs
+    exit' (Interpolation (Arg _ Bool {trueCase, falseCase}))                       = (result 1 . (trueCase <>)) falseCase
 
     -- TODO: plural cases are really complicated to pattern match, is there a better way to handle all of this?
     exit' (Interpolation (Arg _ Plural {}))                                        = Continue 1
