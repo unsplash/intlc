@@ -1,7 +1,7 @@
 module Main where
 
 import           CLI                (Opts (..), getOpts)
-import           Data.Map           (filter, foldrWithKey, size)
+import qualified Data.Map           as M
 import qualified Data.Text          as T
 import           Intlc.Core
 import           Intlc.Linter
@@ -19,11 +19,11 @@ main = getOpts >>= \case
     parserDie = die . printErr
 
     lint' :: Dataset Translation -> IO ()
-    lint' = exit . filter isFailure . fmap (lint . message)
+    lint' = exit . M.filter isFailure . fmap (lint . message)
 
     exit :: Dataset Status -> IO ()
     exit sts
-      | size sts > 0 = (die . T.unpack . ("Errors\n" <>) . foldrWithKey mkLine mempty) sts
+      | M.size sts > 0 = (die . T.unpack . ("Errors\n" <>) . M.foldrWithKey mkLine mempty) sts
       | otherwise = pure ()
 
     mkLine :: Text -> Status -> Text -> Text
