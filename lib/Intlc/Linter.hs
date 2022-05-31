@@ -48,11 +48,6 @@ interpolationsRule s = case result 0 s of
     exit' (Interpolation (Arg _ (Select case' (Just (SelectWildcard wildcards))))) = (result 1 . (wildcards <>) . concatMap (\(SelectCase _ xs) -> xs)) case'
     exit' (Interpolation (Arg _ (Callback xs)))                                    = result 1 xs
 
-
-
-
-
 lint :: Message -> Status
 lint Static {}        = Success
 lint (Dynamic stream) = interpolationsRule (toList stream)
-

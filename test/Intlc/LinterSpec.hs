@@ -33,4 +33,3 @@ spec = describe "linter" $ do
 
   it "does not lint complex interpolations with nested complex interpolations" $ do
     lint (Dynamic (fromList [Interpolation (Arg "outer" (Select (fromList [SelectCase "hello" [Interpolation (Arg "super_inner" (Callback []))]]) Nothing))])) `shouldBe` Failure TooManyInterpolations
-

@@ -9,7 +9,6 @@ import           Intlc.Parser       (parseDataset, printErr)
 import           Intlc.Parser.Error (ParseFailure)
 import           Prelude            hiding (filter)
 
-
 main :: IO ()
 main = getOpts >>= \case
   Lint path -> either parserDie lint' =<< getParsed path
@@ -29,4 +28,3 @@ main = getOpts >>= \case
 
     mkLine :: Text -> Status -> Text -> Text
     mkLine k s acc = acc <> "\n" <> k <> ": " <> show s
-
