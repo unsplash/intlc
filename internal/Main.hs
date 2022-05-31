@@ -24,7 +24,7 @@ main = getOpts >>= \case
     exit :: Dataset Status -> IO ()
     exit sts
       | size sts > 0 = (die . T.unpack . ("Errors\n" <>) . foldrWithKey mkLine mempty) sts
-      | otherwise = putLTextLn "Success"
+      | otherwise = pure ()
 
     mkLine :: Text -> Status -> Text -> Text
     mkLine k s acc = acc <> "\n" <> k <> ": " <> show s
