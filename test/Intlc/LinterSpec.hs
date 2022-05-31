@@ -30,3 +30,12 @@ spec = describe "linter" $ do
 
   it "does not lint complex interpolations with nested complex interpolations" $ do
     lint (Message [Interpolation "outer" (Select (fromList [SelectCase "hello" [Interpolation "super_inner" (Callback [])]]) Nothing)]) `shouldBe` Failure TooManyInterpolations
+
+  it "stops iterating after encountering two stream-interpolations" $ do
+    let nested x = Interpolation "x" (Callback [x])
+    let e = error "should not reach this item"
+
+    lint (Message
+      [ nested (nested e)
+      , e
+      ]) `shouldBe` Failure TooManyInterpolations
