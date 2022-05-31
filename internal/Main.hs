@@ -21,10 +21,11 @@ main = getOpts >>= \case
     lint' :: Dataset Translation -> IO ()
     lint' = exit . M.mapMaybe statusToMaybe . fmap (lint . message)
 
-    exit :: Dataset LintingError -> IO ()
+    exit :: Dataset (NonEmpty LintingError) -> IO ()
     exit sts
       | M.size sts > 0 = (die . T.unpack . ("Errors\n" <>) . M.foldrWithKey mkLine mempty) sts
       | otherwise = pure ()
 
-    mkLine :: Text -> LintingError -> Text -> Text
-    mkLine k s acc = acc <> "\n" <> k <> ": " <> show s
+    mkLine :: Text -> NonEmpty LintingError -> Text -> Text
+    mkLine k es acc = acc <> "\n" <> k <> ": " <> e
+      where e = T.intercalate ", " . toList . fmap show $ es

@@ -23,13 +23,13 @@ spec = describe "linter" $ do
     lint (Message [Interpolation "Hello" (Callback []), Plaintext "hello"]) `shouldBe` Success
 
   it "does not lint streams with 2 or more complex interpolations" $ do
-    lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [] [])]) `shouldBe` Failure TooManyInterpolations
+    lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [] [])]) `shouldBe` Failure (pure TooManyInterpolations)
 
   it "does not lint nested streams" $ do
-    lint (Message [Interpolation "outer" (Callback [Interpolation "inner" (Callback [])])]) `shouldBe` Failure TooManyInterpolations
+    lint (Message [Interpolation "outer" (Callback [Interpolation "inner" (Callback [])])]) `shouldBe` Failure (pure TooManyInterpolations)
 
   it "does not lint complex interpolations with nested complex interpolations" $ do
-    lint (Message [Interpolation "outer" (Select (fromList [SelectCase "hello" [Interpolation "super_inner" (Callback [])]]) Nothing)]) `shouldBe` Failure TooManyInterpolations
+    lint (Message [Interpolation "outer" (Select (fromList [SelectCase "hello" [Interpolation "super_inner" (Callback [])]]) Nothing)]) `shouldBe` Failure (pure TooManyInterpolations)
 
   it "stops iterating after encountering two stream-interpolations" $ do
     let nested x = Interpolation "x" (Callback [x])
@@ -38,4 +38,4 @@ spec = describe "linter" $ do
     lint (Message
       [ nested (nested e)
       , e
-      ]) `shouldBe` Failure TooManyInterpolations
+      ]) `shouldBe` Failure (pure TooManyInterpolations)
