@@ -14,23 +14,17 @@ data Status
   | Failure LintingError
   deriving (Eq, Show)
 
-data InterpolationExit
-  = Stop
-  | Continue Int
-
 isFailure :: Status -> Bool
 isFailure Failure {} = True
 isFailure _          = False
 
 interpolationsRule :: Stream -> Status
-interpolationsRule s = case result 0 s of
-  Continue {} -> Success
-  Stop        -> Failure TooManyInterpolations
+interpolationsRule = result 0
 
   where
-    result :: Int -> Stream -> InterpolationExit
-    result 2 _      = Stop
-    result n []     = Continue n
+    result :: Int -> Stream -> Status
+    result 2 _      = Failure TooManyInterpolations
+    result _ []     = Success
     result n (x:xs) = case exit' x n of
       (n', ys) -> result n' $ ys <> xs
 
