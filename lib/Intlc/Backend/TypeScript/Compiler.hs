@@ -16,11 +16,12 @@ import           Utils                             ((<>^))
 
 compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
 compileNamedExport x l k v =
-  let (n, r) = JS.compileStmtPieces x l k v
-      arg = case v of
-        ICU.Static {}  -> "()"
-        ICU.Dynamic {} -> "x"
-   in "export const " <> n <> ": " <> compileTypeof x v <> " = " <> arg <> " => " <> r
+  "export const " <> n <> ": " <> compileTypeof x v <> " = " <> arg <> " => " <> r
+  where (n, r) = JS.compileStmtPieces x l k v
+        arg = if hasInterpolations then "x" else "()"
+        hasInterpolations = flip any (ICU.unMessage v) $ \case
+          ICU.Interpolation {} -> True
+          ICU.Plaintext {}     -> False
 
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o

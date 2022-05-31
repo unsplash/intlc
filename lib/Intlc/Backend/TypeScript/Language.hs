@@ -41,29 +41,28 @@ collateArgs :: UncollatedArgs -> Args
 collateArgs = fmap nub . M.fromListWith (<>) . fmap (second pure)
 
 fromMsg :: Out -> ICU.Message -> TypeOf
-fromMsg x ICU.Static {}    = Lambda mempty x
-fromMsg x (ICU.Dynamic ys) = Lambda (collateArgs (fromToken =<< toList ys)) x
+fromMsg x (ICU.Message ys) = Lambda (collateArgs (fromToken =<< toList ys)) x
 
 fromToken :: ICU.Token -> UncollatedArgs
-fromToken ICU.Plaintext {}      = mempty
-fromToken (ICU.Interpolation x) = fromArg x
+fromToken ICU.Plaintext {}        = mempty
+fromToken (ICU.Interpolation x y) = fromInterp x y
 
-fromArg :: ICU.Arg -> UncollatedArgs
-fromArg (ICU.Arg n (ICU.Bool xs ys))   = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
-fromArg (ICU.Arg n ICU.String)         = pure (n, TStr)
-fromArg (ICU.Arg n ICU.Number)         = pure (n, TNum)
-fromArg (ICU.Arg n ICU.Date {})        = pure (n, TDate)
-fromArg (ICU.Arg n ICU.Time {})        = pure (n, TDate)
-fromArg (ICU.Arg n (ICU.Plural x))     = fromPlural n x
+fromInterp :: Text -> ICU.Type -> UncollatedArgs
+fromInterp n (ICU.Bool xs ys)   = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
+fromInterp n ICU.String         = pure (n, TStr)
+fromInterp n ICU.Number         = pure (n, TNum)
+fromInterp n ICU.Date {}        = pure (n, TDate)
+fromInterp n ICU.Time {}        = pure (n, TDate)
+fromInterp n (ICU.Plural x)     = fromPlural n x
 -- Plural references are treated as a no-op.
-fromArg (ICU.Arg _ ICU.PluralRef)      = mempty
-fromArg (ICU.Arg n (ICU.Select cs mw)) = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
+fromInterp _ ICU.PluralRef      = mempty
+fromInterp n (ICU.Select cs mw) = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
   -- When there's no wildcard case we can compile to a union of string literals.
   where t = case mw of
               Just _  -> TStr
               Nothing -> TStrLitUnion $ caseLit <$> cs
         caseLit (ICU.SelectCase x _) = x
-fromArg (ICU.Arg n (ICU.Callback xs))  = (n, TEndo) : (fromToken =<< xs)
+fromInterp n (ICU.Callback xs)  = (n, TEndo) : (fromToken =<< xs)
 
 fromPlural :: Text -> ICU.Plural -> UncollatedArgs
 fromPlural n (ICU.Cardinal (ICU.LitPlural ls mw))      = (n, t) : (fromExactPluralCase =<< toList ls) <> foldMap fromPluralWildcard mw

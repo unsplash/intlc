@@ -47,8 +47,7 @@ flattenDataset :: Dataset Translation -> Dataset UnparsedTranslation
 flattenDataset = fmap $ \(Translation msg be md) -> UnparsedTranslation (compileMsg . flatten $ msg) be md
 
 flatten :: ICU.Message -> ICU.Message
-flatten x@(ICU.Static _)      = x
-flatten (ICU.Dynamic xs)      = ICU.Dynamic . fromList . flattenStream . toList $ xs
+flatten (ICU.Message xs)      = ICU.Message . fromList . flattenStream . toList $ xs
   where flattenStream :: ICU.Stream -> ICU.Stream
         flattenStream ys = fromMaybe ys $ choice
           [ mapBool   <$> extractFirstBool ys
@@ -60,7 +59,7 @@ flatten (ICU.Dynamic xs)      = ICU.Dynamic . fromList . flattenStream . toList 
         mapPlural (n, ls, plu, rs) = streamFromArg n .         ICU.Plural $ mapPluralStreams (around ls rs) plu
         around ls rs = flattenStream . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
-        streamFromArg n = pure . ICU.Interpolation . ICU.Arg n
+        streamFromArg n = pure . ICU.Interpolation n
 
 extractFirstBool :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUBool, ICU.Stream)
 extractFirstBool = extractFirstArg $ \case
@@ -69,7 +68,7 @@ extractFirstBool = extractFirstArg $ \case
 
 extractFirstArg :: (ICU.Type -> Maybe a) -> ICU.Stream -> Maybe (Text, ICU.Stream, a, ICU.Stream)
 extractFirstArg f xs = firstJust arg (zip [0..] xs)
-  where arg (i, ICU.Interpolation (ICU.Arg n t)) = (n, ls, , rs) <$> f t
+  where arg (i, ICU.Interpolation n t) = (n, ls, , rs) <$> f t
           where (ls, _:rs) = splitAt i xs
         arg _ = Nothing
 
