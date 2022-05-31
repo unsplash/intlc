@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 -- This module defines an AST for ICU messages. We do not necessarily behave
 -- identically to other implementations.
 
@@ -26,6 +28,55 @@ mergePlaintext :: Stream -> Stream
 mergePlaintext []                               = []
 mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x <> y) : zs
 mergePlaintext (x:ys)                           = x : mergePlaintext ys
+
+getStream :: Token -> Maybe Stream
+getStream Plaintext {}        = Nothing
+getStream (Interpolation _ t) = case t of
+  String                     -> Nothing
+  Number                     -> Nothing
+  Date {}                    -> Nothing
+  Time {}                    -> Nothing
+  PluralRef                  -> Nothing
+  Bool {trueCase, falseCase} -> Just $ trueCase <> falseCase
+  Plural x                   -> Just $ getPluralStream x
+  Select cs mw               -> Just $ ss <> ws
+    where ss = (\(SelectCase _ xs) -> xs) `concatMap` cs
+          ws = case mw of
+                 Nothing                  -> []
+                 Just (SelectWildcard xs) -> xs
+  Callback xs                -> Just xs
+
+getPluralStream :: Plural -> Stream
+getPluralStream (Cardinal x) = getCardinalStream x
+getPluralStream (Ordinal x)  = getOrdinalStream x
+
+getCardinalStream :: CardinalPlural -> Stream
+getCardinalStream (LitPlural xs mw) = join
+  [ getPluralCaseStream `concatMap` xs
+  , maybeToMonoid $ getPluralWildcardStream <$> mw
+  ]
+getCardinalStream (RulePlural xs w) = join
+  [ getPluralCaseStream `concatMap` xs
+  , getPluralWildcardStream w
+  ]
+getCardinalStream (MixedPlural xs ys w) = join
+  [ getPluralCaseStream `concatMap` xs
+  , getPluralCaseStream `concatMap` ys
+  , getPluralWildcardStream w
+  ]
+
+getOrdinalStream :: OrdinalPlural -> Stream
+getOrdinalStream (OrdinalPlural xs ys w) = join
+  [ getPluralCaseStream `concatMap` xs
+  , getPluralCaseStream `concatMap` ys
+  , getPluralWildcardStream w
+  ]
+
+getPluralCaseStream :: PluralCase a -> Stream
+getPluralCaseStream (PluralCase _ xs) = xs
+
+getPluralWildcardStream :: PluralWildcard -> Stream
+getPluralWildcardStream (PluralWildcard xs) = xs
 
 -- We diverge from icu4j by supporting a boolean type, and not necessarily
 -- requiring wildcard cases.

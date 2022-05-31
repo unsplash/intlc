@@ -38,6 +38,16 @@ executable intlc
   other-modules:
     CLI
 
+executable intlc-internal
+  import:                  common
+  hs-source-dirs:          internal/
+  main-is:                 Main.hs
+  build-depends:
+      intlc
+    , optparse-applicative ^>=0.16
+  other-modules:
+    CLI
+
 library
   import:                  common
   hs-source-dirs:          lib/
@@ -54,6 +64,7 @@ library
     Intlc.Backend.TypeScript.Compiler
     Intlc.Core
     Intlc.ICU
+    Intlc.Linter
     Intlc.Parser
     Intlc.Parser.Error
     Intlc.Parser.JSON
@@ -81,5 +92,6 @@ test-suite test-intlc
     Intlc.Backend.TypeScriptSpec
     Intlc.CompilerSpec
     Intlc.EndToEndSpec
+    Intlc.LinterSpec
     Intlc.Parser.JSONSpec
     Intlc.Parser.ICUSpec
