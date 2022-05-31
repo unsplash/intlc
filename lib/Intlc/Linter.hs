@@ -24,23 +24,23 @@ interpolationsRule = go 0
     go :: Int -> Stream -> Status
     go 2 _      = Failure TooManyInterpolations
     go _ []     = Success
-    go n (x:xs) = case exit' x n of
+    go n (x:xs) = case getInterps x n of
       (n', ys) -> go n' $ ys <> xs
 
-    exit' :: Token -> Int -> (Int, Stream)
-    exit' Plaintext {} n = (n, [])
-    exit' (Interpolation _ String) n                                           = (n, [])
-    exit' (Interpolation _ Number) n                                           = (n, [])
-    exit' (Interpolation _ Date {}) n                                          = (n, [])
-    exit' (Interpolation _ Time {}) n                                          = (n, [])
-    exit' (Interpolation _ PluralRef) n                                        = (n, [])
-    exit' (Interpolation _ Bool {trueCase, falseCase}) n                       = (n + 1, trueCase <> falseCase)
+    getInterps :: Token -> Int -> (Int, Stream)
+    getInterps Plaintext {} n = (n, [])
+    getInterps (Interpolation _ String) n                                           = (n, [])
+    getInterps (Interpolation _ Number) n                                           = (n, [])
+    getInterps (Interpolation _ Date {}) n                                          = (n, [])
+    getInterps (Interpolation _ Time {}) n                                          = (n, [])
+    getInterps (Interpolation _ PluralRef) n                                        = (n, [])
+    getInterps (Interpolation _ Bool {trueCase, falseCase}) n                       = (n + 1, trueCase <> falseCase)
 
     -- TODO: plural cases are really complicated to pattern match, is there a better way to handle all of this?
-    exit' (Interpolation _ Plural {}) n                                        = (n, [])
-    exit' (Interpolation _ (Select case' Nothing)) n                           = (n + 1, concatMap (\(SelectCase _ xs) -> xs) case')
-    exit' (Interpolation _ (Select case' (Just (SelectWildcard wildcards)))) n = (n + 1, wildcards <> concatMap (\(SelectCase _ xs) -> xs) case')
-    exit' (Interpolation _ (Callback xs)) n                                    = (n + 1, xs)
+    getInterps (Interpolation _ Plural {}) n                                        = (n, [])
+    getInterps (Interpolation _ (Select case' Nothing)) n                           = (n + 1, concatMap (\(SelectCase _ xs) -> xs) case')
+    getInterps (Interpolation _ (Select case' (Just (SelectWildcard wildcards)))) n = (n + 1, wildcards <> concatMap (\(SelectCase _ xs) -> xs) case')
+    getInterps (Interpolation _ (Callback xs)) n                                    = (n + 1, xs)
 
 lint :: Message -> Status
 lint (Message stream) = interpolationsRule stream
