@@ -5,12 +5,12 @@ module Intlc.ICU where
 
 import           Prelude hiding (Type)
 
-data Message
-  = Static Text
-  | Dynamic NEStream
+newtype Message = Message Stream
   deriving (Show, Eq)
 
-type NEStream = NonEmpty Token
+unMessage :: Message -> Stream
+unMessage (Message xs) = xs
+
 type Stream = [Token]
 
 -- | A token is either an interpolation - some sort of identifier for input -
@@ -18,7 +18,7 @@ type Stream = [Token]
 -- message without any interpolation will be a single `Plaintext` token.
 data Token
   = Plaintext Text
-  | Interpolation Arg
+  | Interpolation Text Type
   deriving (Show, Eq)
 
 -- | Merges any sibling `Plaintext` tokens in a `Stream`.
@@ -26,9 +26,6 @@ mergePlaintext :: Stream -> Stream
 mergePlaintext []                               = []
 mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x <> y) : zs
 mergePlaintext (x:ys)                           = x : mergePlaintext ys
-
-data Arg = Arg Text Type
-  deriving (Show, Eq)
 
 -- We diverge from icu4j by supporting a boolean type, and not necessarily
 -- requiring wildcard cases.

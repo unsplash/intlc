@@ -37,19 +37,18 @@ interpolationsRule s = case result 0 s of
 
     exit' :: Token -> InterpolationExit
     exit' Plaintext {} = Continue 0
-    exit' (Interpolation (Arg _ String))                                           = Continue 0
-    exit' (Interpolation (Arg _ Number))                                           = Continue 0
-    exit' (Interpolation (Arg _ Date {}))                                          = Continue 0
-    exit' (Interpolation (Arg _ Time {}))                                          = Continue 0
-    exit' (Interpolation (Arg _ PluralRef))                                        = Continue 0
-    exit' (Interpolation (Arg _ Bool {trueCase, falseCase}))                       = (result 1 . (trueCase <>)) falseCase
+    exit' (Interpolation _ String)                                           = Continue 0
+    exit' (Interpolation _ Number)                                           = Continue 0
+    exit' (Interpolation _ Date {})                                          = Continue 0
+    exit' (Interpolation _ Time {})                                          = Continue 0
+    exit' (Interpolation _ PluralRef)                                        = Continue 0
+    exit' (Interpolation _ Bool {trueCase, falseCase})                       = (result 1 . (trueCase <>)) falseCase
 
     -- TODO: plural cases are really complicated to pattern match, is there a better way to handle all of this?
-    exit' (Interpolation (Arg _ Plural {}))                                        = Continue 1
-    exit' (Interpolation (Arg _ (Select case' Nothing)))                           = (result 1 . concatMap (\(SelectCase _ xs) -> xs)) case'
-    exit' (Interpolation (Arg _ (Select case' (Just (SelectWildcard wildcards))))) = (result 1 . (wildcards <>) . concatMap (\(SelectCase _ xs) -> xs)) case'
-    exit' (Interpolation (Arg _ (Callback xs)))                                    = result 1 xs
+    exit' (Interpolation _ Plural {})                                        = Continue 1
+    exit' (Interpolation _ (Select case' Nothing))                           = (result 1 . concatMap (\(SelectCase _ xs) -> xs)) case'
+    exit' (Interpolation _ (Select case' (Just (SelectWildcard wildcards)))) = (result 1 . (wildcards <>) . concatMap (\(SelectCase _ xs) -> xs)) case'
+    exit' (Interpolation _ (Callback xs))                                    = result 1 xs
 
 lint :: Message -> Status
-lint Static {}        = Success
-lint (Dynamic stream) = interpolationsRule (toList stream)
+lint (Message stream) = interpolationsRule stream

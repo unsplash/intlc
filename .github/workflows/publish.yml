@@ -1,0 +1,37 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - v*.*.*
+
+jobs:
+  publish:
+    name: Publish binary
+    strategy:
+      matrix:
+        os:
+          [
+            { name: "linux", runner: "ubuntu-latest" },
+            { name: "macos", runner: "macos-latest" },
+          ]
+    runs-on: ${{ matrix.os.runner }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: haskell/actions/setup@v2
+        id: setup-haskell
+        with:
+          ghc-version: 8.10.7
+      - run: cabal freeze
+      - uses: actions/cache@v3
+        with:
+          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: hashFiles('cabal.project.freeze')
+      - name: Build
+        run: |
+          cabal install exe:intlc --install-method=copy --overwrite-policy=always --installdir=dist-newstyle
+          mv dist-newstyle/intlc "dist-newstyle/intlc_${{ matrix.os.name }}"
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "dist-newstyle/intlc_${{ matrix.os.name }}"
