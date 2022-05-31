@@ -24,8 +24,8 @@ interpolationsRule = go 0
     go :: Int -> Stream -> Status
     go 2 _      = Failure TooManyInterpolations
     go _ []     = Success
-    go n (x:xs) = case getInterps x n of
-      (n', ys) -> go n' $ ys <> xs
+    go n (x:xs) = go n' $ ys <> xs
+      where (n', ys) = getStream x n
 
     getInterps :: Token -> Int -> (Int, Stream)
     getInterps Plaintext {} n = (n, [])
