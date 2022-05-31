@@ -19,14 +19,13 @@ isFailure Failure {} = True
 isFailure _          = False
 
 interpolationsRule :: Stream -> Status
-interpolationsRule = result 0
-
+interpolationsRule = go 0
   where
-    result :: Int -> Stream -> Status
-    result 2 _      = Failure TooManyInterpolations
-    result _ []     = Success
-    result n (x:xs) = case exit' x n of
-      (n', ys) -> result n' $ ys <> xs
+    go :: Int -> Stream -> Status
+    go 2 _      = Failure TooManyInterpolations
+    go _ []     = Success
+    go n (x:xs) = case exit' x n of
+      (n', ys) -> go n' $ ys <> xs
 
     exit' :: Token -> Int -> (Int, Stream)
     exit' Plaintext {} n = (n, [])
