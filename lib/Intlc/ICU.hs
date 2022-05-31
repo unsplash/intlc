@@ -32,17 +32,20 @@ mergePlaintext (x:ys)                           = x : mergePlaintext ys
 getStream :: Token -> Maybe Stream
 getStream Plaintext {}        = Nothing
 getStream (Interpolation _ t) = case t of
-  String                                           -> Nothing
-  Number                                           -> Nothing
-  Date {}                                          -> Nothing
-  Time {}                                          -> Nothing
-  PluralRef                                        -> Nothing
-  Bool {trueCase, falseCase}                       -> Just $ trueCase <> falseCase
+  String                     -> Nothing
+  Number                     -> Nothing
+  Date {}                    -> Nothing
+  Time {}                    -> Nothing
+  PluralRef                  -> Nothing
+  Bool {trueCase, falseCase} -> Just $ trueCase <> falseCase
   -- TODO: plural cases are really complicated to pattern match, is there a better way to handle all of this?
-  Plural {}                                        -> Just []
-  (Select case' Nothing)                           -> Just $ concatMap (\(SelectCase _ xs) -> xs) case'
-  (Select case' (Just (SelectWildcard wildcards))) -> Just $ wildcards <> concatMap (\(SelectCase _ xs) -> xs) case'
-  (Callback xs)                                    -> Just xs
+  Plural {}                  -> Just []
+  Select cs mw               -> Just $ ss <> ws
+    where ss = (\(SelectCase _ xs) -> xs) `concatMap` cs
+          ws = case mw of
+                 Nothing                  -> []
+                 Just (SelectWildcard xs) -> xs
+  Callback xs                -> Just xs
 
 -- We diverge from icu4j by supporting a boolean type, and not necessarily
 -- requiring wildcard cases.
