@@ -19,11 +19,11 @@ main = getOpts >>= \case
     parserDie = die . printErr
 
     lint' :: Dataset Translation -> IO ()
-    lint' = exit . M.mapMaybe statusToMaybe . fmap (lint . message)
+    lint' = exit . M.mapMaybe (statusToMaybe . lint . message)
 
     exit :: Dataset (NonEmpty LintingError) -> IO ()
     exit sts
-      | M.size sts > 0 = (die . T.unpack . ("Errors\n" <>) . M.foldrWithKey mkLine mempty) sts
+      | M.size sts > 0 = die . T.unpack . ("Errors\n" <>) . M.foldrWithKey mkLine mempty $ sts
       | otherwise = pure ()
 
     mkLine :: Text -> NonEmpty LintingError -> Text -> Text
