@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 -- This module defines an AST for ICU messages. We do not necessarily behave
 -- identically to other implementations.
 
@@ -26,6 +28,20 @@ mergePlaintext :: Stream -> Stream
 mergePlaintext []                               = []
 mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x <> y) : zs
 mergePlaintext (x:ys)                           = x : mergePlaintext ys
+
+getStream :: Token -> Maybe Stream
+getStream Plaintext {} = Nothing
+getStream (Interpolation _ String)                                           = Nothing
+getStream (Interpolation _ Number)                                           = Nothing
+getStream (Interpolation _ Date {})                                          = Nothing
+getStream (Interpolation _ Time {})                                          = Nothing
+getStream (Interpolation _ PluralRef)                                        = Nothing
+getStream (Interpolation _ Bool {trueCase, falseCase})                       = Just $ trueCase <> falseCase
+-- TODO: plural cases are really complicated to pattern match, is there a better way to handle all of this?
+getStream (Interpolation _ Plural {})                                        = Just []
+getStream (Interpolation _ (Select case' Nothing))                           = Just $ concatMap (\(SelectCase _ xs) -> xs) case'
+getStream (Interpolation _ (Select case' (Just (SelectWildcard wildcards)))) = Just $ wildcards <> concatMap (\(SelectCase _ xs) -> xs) case'
+getStream (Interpolation _ (Callback xs))                                    = Just xs
 
 -- We diverge from icu4j by supporting a boolean type, and not necessarily
 -- requiring wildcard cases.
