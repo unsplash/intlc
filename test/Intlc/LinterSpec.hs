@@ -32,10 +32,10 @@ spec = describe "linter" $ do
     lint (Message [Interpolation "outer" (Select (fromList [SelectCase "hello" [Interpolation "super_inner" (Callback [])]]) Nothing)]) `shouldBe` Failure (pure TooManyInterpolations)
 
   it "does not lint text with emoji" $ do
-    lint (Message [Plaintext "Message with an emoji 🥺"]) `shouldBe` Failure (pure EmojiDetected)
-  
+    lint (Message [Plaintext "Message with an emoji 🥺"]) `shouldBe` Failure (pure $ EmojiDetected(fromList ['🥺']))
+
   it "does not lint text that is deeply nested with emoji" $ do
-    lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [Plaintext "Message with an emoji 🥺"] [])]) `shouldBe` Failure (fromList [TooManyInterpolations,EmojiDetected])
+    lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [Plaintext "Message with an emoji 🥺"] [])]) `shouldBe` Failure (fromList [TooManyInterpolations,EmojiDetected( fromList ['🥺'])])
 
   it "lints streams without emoji" $ do
     lint (Message [Plaintext "Text without emoji"]) `shouldBe` Success
@@ -49,5 +49,5 @@ spec = describe "linter" $ do
       [ nested (nested e)
       , e
       ]) `shouldBe` Failure (pure TooManyInterpolations)
-  
+
 

@@ -1,19 +1,24 @@
 module Intlc.Linter where
-import           Data.Text (all)
+import           Data.Text    (partition, unpack)
 
-import           Data.Char (isAscii)
+
+import           Data.Char    (isAscii)
 import           Intlc.ICU
-import           Prelude   hiding (Type)
+import           Prelude      hiding (Type)
+import           Relude.Extra (Foldable1 (toNonEmpty))
 
 data LintingError
   = TooManyInterpolations
-  | EmojiDetected
+  | EmojiDetected (NonEmpty Char)
   deriving (Eq, Show)
 
 data Status
   = Success
   | Failure (NonEmpty LintingError)
   deriving (Eq, Show)
+
+
+
 
 statusToMaybe :: Status -> Maybe (NonEmpty LintingError)
 statusToMaybe Success      = Nothing
@@ -36,12 +41,21 @@ interpolationsRule = go 0
 
 noEmojiRule :: Stream -> Maybe LintingError
 noEmojiRule [] = Nothing
-noEmojiRule (x : xs) = if checkAsci x then noEmojiRule $ maybeToMonoid mys <> xs else Just EmojiDetected
-  where
-    checkAsci :: Token -> Bool
-    checkAsci (Plaintext t)       = Data.Text.all isAscii t
-    checkAsci (Interpolation t _) = Data.Text.all isAscii t
-    mys = getStream x
+noEmojiRule (x : xs) =  let lintingErrors = noEmojiRule $ maybeToMonoid mys <> xs
+                        in case (getAscii x, lintingErrors) of
+                          (Just asciiChars,Just (EmojiDetected char)) ->  Just $ EmojiDetected $ asciiChars <> char
+                          (Just asciiChars,Nothing) ->  Just $ EmojiDetected asciiChars
+                          (Nothing,_)         -> lintingErrors
+                          where
+                            getAscii :: Token -> Maybe (NonEmpty Char)
+                            getAscii token
+                              | Plaintext t <- token = getAsciiChars t
+                              | Interpolation t _ <- token  = getAsciiChars t
+                              where
+                                  getAsciiChars :: Text -> Maybe (NonEmpty Char)
+                                  getAsciiChars t = let (_, asciiChars) = Data.Text.partition isAscii t in
+                                                    nonEmpty . Data.Text.unpack $ asciiChars
+                            mys = getStream x
 
 lint :: Message -> Status
 lint (Message stream) = toStatus $ rules `flap` stream
