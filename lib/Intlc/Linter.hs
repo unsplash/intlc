@@ -1,21 +1,36 @@
 module Intlc.Linter where
-import           Data.Text    (partition, unpack)
+import           Data.Text (partition, unlines, unpack)
 
+import           Data.Char (isAscii)
 
-import           Data.Char    (isAscii)
 import           Intlc.ICU
-import           Prelude      hiding (Type)
-import           Relude.Extra (Foldable1 (toNonEmpty))
+import           Prelude   hiding (Type)
 
+
+import           Text.Show
 data LintingError
   = TooManyInterpolations
   | EmojiDetected (NonEmpty Char)
-  deriving (Eq, Show)
+  deriving (Eq)
+instance Show LintingError where
+  show TooManyInterpolations = "Nested functions not allowed"
+  show (EmojiDetected chars)   =  "These non-ascii characters are not allowed: " <> Prelude.show (toList chars)
+
+
 
 data Status
   = Success
   | Failure (NonEmpty LintingError)
-  deriving (Eq, Show)
+  deriving (Eq)
+
+
+instance Show Status where
+  show Success          = "Success"
+  show (Failure errors) = "Failed to Lint because of the following reasons:\n" <> unpack (a errors)
+    where
+      a:: NonEmpty LintingError -> Text
+      a e =  Data.Text.unlines $ toList (("  " <>) . Prelude.show <$> e)
+
 
 
 
@@ -45,7 +60,7 @@ noEmojiRule (x : xs) =  let lintingErrors = noEmojiRule $ maybeToMonoid mys <> x
                         in case (getAscii x, lintingErrors) of
                           (Just asciiChars,Just (EmojiDetected char)) ->  Just $ EmojiDetected $ asciiChars <> char
                           (Just asciiChars,Nothing) ->  Just $ EmojiDetected asciiChars
-                          (Nothing,_)         -> lintingErrors
+                          (_,_)         -> lintingErrors
                           where
                             getAscii :: Token -> Maybe (NonEmpty Char)
                             getAscii token
