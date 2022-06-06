@@ -1,7 +1,6 @@
 module Intlc.Linter where
-import           Data.Text (partition, unlines, unpack)
-
 import           Data.Char (isAscii)
+import qualified Data.Text as T
 
 import           Intlc.ICU
 import           Prelude   hiding (Type)
@@ -26,10 +25,10 @@ data Status
 
 instance Show Status where
   show Success          = "Success"
-  show (Failure errors) = "Failed to Lint because of the following reasons:\n" <> unpack (a errors)
+  show (Failure errors) = "Failed to Lint because of the following reasons:\n" <> T.unpack (a errors)
     where
       a:: NonEmpty LintingError -> Text
-      a e =  Data.Text.unlines $ toList (("  " <>) . Prelude.show <$> e)
+      a e =  T.unlines $ toList (("  " <>) . Prelude.show <$> e)
 
 
 
@@ -68,8 +67,8 @@ noEmojiRule (x : xs) =  let lintingErrors = noEmojiRule $ maybeToMonoid mys <> x
                               | Interpolation t _ <- token  = getAsciiChars t
                               where
                                   getAsciiChars :: Text -> Maybe (NonEmpty Char)
-                                  getAsciiChars t = let (_, asciiChars) = Data.Text.partition isAscii t in
-                                                    nonEmpty . Data.Text.unpack $ asciiChars
+                                  getAsciiChars t = let (_, asciiChars) = T.partition isAscii t in
+                                                    nonEmpty . T.unpack $ asciiChars
                             mys = getStream x
 
 lint :: Message -> Status
