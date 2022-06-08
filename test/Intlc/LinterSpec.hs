@@ -45,7 +45,7 @@ spec = describe "linter" $ do
     let nested x = Interpolation "x" (Callback [x])
     let e = error "should not reach this item"
 
-    lint (Message
+    lintWithRules [interpolationsRule] (Message
       [ nested (nested e)
       , e
       ]) `shouldBe` Failure (pure TooManyInterpolations)
