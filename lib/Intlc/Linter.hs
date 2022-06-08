@@ -9,12 +9,12 @@ import           Prelude   hiding (Type)
 import           Text.Show
 data LintingError
   = TooManyInterpolations
-  | EmojiDetected (NonEmpty Char)
+  | InvalidNonAsciiCharacter (NonEmpty Char)
   deriving (Eq)
 
 instance Show LintingError where
   show TooManyInterpolations = "Nested functions not allowed"
-  show (EmojiDetected chars)   =  "These non-ascii characters are not allowed: " <> Prelude.show (toList chars)
+  show (InvalidNonAsciiCharacter chars)   =  "These non-ascii characters are not allowed: " <> Prelude.show (toList chars)
 
 
 
@@ -54,12 +54,12 @@ interpolationsRule = go 0
         mys = getStream x
         n' = n + length mys
 
-noEmojiRule :: Rule
-noEmojiRule [] = Nothing
-noEmojiRule (x : xs) =  let lintingErrors = noEmojiRule $ maybeToMonoid mys <> xs
+noAsciiRule :: Rule
+noAsciiRule [] = Nothing
+noAsciiRule (x : xs) =  let lintingErrors = noAsciiRule $ maybeToMonoid mys <> xs
                         in case (getAscii x, lintingErrors) of
-                          (Just asciiChars,Just (EmojiDetected char)) ->  Just $ EmojiDetected $ asciiChars <> char
-                          (Just asciiChars,Nothing) ->  Just $ EmojiDetected asciiChars
+                          (Just asciiChars,Just (InvalidNonAsciiCharacter char)) ->  Just $ InvalidNonAsciiCharacter $ asciiChars <> char
+                          (Just asciiChars,Nothing) ->  Just $ InvalidNonAsciiCharacter asciiChars
                           (_,_)         -> lintingErrors
                           where
                             getAscii :: Token -> Maybe (NonEmpty Char)
@@ -78,4 +78,4 @@ lintWithRules rules (Message stream) = toStatus $ rules `flap` stream
     toStatus = maybeToStatus . nonEmpty . catMaybes
 
 lint :: Message -> Status
-lint message = lintWithRules [interpolationsRule,noEmojiRule] message
+lint message = lintWithRules [interpolationsRule,noAsciiRule] message
