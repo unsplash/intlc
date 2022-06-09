@@ -55,22 +55,12 @@ interpolationsRule = go 0
         n' = n + length mys
 
 noAsciiRule :: Rule
-noAsciiRule [] = Nothing
-noAsciiRule (x : xs) =  let lintingErrors = noAsciiRule $ maybeToMonoid mys <> xs
-                        in case (getAscii x, lintingErrors) of
-                          (Just asciiChars,Just (InvalidNonAsciiCharacter char)) ->  Just $ InvalidNonAsciiCharacter $ asciiChars <> char
-                          (Just asciiChars,Nothing) ->  Just $ InvalidNonAsciiCharacter asciiChars
-                          (_,_)         -> lintingErrors
-                          where
-                            getAscii :: Token -> Maybe (NonEmpty Char)
-                            getAscii token
-                              | Plaintext t <- token = getAsciiChars t
-                              | Interpolation t _ <- token  = getAsciiChars t
-                              where
-                                  getAsciiChars :: Text -> Maybe (NonEmpty Char)
-                                  getAsciiChars t = let (_, asciiChars) = T.partition isAscii t in
-                                                    nonEmpty . T.unpack $ asciiChars
-                            mys = getStream x
+noAsciiRule = output . nonAscii where
+  output = fmap InvalidNonAsciiCharacter . nonEmpty . T.unpack
+  nonAscii :: Stream -> Text
+  nonAscii []                      = mempty
+  nonAscii (Plaintext x:ys)        = T.filter (not . isAscii) x <> nonAscii ys
+  nonAscii (x@Interpolation {}:ys) = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
 
 lintWithRules :: [Rule] -> Message -> Status
 lintWithRules rules (Message stream) = toStatus $ rules `flap` stream
@@ -78,4 +68,4 @@ lintWithRules rules (Message stream) = toStatus $ rules `flap` stream
     toStatus = maybeToStatus . nonEmpty . catMaybes
 
 lint :: Message -> Status
-lint message = lintWithRules [interpolationsRule,noAsciiRule] message
+lint = lintWithRules [interpolationsRule,noAsciiRule]
