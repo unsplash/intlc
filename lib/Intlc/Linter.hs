@@ -6,31 +6,17 @@ import           Intlc.ICU
 import           Prelude   hiding (Type)
 
 
-import           Text.Show
+
 data LintingError
   = TooManyInterpolations
   | InvalidNonAsciiCharacter (NonEmpty Char)
   deriving (Eq)
-
-instance Show LintingError where
-  show TooManyInterpolations = "Nested functions not allowed"
-  show (InvalidNonAsciiCharacter chars)   =  "These non-ascii characters are not allowed: " <> Prelude.show (toList chars)
-
 
 
 data Status
   = Success
   | Failure (NonEmpty LintingError)
   deriving (Eq)
-
-
-instance Show Status where
-  show Success          = "Success"
-  show (Failure errors) = "Failed to Lint because of the following reasons:\n" <> T.unpack (a errors)
-    where
-      a:: NonEmpty LintingError -> Text
-      a e =  T.unlines $ toList (("  " <>) . Prelude.show <$> e)
-
 
 
 type Rule = Stream -> Maybe LintingError
