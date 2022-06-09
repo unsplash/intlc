@@ -10,13 +10,13 @@ import           Prelude   hiding (Type)
 data LintingError
   = TooManyInterpolations
   | InvalidNonAsciiCharacter (NonEmpty Char)
-  deriving (Eq)
+  deriving (Eq,Show)
 
 
 data Status
   = Success
   | Failure (NonEmpty LintingError)
-  deriving (Eq)
+  deriving (Eq,Show)
 
 
 type Rule = Stream -> Maybe LintingError
