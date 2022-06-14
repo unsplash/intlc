@@ -40,12 +40,24 @@ interpolationsRule = go 0
         mys = getStream x
         n' = n + length mys
 
+
+-- | Selects the first 128 characters of the Unicode character set,
+-- corresponding to the ASCII character set.
+-- and the special cases
+acceptedChars :: String
+acceptedChars = ['’','…','é','—','ƒ']
+
+isAcceptedChar                 :: Char -> Bool
+isAcceptedChar c               =  c <  '\x80' || c `elem` acceptedChars
+
+
+
 noAsciiRule :: Rule
 noAsciiRule = output . nonAscii where
   output = fmap InvalidNonAsciiCharacter . nonEmpty . T.unpack
   nonAscii :: Stream -> Text
   nonAscii []                      = mempty
-  nonAscii (Plaintext x:ys)        = T.filter (not . isAscii) x <> nonAscii ys
+  nonAscii (Plaintext x:ys)        = T.filter (not . isAcceptedChar) x <> nonAscii ys
   nonAscii (x@Interpolation {}:ys) = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
 
 lintWithRules :: [Rule] -> Message -> Status
