@@ -1,5 +1,5 @@
 module Intlc.Linter where
-import           Data.Char (isAscii)
+
 import qualified Data.Text as T
 
 import           Intlc.ICU
@@ -67,3 +67,10 @@ lintWithRules rules (Message stream) = toStatus $ rules `flap` stream
 
 lint :: Message -> Status
 lint = lintWithRules [interpolationsRule,noAsciiRule]
+
+printLintingError :: LintingError -> IO ()
+printLintingError TooManyInterpolations           = putStrLn "Nested functions are not allowed"
+printLintingError (InvalidNonAsciiCharacter chars) = putStr "Following characters are not allowed: " >> printChars chars
+  where
+    printChars:: NonEmpty Char -> IO()
+    printChars = putStrLn . intercalate "   " . toList . fmap return

@@ -9,6 +9,7 @@ import           Intlc.Parser       (parseDataset, printErr)
 import           Intlc.Parser.Error (ParseFailure)
 import           Prelude            hiding (filter)
 
+
 main :: IO ()
 main = getOpts >>= \case
   Lint path -> either parserDie lint' =<< getParsed path
@@ -23,9 +24,13 @@ main = getOpts >>= \case
 
     exit :: Dataset (NonEmpty LintingError) -> IO ()
     exit sts
-      | M.size sts > 0 = die . T.unpack . ("Errors\n" <>) . M.foldrWithKey mkLine mempty $ sts
+      | M.size sts > 0 =   mapM_ printLine (M.assocs sts)
       | otherwise = pure ()
 
-    mkLine :: Text -> NonEmpty LintingError -> Text -> Text
-    mkLine k es acc = acc <> "\n" <> k <> ": " <> e
-      where e = T.intercalate ", " . toList . fmap show $ es
+
+    printLine :: (Text,NonEmpty LintingError) -> IO()
+    printLine (k ,es) =  putStrLn (T.unpack k <> ": ") >> tab >> e
+      where e = sequence_ . toList . fmap printLintingError $ es
+            tab:: IO()
+            tab = putStr " "
+
