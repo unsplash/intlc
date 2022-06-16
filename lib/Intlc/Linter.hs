@@ -45,7 +45,7 @@ interpolationsRule = go 0
 -- corresponding to the ASCII character set.
 -- and the special cases
 acceptedChars :: String
-acceptedChars = ['’','…','é','—','ƒ']
+acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 
 isAcceptedChar                 :: Char -> Bool
 isAcceptedChar c               =  c <  '\x80' || c `elem` acceptedChars
