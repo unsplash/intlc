@@ -1,13 +1,16 @@
 module Intlc.Backend.JSON.Compiler where
 
+import           Data.List.Extra            (escapeJSON)
 import qualified Data.Map                   as M
 import qualified Data.Text                  as T
 import           Intlc.Backend.ICU.Compiler (compileMsg)
 import           Intlc.Core
 import           Prelude
 
+-- Assumes unescaped input.
 dblqts :: Text -> Text
-dblqts v = "\"" <> v <> "\""
+dblqts v = "\"" <> escapeJSONText v <> "\""
+  where escapeJSONText = T.pack . escapeJSON . T.unpack
 
 strVal :: Text -> Text
 strVal = dblqts
