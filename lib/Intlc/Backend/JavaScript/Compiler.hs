@@ -1,4 +1,4 @@
-module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), compileStmt, compileStmtPieces, buildReactImport, emptyModule, validateKey) where
+module Intlc.Backend.JavaScript.Compiler (InterpStrat (..), Overrides (..), emptyOverrides, compileStmt, buildReactImport, emptyModule, validateKey) where
 
 import           Control.Monad.Extra               (pureIf)
 import           Data.Char                         (isAlpha, isDigit)
@@ -9,25 +9,31 @@ import           Intlc.Core                        (Backend (..), Dataset,
                                                     Translation (backend))
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (Type, fromList)
-import           Utils                             ((<>^))
+import           Utils                             (apply2, (<>^))
 
 type Compiler = Reader Cfg
 
-data Cfg = Cfg
-  { locale :: Locale
-  , interp :: InterpStrat
+-- Allow other compilers to leverage this one, overriding only specific parts
+-- of it. What's here and in what form is merely ad hoc.
+data Overrides = Overrides
+  { stmtOverride :: Maybe (Text -> Text -> Text)
   }
 
-compileStmt :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
-compileStmt = compileWith stmt
+emptyOverrides :: Overrides
+emptyOverrides = Overrides mempty
 
--- Offers cheap extensibility with TypeScript over rendering statements.
-compileStmtPieces :: InterpStrat -> Locale -> Text -> ICU.Message -> (Text, Text)
-compileStmtPieces = compileWith stmtPieces
+fromOverride :: (Overrides -> Maybe a) -> a -> Compiler a
+fromOverride f x = fromMaybe x <$> asks (f . overrides)
 
-compileWith :: (Stmt -> Compiler a) -> InterpStrat -> Locale -> Text -> ICU.Message -> a
-compileWith f o l k m = f' fromKeyedMsg'
-  where f' = flip runReader (Cfg l o) . f
+data Cfg = Cfg
+  { locale    :: Locale
+  , interp    :: InterpStrat
+  , overrides :: Overrides
+  }
+
+compileStmt :: Overrides -> InterpStrat -> Locale -> Text -> ICU.Message -> Text
+compileStmt o s l k m = f' fromKeyedMsg'
+  where f' = flip runReader (Cfg l s o) . stmt
         fromKeyedMsg' = runReader (fromKeyedMsg k m) l
 
 data InterpStrat
@@ -74,11 +80,9 @@ interpc x = do
   pure $ o <> x <> c
 
 stmt :: Stmt -> Compiler Text
-stmt = fmap f . stmtPieces
-  where f (n, r) = "export const " <> n <> " = " <> r
-
-stmtPieces :: Stmt -> Compiler (Text, Text)
-stmtPieces (Stmt n xs) = (n, ) <$> (wrap =<< exprs xs)
+stmt (Stmt n xs) = do
+  r <- wrap =<< exprs xs
+  (fmap (apply2 n r) . stmtOverride) `fromOverride` ("export const " <> n <> " = " <> r)
 
 exprs :: Foldable f => f Expr -> Compiler Text
 exprs = foldMapM expr
