@@ -1,11 +1,12 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Intlc.Compiler (compileDataset, flatten)
-import           Intlc.Core     (Backend (TypeScript), Locale (Locale),
-                                 Translation (Translation))
+import           Intlc.Compiler    (compileDataset, compileFlattened, flatten)
+import           Intlc.Core        (Backend (..), Locale (Locale),
+                                    Translation (Translation))
 import           Intlc.ICU
-import           Prelude        hiding (one)
+import           Prelude           hiding (one)
 import           Test.Hspec
+import           Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "compiler" $ do
@@ -22,7 +23,16 @@ spec = describe "compiler" $ do
     it "validates keys aren't empty" $ do
       f [""] `shouldSatisfy` isLeft
 
-  describe "flatten" $ do
+  describe "compile flattened dataset" $ do
+    it "flattens messages and outputs JSON" $ do
+      compileFlattened (fromList
+        [ ("x", Translation (Static "xfoo") TypeScript Nothing)
+        , ("z", Translation (Static "zfoo") TypeScriptReact (Just "zbar"))
+        , ("y", Translation (Dynamic $ Plaintext "yfoo " :| [Interpolation (Arg "ybar" String)]) TypeScript Nothing)
+        ])
+          `shouldBe` [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
+
+  describe "flatten message" $ do
     it "no-ops static" $ do
       flatten (Message [Plaintext "xyz"]) `shouldBe` Message [Plaintext "xyz"]
 
