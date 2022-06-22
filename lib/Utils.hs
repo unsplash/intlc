@@ -8,3 +8,6 @@ import           Prelude
 (<>^) = liftA2 (<>)
 infixr 6 <>^
 {-# INLINE (<>^) #-}
+
+apply2 :: a -> b -> (a -> b -> c) -> c
+apply2 x y f = f x y
