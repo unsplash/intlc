@@ -109,7 +109,10 @@ match = fmap iife . go where
     RecMatchRet bs m'   -> switch <$> cond <*> recBranches bs (go m')
     where cond = matchCond n c
   iife x = "(() => { " <> x <> " })()"
-  switch x ys = "switch (" <> x <> ") { " <> ys <> " }"
+  switch x ys = "switch (" <> noNarrow x <> ") { " <> ys <> " }"
+  -- Prevents TypeScript from narrowing, which is important for our generated
+  -- code in nested switch statements.
+  noNarrow x = "(() => " <> x <> ")()"
   branches xs = concatBranches . toList <$> mapM branch xs
     where branch (Branch x ys) = pure ("case " <> x <> ": return ") <>^ (wrap =<< exprs ys) <>^ pure ";"
           concatBranches = unwords
