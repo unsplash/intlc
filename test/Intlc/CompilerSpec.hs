@@ -32,6 +32,10 @@ spec = describe "compiler" $ do
         ])
           `shouldBe` [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
 
+    it "escapes double quotes in JSON" $ do
+      compileFlattened (fromList [("x\"y", Translation (Message [Plaintext "\"z\""]) TypeScript Nothing)])
+        `shouldBe` [r|{"x\"y":{"message":"\"z\"","backend":"ts","description":null}}|]
+
   describe "flatten message" $ do
     it "no-ops static" $ do
       flatten (Message [Plaintext "xyz"]) `shouldBe` Message [Plaintext "xyz"]
