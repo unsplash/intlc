@@ -1,1 +1,1 @@
-export const test: (x: { x: 'a' | 'b' }) => string = x => `${(() => { switch (x.x) { case 'a': return ``; case 'b': return `${(() => { switch (x.x) { case 'a': return ``; case 'b': return ``; } })()}`; } })()}`
+export const test: (x: { x: 'a' | 'b' }) => string = x => `${(() => { switch (x.x as typeof x.x) { case 'a': return ``; case 'b': return `${(() => { switch (x.x as typeof x.x) { case 'a': return ``; case 'b': return ``; } })()}`; } })()}`

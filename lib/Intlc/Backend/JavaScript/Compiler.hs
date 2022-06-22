@@ -16,14 +16,18 @@ type Compiler = Reader Cfg
 -- Allow other compilers to leverage this one, overriding only specific parts
 -- of it. What's here and in what form is merely ad hoc.
 data Overrides = Overrides
-  { stmtOverride :: Maybe (Text -> Text -> Text)
+  { stmtOverride         :: Maybe (Text -> Text -> Text)
+  , matchLitCondOverride :: Maybe (Text -> Text)
   }
 
 emptyOverrides :: Overrides
-emptyOverrides = Overrides mempty
+emptyOverrides = Overrides mempty mempty
 
 fromOverride :: (Overrides -> Maybe a) -> a -> Compiler a
 fromOverride f x = fromMaybe x <$> asks (f . overrides)
+
+override :: (Overrides -> Maybe (a -> a)) -> a -> Compiler a
+override f x = maybe x ($ x) <$> asks (f . overrides)
 
 data Cfg = Cfg
   { locale    :: Locale
@@ -123,7 +127,7 @@ match = fmap iife . go where
     where nest x = "default: { " <> x <> " }"
 
 matchCond :: Ref -> MatchCond -> Compiler Text
-matchCond n LitCond                = pure . prop $ n
+matchCond n LitCond                = override matchLitCondOverride (prop n)
 matchCond n CardinalPluralRuleCond = f <$> asks locale
   where f (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop n <> ")"
 matchCond n OrdinalPluralRuleCond  = f <$> asks locale
