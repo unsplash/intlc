@@ -26,9 +26,9 @@ spec = describe "compiler" $ do
   describe "compile flattened dataset" $ do
     it "flattens messages and outputs JSON" $ do
       compileFlattened (fromList
-        [ ("x", Translation (Static "xfoo") TypeScript Nothing)
-        , ("z", Translation (Static "zfoo") TypeScriptReact (Just "zbar"))
-        , ("y", Translation (Dynamic $ Plaintext "yfoo " :| [Interpolation (Arg "ybar" String)]) TypeScript Nothing)
+        [ ("x", Translation (Message [Plaintext "xfoo"]) TypeScript Nothing)
+        , ("z", Translation (Message [Plaintext "zfoo"]) TypeScriptReact (Just "zbar"))
+        , ("y", Translation (Message [Plaintext "yfoo ", Interpolation "ybar" String]) TypeScript Nothing)
         ])
           `shouldBe` [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
 
