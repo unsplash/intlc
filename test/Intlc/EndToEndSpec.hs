@@ -49,33 +49,33 @@ spec = describe "end-to-end" $ do
 
   it "compiles bools" $ do
     [r|{ "f": { "message": "{x, boolean, true {y} false {z}}" } }|]
-      =*= "export const f: (x: { x: boolean }) => string = x => `${(() => { switch (x.x) { case true: return `y`; case false: return `z`; } })()}`"
+      =*= "export const f: (x: { x: boolean }) => string = x => `${(() => { switch (x.x as typeof x.x) { case true: return `y`; case false: return `z`; } })()}`"
 
   it "compiles plurals" $ do
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "ts" } }|]
-      =*= "export const prop: (x: { age: number; name: string }) => string = x => `Age: ${(() => { switch (x.age) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring ${new Intl.NumberFormat('en-US').format(x.age)}`; } })()}`"
+      =*= "export const prop: (x: { age: number; name: string }) => string = x => `Age: ${(() => { switch (x.age as typeof x.age) { case 0: return `newborn called ${x.name}`; case 42: return `magical`; default: return `boring ${new Intl.NumberFormat('en-US').format(x.age)}`; } })()}`"
     [r|{ "prop": { "message": "Age: {age, plural, =0 {newborn called {name}} =42 {magical} other {boring #}}", "backend": "tsx" } }|]
-      =*= withReactImport "export const prop: (x: { age: number; name: string }) => ReactElement = x => <>Age: {(() => { switch (x.age) { case 0: return <>newborn called {x.name}</>; case 42: return <>magical</>; default: return <>boring {new Intl.NumberFormat('en-US').format(x.age)}</>; } })()}</>"
+      =*= withReactImport "export const prop: (x: { age: number; name: string }) => ReactElement = x => <>Age: {(() => { switch (x.age as typeof x.age) { case 0: return <>newborn called {x.name}</>; case 42: return <>magical</>; default: return <>boring {new Intl.NumberFormat('en-US').format(x.age)}</>; } })()}</>"
     [r|{ "f": { "message": "{n, plural, =0 {x} =42 {y}}", "backend": "ts" } }|]
-      =*= "export const f: (x: { n: 0 | 42 }) => string = x => `${(() => { switch (x.n) { case 0: return `x`; case 42: return `y`; } })()}`"
+      =*= "export const f: (x: { n: 0 | 42 }) => string = x => `${(() => { switch (x.n as typeof x.n) { case 0: return `x`; case 42: return `y`; } })()}`"
     [r|{ "f": { "message": "{n, plural, =0 {zero} many {many} other {#}}", "backend": "ts" } }|]
-      =*= "export const f: (x: { n: number }) => string = x => `${(() => { switch (x.n) { case 0: return `zero`; default: { switch (new Intl.PluralRules('en-US').select(x.n)) { case 'many': return `many`; default: return `${new Intl.NumberFormat('en-US').format(x.n)}`; } } } })()}`"
+      =*= "export const f: (x: { n: number }) => string = x => `${(() => { switch (x.n as typeof x.n) { case 0: return `zero`; default: { switch (new Intl.PluralRules('en-US').select(x.n)) { case 'many': return `many`; default: return `${new Intl.NumberFormat('en-US').format(x.n)}`; } } } })()}`"
     [r|{ "f": { "message": "{n, plural, many {many} other {#}}", "backend": "ts" } }|]
       =*= "export const f: (x: { n: number }) => string = x => `${(() => { switch (new Intl.PluralRules('en-US').select(x.n)) { case 'many': return `many`; default: return `${new Intl.NumberFormat('en-US').format(x.n)}`; } })()}`"
     [r|{ "f": { "message": "{n, plural, =42 {#}}" } }|]
-      =*= "export const f: (x: { n: 42 }) => string = x => `${(() => { switch (x.n) { case 42: return `${new Intl.NumberFormat('en-US').format(x.n)}`; } })()}`"
+      =*= "export const f: (x: { n: 42 }) => string = x => `${(() => { switch (x.n as typeof x.n) { case 42: return `${new Intl.NumberFormat('en-US').format(x.n)}`; } })()}`"
 
   it "compiles select" $ do
     [r|{ "f": { "message": "{x, select, a {hi} b {yo}}", "backend": "ts" } }|]
-      =*= "export const f: (x: { x: 'a' | 'b' }) => string = x => `${(() => { switch (x.x) { case 'a': return `hi`; case 'b': return `yo`; } })()}`"
+      =*= "export const f: (x: { x: 'a' | 'b' }) => string = x => `${(() => { switch (x.x as typeof x.x) { case 'a': return `hi`; case 'b': return `yo`; } })()}`"
     [r|{ "f": { "message": "{x, select, a {hi} b {yo} other {ciao}}", "backend": "ts" } }|]
-      =*= "export const f: (x: { x: string }) => string = x => `${(() => { switch (x.x) { case 'a': return `hi`; case 'b': return `yo`; default: return `ciao`; } })()}`"
+      =*= "export const f: (x: { x: string }) => string = x => `${(() => { switch (x.x as typeof x.x) { case 'a': return `hi`; case 'b': return `yo`; default: return `ciao`; } })()}`"
 
   it "compiles selectordinal" $ do
     [r|{ "f": { "message": "{x, selectordinal, one {foo} other {bar}}", "backend": "ts" } }|]
       =*= "export const f: (x: { x: number }) => string = x => `${(() => { switch (new Intl.PluralRules('en-US', { type: 'ordinal' }).select(x.x)) { case 'one': return `foo`; default: return `bar`; } })()}`"
     [r|{ "f": { "message": "{x, selectordinal, one {foo} =2 {bar} other {baz}}", "backend": "ts" } }|]
-      =*= "export const f: (x: { x: number }) => string = x => `${(() => { switch (x.x) { case 2: return `bar`; default: { switch (new Intl.PluralRules('en-US', { type: 'ordinal' }).select(x.x)) { case 'one': return `foo`; default: return `baz`; } } } })()}`"
+      =*= "export const f: (x: { x: number }) => string = x => `${(() => { switch (x.x as typeof x.x) { case 2: return `bar`; default: { switch (new Intl.PluralRules('en-US', { type: 'ordinal' }).select(x.x)) { case 'one': return `foo`; default: return `baz`; } } } })()}`"
 
   it "TypeScript backend" $ do
     [r|{ "f": { "message": "{x} <z>{y, number}</z> {y, number}", "backend": "ts" } }|]
