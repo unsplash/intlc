@@ -7,16 +7,16 @@ data InternalLintingError
   = TooManyInterpolations
   deriving (Eq, Show)
 
-data Status
+data Status a
   = Success
-  | Failure (NonEmpty InternalLintingError)
+  | Failure (NonEmpty a)
   deriving (Eq, Show)
 
-statusToMaybe :: Status -> Maybe (NonEmpty InternalLintingError)
+statusToMaybe :: Status a -> Maybe (NonEmpty a)
 statusToMaybe Success      = Nothing
 statusToMaybe (Failure xs) = Just xs
 
-maybeToStatus :: Maybe (NonEmpty InternalLintingError) -> Status
+maybeToStatus :: Maybe (NonEmpty a) -> Status a
 maybeToStatus Nothing   = Success
 maybeToStatus (Just xs) = Failure xs
 
@@ -30,7 +30,7 @@ interpolationsRule = go 0
       where mys = getStream x
             n' = n + length mys
 
-lint :: Message -> Status
+lint :: Message -> Status InternalLintingError
 lint (Message stream) = toStatus $ rules `flap` stream
   where toStatus = maybeToStatus . nonEmpty . catMaybes
         rules = [interpolationsRule]
