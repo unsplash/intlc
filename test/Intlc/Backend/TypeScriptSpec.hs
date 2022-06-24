@@ -28,7 +28,7 @@ golden strat compiler name msg = baseCfg
 spec :: Spec
 spec = describe "TypeScript compiler" $ do
   describe "golden" $ do
-    let msg = ICU.Message $
+    let msg = ICU.Message
           [ ICU.Plaintext "Hello "
           , ICU.Interpolation "bold" (ICU.Callback (pure $
               ICU.Interpolation "name" ICU.String
