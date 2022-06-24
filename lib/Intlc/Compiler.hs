@@ -45,7 +45,7 @@ mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Transl
 mapMsgs f = fmap $ \x -> x { message = f (message x) }
 
 flatten :: ICU.Message -> ICU.Message
-flatten (ICU.Message xs) = ICU.Message . fromList . flattenStream . toList $ xs
+flatten (ICU.Message xs) = ICU.Message . flattenStream $ xs
   where flattenStream :: ICU.Stream -> ICU.Stream
         flattenStream ys = fromMaybe ys $ choice
           [ mapBool   <$> extractFirstBool ys
