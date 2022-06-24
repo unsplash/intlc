@@ -1,5 +1,6 @@
 module Intlc.Parser.ICUSpec (spec) where
 
+import           Data.These            (These (..))
 import           Intlc.ICU
 import           Intlc.Parser.Error    (MessageParseErr (..),
                                         ParseErr (FailedMsgParse), ParseFailure)
@@ -36,7 +37,7 @@ spec = describe "ICU parser" $ do
         parse msg "#" `shouldParse` Message [Plaintext "#"]
         parse msg "{x, select, y {#}}" `shouldParse`
           (Message . pure . Interpolation "x" $
-            Select (pure $ SelectCase "y" (pure $ Plaintext "#")) Nothing)
+            Select (This . pure $ SelectCase "y" (pure $ Plaintext "#")))
 
       it "parses as arg inside shallow plural" $ do
         let n = pure $ Interpolation "n" PluralRef
@@ -191,13 +192,13 @@ spec = describe "ICU parser" $ do
     let selectCases' = selectCases <* eof
 
     it "disallows wildcard not at the end" $ do
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Just (SelectWildcard [Plaintext "baz"]))
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure $ SelectCase "foo" [Plaintext "bar"]) (SelectWildcard [Plaintext "baz"])
       parse selectCases' `shouldFailOn` "other {bar} foo {baz}"
 
     it "tolerates empty cases" $ do
-      parse selectCases' "x {} other {}" `shouldParse` (pure (SelectCase "x" []), Just (SelectWildcard []))
+      parse selectCases' "x {} other {}" `shouldParse` These (pure $ SelectCase "x" []) (SelectWildcard [])
 
-    it "requires at least one non-wildcard case" $ do
-      parse selectCases' "foo {bar}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Nothing)
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Just (SelectWildcard [Plaintext "baz"]))
-      parse selectCases' `shouldFailOn` "other {foo}"
+    it "allows no non-wildcard case" $ do
+      parse selectCases' "foo {bar}" `shouldParse` This (pure $ SelectCase "foo" [Plaintext "bar"])
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure $ SelectCase "foo" [Plaintext "bar"]) (SelectWildcard [Plaintext "baz"])
+      parse selectCases' "other {foo}" `shouldParse` That (SelectWildcard [Plaintext "foo"])

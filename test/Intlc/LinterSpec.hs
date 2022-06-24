@@ -1,5 +1,6 @@
 module Intlc.LinterSpec where
 
+import           Data.These   (These (..))
 import           Intlc.ICU
 import           Intlc.Linter
 import           Prelude
@@ -29,7 +30,7 @@ spec = describe "linter" $ do
     lint (Message [Interpolation "outer" (Callback [Interpolation "inner" (Callback [])])]) `shouldBe` Failure (pure TooManyInterpolations)
 
   it "does not lint complex interpolations with nested complex interpolations" $ do
-    lint (Message [Interpolation "outer" (Select (fromList [SelectCase "hello" [Interpolation "super_inner" (Callback [])]]) Nothing)]) `shouldBe` Failure (pure TooManyInterpolations)
+    lint (Message [Interpolation "outer" (Select (This (pure $ SelectCase "hello" [Interpolation "super_inner" (Callback [])])))]) `shouldBe` Failure (pure TooManyInterpolations)
 
   it "stops iterating after encountering two stream-interpolations" $ do
     let nested x = Interpolation "x" (Callback [x])

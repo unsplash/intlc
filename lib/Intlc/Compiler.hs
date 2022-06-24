@@ -4,6 +4,7 @@ import           Control.Applicative.Combinators   (choice)
 import           Data.List.Extra                   (firstJust)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
+import           Data.These                        (These (..))
 import           Intlc.Backend.JavaScript.Compiler as JS
 import qualified Intlc.Backend.JSON.Compiler       as JSON
 import qualified Intlc.Backend.TypeScript.Compiler as TS
@@ -36,7 +37,7 @@ compileTranslation l k (Translation v be _) = case be of
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
 type ICUBool = (ICU.Stream, ICU.Stream)
-type ICUSelect = (NonEmpty ICU.SelectCase, Maybe ICU.SelectWildcard)
+type ICUSelect = These (NonEmpty ICU.SelectCase) ICU.SelectWildcard
 
 compileFlattened :: Dataset Translation -> Text
 compileFlattened = JSON.compileDataset . mapMsgs flatten
@@ -53,8 +54,8 @@ flatten (ICU.Message xs)      = ICU.Message . fromList . flattenStream . toList 
           , mapPlural <$> extractFirstPlural ys
           ]
         mapBool (n, ls, boo, rs) = streamFromArg n . uncurry ICU.Bool $ mapBoolStreams (around ls rs) boo
-        mapSelect (n, ls, sel, rs) = streamFromArg n . uncurry ICU.Select $ mapSelectStreams (around ls rs) sel
-        mapPlural (n, ls, plu, rs) = streamFromArg n .         ICU.Plural $ mapPluralStreams (around ls rs) plu
+        mapSelect (n, ls, sel, rs) = streamFromArg n . ICU.Select $ mapSelectStreams (around ls rs) sel
+        mapPlural (n, ls, plu, rs) = streamFromArg n . ICU.Plural $ mapPluralStreams (around ls rs) plu
         around ls rs = flattenStream . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
         streamFromArg n = pure . ICU.Interpolation n
@@ -72,8 +73,8 @@ extractFirstArg f xs = firstJust arg (zip [0..] xs)
 
 extractFirstSelect :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUSelect, ICU.Stream)
 extractFirstSelect = extractFirstArg $ \case
-  ICU.Select xs y -> Just (xs, y)
-  _               -> Nothing
+  ICU.Select x -> Just x
+  _            -> Nothing
 
 extractFirstPlural :: ICU.Stream -> Maybe (Text, ICU.Stream, ICU.Plural, ICU.Stream)
 extractFirstPlural = extractFirstArg $ \case
@@ -84,7 +85,7 @@ mapBoolStreams :: (ICU.Stream -> ICU.Stream) -> ICUBool -> ICUBool
 mapBoolStreams f (xs, ys) = (f xs, f ys)
 
 mapSelectStreams :: (ICU.Stream -> ICU.Stream) -> ICUSelect -> ICUSelect
-mapSelectStreams f (xs, mw) = (mapSelectCase f <$> xs, mapSelectWildcard f <$> mw)
+mapSelectStreams f = bimap (fmap (mapSelectCase f)) (mapSelectWildcard f)
 
 mapSelectCase :: (ICU.Stream -> ICU.Stream) -> ICU.SelectCase -> ICU.SelectCase
 mapSelectCase f (ICU.SelectCase x ys) = ICU.SelectCase x (f ys)

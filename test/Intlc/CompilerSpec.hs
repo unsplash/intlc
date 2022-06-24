@@ -1,5 +1,6 @@
 module Intlc.CompilerSpec (spec) where
 
+import           Data.These        (These (..))
 import           Intlc.Compiler    (compileDataset, compileFlattened, flatten)
 import           Intlc.Core        (Backend (..), Locale (Locale),
                                     Translation (Translation))
@@ -48,12 +49,12 @@ spec = describe "compiler" $ do
         let other = SelectWildcard [Plaintext "many dogs"]
         let otherf = SelectWildcard [Plaintext "I have many dogs"]
 
-        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select (pure foo) (pure other))]) `shouldBe`
-          Message (pure $ Interpolation "thing" (Select (pure foof) (pure otherf)))
+        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select $ These (pure foo) other)]) `shouldBe`
+          Message (pure $ Interpolation "thing" (Select $ These (pure foof) otherf))
 
       it "without a wildcard" $ do
-        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select (pure foo) empty)]) `shouldBe`
-          Message (pure $ Interpolation "thing" (Select (pure foof) empty))
+        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select $ This (pure foo))]) `shouldBe`
+          Message (pure $ Interpolation "thing" (Select $ This (pure foof)))
 
     it "flattens shallow plural" $ do
       let other = PluralWildcard [Plaintext "many dogs"]
@@ -72,9 +73,9 @@ spec = describe "compiler" $ do
               (PluralWildcard
                 [ Interpolation "count" Number
                 , Plaintext " dogs, the newest of which is "
-                , Interpolation "name" $ Select
+                , Interpolation "name" . Select $ These
                   (pure $ SelectCase "hodor" [Plaintext "Hodor"])
-                  (pure $ SelectWildcard [Plaintext "unknown"])
+                  (SelectWildcard [Plaintext "unknown"])
                 ]
               )
             , Plaintext "!"
@@ -83,14 +84,14 @@ spec = describe "compiler" $ do
             Interpolation "count" . Plural . Cardinal $ RulePlural
               (pure $ PluralCase One [Plaintext "I have a dog!"])
               (PluralWildcard
-                [ Interpolation "name" $ Select
+                [ Interpolation "name" . Select $ These
                   (pure $ SelectCase "hodor"
                     [ Plaintext "I have "
                     , Interpolation "count" Number
                     , Plaintext " dogs, the newest of which is Hodor!"
                     ]
                   )
-                  (pure $ SelectWildcard
+                  (SelectWildcard
                     [ Plaintext "I have "
                     , Interpolation "count" Number
                     , Plaintext " dogs, the newest of which is unknown!"

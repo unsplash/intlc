@@ -11,6 +11,7 @@ module Intlc.Parser.ICU where
 
 import qualified Control.Applicative.Combinators.NonEmpty as NE
 import qualified Data.Text                                as T
+import           Data.These                               (These (..))
 import           Data.Void                                ()
 import           Intlc.ICU
 import           Intlc.Parser.Error                       (MessageParseErr (..),
@@ -105,7 +106,7 @@ interp = between (char '{') (char '}') $ do
                   string "plural" *> sep *> cardinalPluralCases
               <|> string "selectordinal" *> sep *> ordinalPluralCases
             )
-          , uncurry Select <$> (string "select" *> sep *> selectCases)
+          , Select <$> (string "select" *> sep *> selectCases)
           ]
         withPluralCtx n = withReaderT (const . ParserState . pure $ n)
 
@@ -126,10 +127,15 @@ boolCases = (,)
    <* hspace1
   <*> (string "false" *> hspace1 *> caseBody)
 
-selectCases :: Parser (NonEmpty SelectCase, Maybe SelectWildcard)
-selectCases = (,) <$> cases <*> optional wildcard
+selectCases :: Parser (These (NonEmpty SelectCase) SelectWildcard)
+selectCases = choice
+  [ reconcile <$> cases <*> optional wildcard
+  , That <$> wildcard
+  ]
   where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> caseBody) hspace1
         wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> caseBody)
+        reconcile cs (Just w) = These cs w
+        reconcile cs Nothing  = This cs
         name = try $ mfilter (/= wildcardName) ident
         wildcardName = "other"
 

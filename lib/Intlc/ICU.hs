@@ -5,7 +5,8 @@
 
 module Intlc.ICU where
 
-import           Prelude hiding (Type)
+import           Data.These (These (..), mergeTheseWith)
+import           Prelude    hiding (Type)
 
 newtype Message = Message Stream
   deriving (Show, Eq)
@@ -39,11 +40,9 @@ getStream (Interpolation _ t) = case t of
   PluralRef                  -> Nothing
   Bool {trueCase, falseCase} -> Just $ trueCase <> falseCase
   Plural x                   -> Just $ getPluralStream x
-  Select cs mw               -> Just $ ss <> ws
-    where ss = (\(SelectCase _ xs) -> xs) `concatMap` cs
-          ws = case mw of
-                 Nothing                  -> []
-                 Just (SelectWildcard xs) -> xs
+  Select x                   -> Just . mergeTheseWith (concatMap f) g (<>) $ x
+    where f (SelectCase _ xs)  = xs
+          g (SelectWildcard w) = w
   Callback xs                -> Just xs
 
 getPluralStream :: Plural -> Stream
@@ -90,7 +89,7 @@ data Type
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
   | PluralRef
-  | Select (NonEmpty SelectCase) (Maybe SelectWildcard)
+  | Select (These (NonEmpty SelectCase) SelectWildcard)
   | Callback Stream
   deriving (Show, Eq)
 
