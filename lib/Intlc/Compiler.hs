@@ -1,7 +1,8 @@
-module Intlc.Compiler (compileDataset, compileFlattened, flatten) where
+module Intlc.Compiler (compileDataset, compileFlattened, flatten, expandRules) where
 
 import           Control.Applicative.Combinators   (choice)
-import           Data.List.Extra                   (firstJust)
+import           Data.Foldable                     (elem)
+import           Data.List.Extra                   (firstJust, unionBy)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Compiler as JS
@@ -9,7 +10,7 @@ import qualified Intlc.Backend.JSON.Compiler       as JSON
 import qualified Intlc.Backend.TypeScript.Compiler as TS
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
-import           Prelude
+import           Prelude                           hiding (elem)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
@@ -58,6 +59,19 @@ flatten (ICU.Message xs) = ICU.Message . flattenStream $ xs
         around ls rs = flattenStream . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
         streamFromArg n = pure . ICU.Interpolation n
+
+expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.PluralWildcard -> NonEmpty (ICU.PluralCase ICU.PluralRule)
+-- `fromList` is a cheap way to promise the compiler that we'll return a
+-- non-empty list. This is logically guaranteed by one of the inputs to
+-- `unionBy` being non-empty, namely `extraCases` - though given the complexity
+-- this is unit tested for confidence.
+expandRules ys w = fromList $ unionBy ((==) `on` caseRule) (toList ys) extraCases
+  where extraCases = flip ICU.PluralCase (wildContent w) <$> missingRules
+        missingRules = filter (not . flip elem presentRules) allRules
+        presentRules = caseRule <$> ys
+        allRules = universe
+        caseRule (ICU.PluralCase x _) = x
+        wildContent (ICU.PluralWildcard x) = x
 
 extractFirstBool :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUBool, ICU.Stream)
 extractFirstBool = extractFirstArg $ \case
