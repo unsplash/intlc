@@ -30,7 +30,11 @@ interpolationsRule = go 0
       where mys = getStream x
             n' = n + length mys
 
-lintInternal :: Message -> Status InternalLintingError
-lintInternal (Message stream) = toStatus $ rules `flap` stream
+lintWith :: [Stream -> Maybe a] -> Message -> Status a
+lintWith rules (Message stream) = toStatus $ rules `flap` stream
   where toStatus = maybeToStatus . nonEmpty . catMaybes
-        rules = [interpolationsRule]
+
+lintInternal :: Message -> Status InternalLintingError
+lintInternal = lintWith
+  [ interpolationsRule
+  ]
