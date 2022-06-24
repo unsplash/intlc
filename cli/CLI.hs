@@ -13,10 +13,10 @@ getOpts = execParser (info (opts <**> helper) (progDesc h))
   where h = "Compile ICU messages into code."
 
 opts :: Parser Opts
-opts = subparser
-  ( command "compile" (info (compile <**> helper) mempty)
- <> command "flatten" (info (flatten <**> helper) mempty)
-  )
+opts = subparser . mconcat $
+  [ command "compile" (info (compile <**> helper) mempty)
+  , command "flatten" (info (flatten <**> helper) mempty)
+  ]
 
 compile :: Parser Opts
 compile = Compile <$> pathp <*> localep

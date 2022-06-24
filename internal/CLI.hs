@@ -14,9 +14,9 @@ getOpts = execParser (info (opts <**> helper) (progDesc h))
   where h = "Additional tooling for Unsplash."
 
 opts :: Parser Opts
-opts = subparser
-  ( command "lint" (info (lint <**> helper) mempty)
-  )
+opts = subparser . mconcat $
+  [ command "lint" (info (lint <**> helper) mempty)
+  ]
 
 lint :: Parser Opts
 lint = Lint <$> pathp
