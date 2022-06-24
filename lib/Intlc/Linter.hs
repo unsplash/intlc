@@ -1,7 +1,7 @@
 module Intlc.Linter where
 
 import           Intlc.ICU
-import           Prelude   hiding (Type)
+import           Prelude
 
 data InternalLint
   = TooManyInterpolations
