@@ -11,7 +11,8 @@ import           Prelude
 main :: IO ()
 main = getOpts >>= \case
   Compile path loc -> tryCompile loc =<< getParsed path
-  Flatten path -> either parserDie (putTextLn . compileFlattened) =<< getParsed path
+  Flatten path     -> either parserDie (putTextLn . compileFlattened) =<< getParsed path
+  Lint    path     -> pure ()
   where tryCompile l = either parserDie (either compilerDie putTextLn . compileDataset l)
         parserDie = die . printErr
         compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
