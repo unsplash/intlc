@@ -3,7 +3,7 @@ module Intlc.Linter where
 import           Intlc.ICU
 import           Prelude   hiding (Type)
 
-data InternalLintingError
+data InternalLint
   = TooManyInterpolations
   deriving (Eq, Show)
 
@@ -22,10 +22,10 @@ maybeToStatus :: Maybe (NonEmpty a) -> Status a
 maybeToStatus Nothing   = Success
 maybeToStatus (Just xs) = Failure xs
 
-interpolationsRule :: Rule InternalLintingError
+interpolationsRule :: Rule InternalLint
 interpolationsRule = go 0
   where
-    go :: Int -> Rule InternalLintingError
+    go :: Int -> Rule InternalLint
     go 2 _      = Just TooManyInterpolations
     go _ []     = Nothing
     go n (x:xs) = go n' $ maybeToMonoid mys <> xs
@@ -36,7 +36,7 @@ lintWith :: [Rule a] -> Message -> Status a
 lintWith rules (Message stream) = toStatus $ rules `flap` stream
   where toStatus = maybeToStatus . nonEmpty . catMaybes
 
-lintInternal :: Message -> Status InternalLintingError
+lintInternal :: Message -> Status InternalLint
 lintInternal = lintWith
   [ interpolationsRule
   ]
