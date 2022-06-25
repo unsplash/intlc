@@ -1,4 +1,4 @@
-module Intlc.Compiler (compileDataset, compileFlattened, flatten, expandRules) where
+module Intlc.Compiler (compileDataset, compileFlattened, flatten, expandPlurals, expandRules) where
 
 import           Control.Applicative.Combinators   (choice)
 import           Data.Foldable                     (elem)
@@ -74,6 +74,24 @@ flatten (ICU.Message xs) = ICU.Message . flattenStream $ xs
         around ls rs = flattenStream . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
         streamFromArg n = pure . ICU.Interpolation n
+
+-- Expands any plural with a rule to contain every rule. This makes ICU plural
+-- syntax usable on platforms which don't support ICU; translators can reuse
+-- copy across unneeded plural rules.
+--
+-- Added plural rules inherit the content of the wildcard. Output order of
+-- rules is unspecified.
+expandPlurals :: ICU.Message -> ICU.Message
+expandPlurals (ICU.Message xs) = ICU.Message . flip mapTokens xs $ \case
+  ICU.Interpolation n (ICU.Plural p) -> ICU.Interpolation n . ICU.Plural $ case p of
+    ICU.Cardinal (ICU.LitPlural {})                -> p
+    ICU.Cardinal (ICU.RulePlural rules w)          ->
+      ICU.Cardinal $ ICU.RulePlural (expandRules rules w) w
+    ICU.Cardinal (ICU.MixedPlural exacts rules w)  ->
+      ICU.Cardinal $ ICU.MixedPlural exacts (expandRules rules w) w
+    ICU.Ordinal (ICU.OrdinalPlural exacts rules w) ->
+      ICU.Ordinal $ ICU.OrdinalPlural exacts (expandRules rules w) w
+  x -> x
 
 expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.PluralWildcard -> NonEmpty (ICU.PluralCase ICU.PluralRule)
 -- `fromList` is a cheap way to promise the compiler that we'll return a

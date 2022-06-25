@@ -1,17 +1,25 @@
 module Intlc.EndToEndSpec (spec) where
 
-import qualified Data.Text         as T
-import           Intlc.Compiler    (compileDataset)
-import           Intlc.Core        (Locale (Locale))
-import           Intlc.Parser      (parseDataset)
+import qualified Data.Text                  as T
+import           Intlc.Backend.ICU.Compiler (compileMsg)
+import           Intlc.Compiler             (compileDataset, expandPlurals)
+import           Intlc.Core                 (Locale (Locale))
+import           Intlc.Parser               (parseDataset)
+import           Intlc.Parser.Error         (ParseFailure)
+import           Intlc.Parser.ICU           (ParserState (ParserState), msg)
 import           Prelude
-import           System.FilePath   ((<.>), (</>))
+import           System.FilePath            ((<.>), (</>))
 import           Test.Hspec
-import           Test.Hspec.Golden (Golden (..), defaultGolden)
-import           Text.RawString.QQ (r)
+import           Test.Hspec.Golden          (Golden (..), defaultGolden)
+import           Text.Megaparsec            (runParser)
+import           Text.RawString.QQ          (r)
 
 parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text
 parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset "test"
+
+parseAndExpandMsg :: Text -> Either ParseFailure Text
+parseAndExpandMsg = fmap (compileMsg . expandPlurals) . parseMsg
+  where parseMsg = runParser (runReaderT msg (ParserState mempty)) "test"
 
 golden :: String -> Text -> Golden String
 golden name in' = baseCfg
@@ -82,3 +90,10 @@ spec = describe "end-to-end" $ do
     it "TypeScriptReact backend" $ do
       [r|{ "f": { "message": "{x} <z>{y, number}</z>", "backend": "tsx" } }|]
         =*= withReactImport "export const f: (x: { x: string; y: number; z: (x: ReactElement) => ReactElement }) => ReactElement = x => <>{x.x} {x.z(<>{new Intl.NumberFormat('en-US').format(x.y)}</>)}</>"
+  describe "expand plurals" $ do
+    let x =*= y = parseAndExpandMsg x `shouldBe` Right y
+
+    -- For the utmost confidence this was written by hand. Have run reading it!
+    it "expands nested rule plurals" $ do
+      "a {na, plural, zero {b} other {{nb, plural, two {c} many {d} other {e}}}} {f, number} {nc, plural, one {g} other {{h}}} i {nd, plural, =1 {j} one {k} other {l}}"
+        =*= "a {na, plural, zero {b} one {{nb, plural, two {c} many {d} zero {e} one {e} few {e} other {e}}} two {{nb, plural, two {c} many {d} zero {e} one {e} few {e} other {e}}} few {{nb, plural, two {c} many {d} zero {e} one {e} few {e} other {e}}} many {{nb, plural, two {c} many {d} zero {e} one {e} few {e} other {e}}} other {{nb, plural, two {c} many {d} zero {e} one {e} few {e} other {e}}}} {f, number} {nc, plural, one {g} zero {{h}} two {{h}} few {{h}} many {{h}} other {{h}}} i {nd, plural, =1 {j} one {k} zero {l} two {l} few {l} many {l} other {l}}"
