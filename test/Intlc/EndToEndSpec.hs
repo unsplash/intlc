@@ -24,15 +24,12 @@ golden name in' = baseCfg
         fromErrs (Right x) = x
         fromErrs (Left es) = T.intercalate "\n" . toList $ es
 
-(=*=) :: Text -> Text -> IO ()
-x =*= y = parseAndCompileDataset x `shouldBe` Right y
-
-withReactImport :: Text -> Text
-withReactImport = ("import { ReactElement } from 'react'\n" <>)
-
 spec :: Spec
 spec = describe "end-to-end" $ do
   describe "compile" $ do
+    let x =*= y = parseAndCompileDataset x `shouldBe` Right y
+    let withReactImport = ("import { ReactElement } from 'react'\n" <>)
+
     it "example message" $ do
       golden "example" [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]
 
