@@ -45,6 +45,21 @@ compileFlattened = JSON.compileDataset . mapMsgs flatten
 mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
 mapMsgs f = fmap $ \x -> x { message = f (message x) }
 
+-- Map every token, included those nested, in a `Stream`. Order is unspecified.
+-- The children of a token, if any, will be traversed after the provided
+-- function is applied.
+mapTokens :: (ICU.Token -> ICU.Token) -> ICU.Stream -> ICU.Stream
+mapTokens f = fmap $ f >>> \case
+  x@(ICU.Plaintext {})      -> x
+  x@(ICU.Interpolation n t) -> case t of
+    ICU.Bool xs ys   -> g $ ICU.Bool (h xs) (h ys)
+    ICU.Plural y     -> g . ICU.Plural $ mapPluralStreams h y
+    ICU.Select ys mz -> g . uncurry ICU.Select $ mapSelectStreams h (ys, mz)
+    ICU.Callback ys  -> g . ICU.Callback . h $ ys
+    _                -> x
+    where g = ICU.Interpolation n
+          h = fmap f
+
 flatten :: ICU.Message -> ICU.Message
 flatten (ICU.Message xs) = ICU.Message . flattenStream $ xs
   where flattenStream :: ICU.Stream -> ICU.Stream
