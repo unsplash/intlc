@@ -53,11 +53,11 @@ mapTokens :: (ICU.Token -> ICU.Token) -> ICU.Stream -> ICU.Stream
 mapTokens f = fmap $ f >>> \case
   x@(ICU.Plaintext {})      -> x
   x@(ICU.Interpolation n t) -> case t of
-    ICU.Bool xs ys   -> g $ ICU.Bool (h xs) (h ys)
-    ICU.Plural y     -> g . ICU.Plural $ mapPluralStreams h y
-    ICU.Select y     -> g . ICU.Select $ mapSelectStreams h y
-    ICU.Callback ys  -> g . ICU.Callback . h $ ys
-    _                -> x
+    ICU.Bool xs ys  -> g $ ICU.Bool (h xs) (h ys)
+    ICU.Plural y    -> g . ICU.Plural $ mapPluralStreams h y
+    ICU.Select y    -> g . ICU.Select $ mapSelectStreams h y
+    ICU.Callback ys -> g . ICU.Callback . h $ ys
+    _               -> x
     where g = ICU.Interpolation n
           h = fmap f
 
