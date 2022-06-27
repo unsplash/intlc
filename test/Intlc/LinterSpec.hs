@@ -11,6 +11,20 @@ lintWith' = lintWith . pure
 
 spec :: Spec
 spec = describe "linter" $ do
+  describe "external" $ do
+    describe "redundant select" $ do
+      let lint = lintWith' redundantSelectRule
+
+      it "succeeds on select with any non-wildcard case" $ do
+        lint (Message [Interpolation "x" (Select $ This (pure $ SelectCase "y" []))])
+          `shouldBe` Success
+        lint (Message [Interpolation "x" (Select $ These (pure $ SelectCase "y" []) (SelectWildcard []))])
+          `shouldBe` Success
+
+      it "fails on select with only a wildcard" $ do
+        lint (Message [Interpolation "x" (Select $ That (SelectWildcard []))])
+          `shouldBe` Failure (pure RedundantSelect)
+
   describe "internal" $ do
     describe "interpolations" $ do
       let lint = lintWith' interpolationsRule
