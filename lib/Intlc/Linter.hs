@@ -68,9 +68,9 @@ lintWithRules rules (Message stream) = toStatus $ rules `flap` stream
 lint :: Message -> Status
 lint = lintWithRules [interpolationsRule,noAsciiRule]
 
-printLintingError :: LintingError -> IO ()
-printLintingError TooManyInterpolations           = putStrLn "Nested functions are not allowed"
-printLintingError (InvalidNonAsciiCharacter chars) = putStr "Following characters are not allowed: " >> printChars chars
+formatLintingError :: LintingError -> Text
+formatLintingError TooManyInterpolations           = "Nested functions are not allowed"
+formatLintingError (InvalidNonAsciiCharacter chars) = "Following characters are not allowed: " <> intercalateChars chars
   where
-    printChars:: NonEmpty Char -> IO()
-    printChars = putStrLn . intercalate "   " . toList . fmap return
+    intercalateChars:: NonEmpty Char -> Text
+    intercalateChars = T.intercalate " " . toList . fmap T.singleton

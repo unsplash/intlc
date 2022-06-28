@@ -30,7 +30,9 @@ main = getOpts >>= \case
 
     printLine :: (Text,NonEmpty LintingError) -> IO()
     printLine (k ,es) =  putStrLn (T.unpack k <> ": ") >> tab >> e
-      where e = sequence_ . toList . fmap printLintingError $ es
-            tab:: IO()
-            tab = putStr " "
+      where
+          e::IO()
+          e = mapM_ putStrLn (toList . fmap (T.unpack . formatLintingError) $ es)
+          tab:: IO()
+          tab = putStr " "
 
