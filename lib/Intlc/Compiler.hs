@@ -1,17 +1,16 @@
-module Intlc.Compiler (compileDataset, compileFlattened, flatten) where
+module Intlc.Compiler (compileDataset, compileFlattened, flatten, expandPlurals, expandRules) where
 
 import           Control.Applicative.Combinators   (choice)
-import           Data.Aeson                        (encode)
-import           Data.ByteString.Lazy              (ByteString)
-import           Data.List.Extra                   (firstJust)
+import           Data.Foldable                     (elem)
+import           Data.List.Extra                   (firstJust, unionBy)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
-import           Intlc.Backend.ICU.Compiler        (compileMsg)
 import           Intlc.Backend.JavaScript.Compiler as JS
+import qualified Intlc.Backend.JSON.Compiler       as JSON
 import qualified Intlc.Backend.TypeScript.Compiler as TS
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
-import           Prelude                           hiding (ByteString)
+import           Prelude                           hiding (elem)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
@@ -40,14 +39,29 @@ compileTranslation l k (Translation v be _) = case be of
 type ICUBool = (ICU.Stream, ICU.Stream)
 type ICUSelect = (NonEmpty ICU.SelectCase, Maybe ICU.SelectWildcard)
 
-compileFlattened :: Dataset Translation -> ByteString
-compileFlattened = encode . flattenDataset
+compileFlattened :: Dataset Translation -> Text
+compileFlattened = JSON.compileDataset . mapMsgs flatten
 
-flattenDataset :: Dataset Translation -> Dataset UnparsedTranslation
-flattenDataset = fmap $ \(Translation msg be md) -> UnparsedTranslation (compileMsg . flatten $ msg) be md
+mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
+mapMsgs f = fmap $ \x -> x { message = f (message x) }
+
+-- Map every token, included those nested, in a `Stream`. Order is unspecified.
+-- The children of a token, if any, will be traversed after the provided
+-- function is applied.
+mapTokens :: (ICU.Token -> ICU.Token) -> ICU.Stream -> ICU.Stream
+mapTokens f = fmap $ f >>> \case
+  x@(ICU.Plaintext {})      -> x
+  x@(ICU.Interpolation n t) -> case t of
+    ICU.Bool xs ys   -> g $ ICU.Bool (h xs) (h ys)
+    ICU.Plural y     -> g . ICU.Plural $ mapPluralStreams h y
+    ICU.Select ys mz -> g . uncurry ICU.Select $ mapSelectStreams h (ys, mz)
+    ICU.Callback ys  -> g . ICU.Callback . h $ ys
+    _                -> x
+    where g = ICU.Interpolation n
+          h = fmap f
 
 flatten :: ICU.Message -> ICU.Message
-flatten (ICU.Message xs)      = ICU.Message . fromList . flattenStream . toList $ xs
+flatten (ICU.Message xs) = ICU.Message . flattenStream $ xs
   where flattenStream :: ICU.Stream -> ICU.Stream
         flattenStream ys = fromMaybe ys $ choice
           [ mapBool   <$> extractFirstBool ys
@@ -60,6 +74,37 @@ flatten (ICU.Message xs)      = ICU.Message . fromList . flattenStream . toList 
         around ls rs = flattenStream . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
         streamFromArg n = pure . ICU.Interpolation n
+
+-- Expands any plural with a rule to contain every rule. This makes ICU plural
+-- syntax usable on platforms which don't support ICU; translators can reuse
+-- copy across unneeded plural rules.
+--
+-- Added plural rules inherit the content of the wildcard. Output order of
+-- rules is unspecified.
+expandPlurals :: ICU.Message -> ICU.Message
+expandPlurals (ICU.Message xs) = ICU.Message . flip mapTokens xs $ \case
+  ICU.Interpolation n (ICU.Plural p) -> ICU.Interpolation n . ICU.Plural $ case p of
+    ICU.Cardinal (ICU.LitPlural {})                -> p
+    ICU.Cardinal (ICU.RulePlural rules w)          ->
+      ICU.Cardinal $ ICU.RulePlural (expandRules rules w) w
+    ICU.Cardinal (ICU.MixedPlural exacts rules w)  ->
+      ICU.Cardinal $ ICU.MixedPlural exacts (expandRules rules w) w
+    ICU.Ordinal (ICU.OrdinalPlural exacts rules w) ->
+      ICU.Ordinal $ ICU.OrdinalPlural exacts (expandRules rules w) w
+  x -> x
+
+expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.PluralWildcard -> NonEmpty (ICU.PluralCase ICU.PluralRule)
+-- `fromList` is a cheap way to promise the compiler that we'll return a
+-- non-empty list. This is logically guaranteed by one of the inputs to
+-- `unionBy` being non-empty, namely `extraCases` - though given the complexity
+-- this is unit tested for confidence.
+expandRules ys w = fromList $ unionBy ((==) `on` caseRule) (toList ys) extraCases
+  where extraCases = flip ICU.PluralCase (wildContent w) <$> missingRules
+        missingRules = filter (not . flip elem presentRules) allRules
+        presentRules = caseRule <$> ys
+        allRules = universe
+        caseRule (ICU.PluralCase x _) = x
+        wildContent (ICU.PluralWildcard x) = x
 
 extractFirstBool :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUBool, ICU.Stream)
 extractFirstBool = extractFirstArg $ \case

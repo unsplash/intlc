@@ -2,9 +2,7 @@
 
 module Intlc.Core where
 
-import           Data.Aeson          (ToJSON (toEncoding), (.=))
-import           Data.Aeson.Encoding (pairs, string)
-import           Intlc.ICU           (Message)
+import           Intlc.ICU (Message)
 import           Prelude
 
 -- Locales are too broad and too much of a moving target to validate, so this
@@ -19,22 +17,12 @@ data Backend
   | TypeScriptReact
   deriving (Show, Eq, Generic)
 
-instance ToJSON Backend where
-  toEncoding TypeScript      = string "ts"
-  toEncoding TypeScriptReact = string "tsx"
-
 data UnparsedTranslation = UnparsedTranslation
   { umessage :: UnparsedMessage
   , ubackend :: Backend
   , umdesc   :: Maybe Text
   }
   deriving (Show, Eq, Generic)
-
-instance ToJSON UnparsedTranslation where
-  toEncoding (UnparsedTranslation msg be md) = pairs $
-       "message"     .= msg
-    <> "backend"     .= be
-    <> "description" .= md
 
 data Translation = Translation
   { message :: Message

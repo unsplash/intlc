@@ -89,6 +89,17 @@ spec = describe "TypeScript compiler" $ do
 
         golden' "named-export" msg
 
+    -- Typechecking happens externally.
+    it "typechecks nested selects" $ do
+      golden TemplateLit (compileNamedExport TemplateLit (Locale "te-ST") "test") "nested-select" $
+        ICU.Message [ICU.Interpolation "x" $ flip ICU.Select Nothing $ (fromList
+          [ ICU.SelectCase "a" []
+          , ICU.SelectCase "b" [ICU.Interpolation "x" $ flip ICU.Select Nothing $ (fromList
+            [ ICU.SelectCase "a" [] -- <-- without a workaround, TypeScript will have narrowed and reject this case
+            , ICU.SelectCase "b" []
+            ])]
+          ])]
+
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
     let fromToken = args . TS.fromMsg TS.TFragment . ICU.Message . pure . ICU.Interpolation "x"

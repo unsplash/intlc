@@ -15,9 +15,12 @@ import           Prelude                           hiding (Type)
 import           Utils                             ((<>^))
 
 compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
-compileNamedExport x l k v =
-  "export const " <> n <> ": " <> compileTypeof x v <> " = " <> arg <> " => " <> r
-  where (n, r) = JS.compileStmtPieces x l k v
+compileNamedExport s l k v = JS.compileStmt o s l k v
+  where o = JS.emptyOverrides { JS.stmtOverride = Just stmt, JS.matchLitCondOverride = Just matchLitCond }
+        stmt n r = "export const " <> n <> ": " <> compileTypeof s v <> " = " <> arg <> " => " <> r
+        -- Prevents TypeScript from narrowing, which absent this causes some
+        -- nested switch output to fail typechecking.
+        matchLitCond x = x <> " as typeof " <> x
         arg = if hasInterpolations then "x" else "()"
         hasInterpolations = flip any (ICU.unMessage v) $ \case
           ICU.Interpolation {} -> True

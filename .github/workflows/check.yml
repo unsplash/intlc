@@ -45,7 +45,7 @@ jobs:
       - uses: haskell/actions/hlint-setup@v2
       - uses: haskell/actions/hlint-run@v2
         with:
-          path: '["lib/", "cli/"]'
+          path: '["lib/", "cli/", "internal/"]'
   fmt:
     name: Formatting
     runs-on: ubuntu-latest

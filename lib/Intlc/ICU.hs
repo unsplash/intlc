@@ -146,7 +146,7 @@ data PluralRule
   | Two
   | Few
   | Many
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord, Enum, Bounded)
 
 newtype PluralWildcard = PluralWildcard Stream
   deriving (Show, Eq)
