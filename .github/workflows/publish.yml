@@ -30,11 +30,11 @@ jobs:
       - name: Build
         run: |
           cabal install --install-method=copy --installdir=dist-newstyle
-          mv dist-newstyle/intlc "dist-newstyle/intlc_${{ matrix.os.name }}"
-          mv dist-newstyle/intlc-internal "dist-newstyle/intlc-internal_${{ matrix.os.name }}"
+          mv dist-newstyle/intlc dist-newstyle/intlc_${{ matrix.os.name }}
+          mv dist-newstyle/intlc-internal dist-newstyle/intlc-internal_${{ matrix.os.name }}
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            "dist-newstyle/intlc_${{ matrix.os.name }}"
-            "dist-newstyle/intlc-internal_${{ matrix.os.name }}"
+            dist-newstyle/intlc_${{ matrix.os.name }}
+            dist-newstyle/intlc-internal_${{ matrix.os.name }}
