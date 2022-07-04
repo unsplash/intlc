@@ -6,7 +6,7 @@ import           Intlc.Compiler             (compileDataset, expandPlurals)
 import           Intlc.Core                 (Locale (Locale))
 import           Intlc.Parser               (parseDataset)
 import           Intlc.Parser.Error         (ParseFailure)
-import           Intlc.Parser.ICU           (ParserState (ParserState), msg)
+import           Intlc.Parser.ICU           (msg, initialState)
 import           Prelude
 import           System.FilePath            ((<.>), (</>))
 import           Test.Hspec
@@ -19,7 +19,7 @@ parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show)
 
 parseAndExpandMsg :: Text -> Either ParseFailure Text
 parseAndExpandMsg = fmap (compileMsg . expandPlurals) . parseMsg
-  where parseMsg = runParser (runReaderT msg (ParserState mempty)) "test"
+  where parseMsg = runParser (runReaderT msg initialState) "test"
 
 golden :: String -> Text -> Golden String
 golden name in' = baseCfg
