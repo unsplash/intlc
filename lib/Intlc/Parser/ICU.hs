@@ -87,10 +87,15 @@ escaped = apos *> choice
   where apos = char '\''
         syn = char '{' <|> char '<'
         -- Like `someTill`, but doesn't end upon encountering two `end` tokens,
-        -- instead consuming them as one and continuing.
+        -- instead consuming them as one and continuing. A little less abstract
+        -- though as we'll check for only a single end of input token.
         someTillNotDouble p end = tryOne
           where tryOne = (:) <$> p <*> go
-                go = ((:) <$> try (end <* end) <*> go) <|> (mempty <$ end) <|> tryOne
+                go = choice
+                  [ (:) <$> try (end <* end) <*> go
+                  , (mempty <$ end)
+                  , tryOne
+                  ]
 
 callback :: Parser (Text, Type)
 callback = do
