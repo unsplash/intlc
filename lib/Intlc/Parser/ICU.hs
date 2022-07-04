@@ -27,26 +27,38 @@ failingWith' :: MonadParsec ParseErr s m => Int -> MessageParseErr -> m a
 i `failingWith'` e = i `failingWith` FailedMsgParse e
 
 data ParserState = ParserState
+  -- Expected to be supplied internally.
   { pluralCtxName :: Maybe Text
+  -- Expected to be potentially supplied externally.
+  , endOfInput    :: Parser ()
   }
 
 initialState :: ParserState
-initialState = ParserState mempty
+initialState = ParserState
+  { pluralCtxName = Nothing
+  , endOfInput = pure ()
+  }
 
 type Parser = ReaderT ParserState (Parsec ParseErr Text)
 
 ident :: Parser Text
 ident = T.pack <$> some letterChar
 
-toMsg :: Stream -> Message
-toMsg = Message . mergePlaintext
-
+-- Parse a message until the end of input parser matches.
 msg :: Parser Message
-msg = toMsg <$> manyTill token eof
+msg = msgTill =<< asks endOfInput
 
-eom :: Parser ()
-eom = void $ char '"'
+-- Parse a message until the provided parser matches.
+msgTill :: Parser a -> Parser Message
+msgTill = fmap (Message . mergePlaintext) . streamTill
 
+-- Parse a stream until the provided parser matches.
+streamTill :: Parser a -> Parser [Token]
+streamTill = manyTill token
+
+-- The core parser of this module. Parse as many of these as you'd like until
+-- reaching an anticipated delimiter, such as a double quote in the surrounding
+-- JSON string or end of input in a REPL.
 token :: Parser Token
 token = choice
   [ uncurry Interpolation <$> (interp <|> callback)
@@ -89,7 +101,10 @@ callback = do
     Right (ch, closePos, cname) -> if oname == cname
        then pure (oname, ch)
        else closePos `failingWith'` BadClosingCallbackTag oname cname
-    where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ void (string "</") <|> eom)
+    where children = do
+            eom <- asks endOfInput
+            stream <- streamTill (lookAhead $ void (string "</") <|> eom)
+            pure . Callback . mergePlaintext $ stream
 
 interp :: Parser (Text, Type)
 interp = between (char '{') (char '}') $ do
@@ -107,7 +122,7 @@ interp = between (char '{') (char '}') $ do
             )
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
-        withPluralCtx n = withReaderT (const . ParserState . pure $ n)
+        withPluralCtx n = withReaderT (\x -> x { pluralCtxName = Just n })
 
 dateTimeFmt :: Parser DateTimeFmt
 dateTimeFmt = choice
@@ -118,7 +133,7 @@ dateTimeFmt = choice
   ]
 
 caseBody :: Parser Stream
-caseBody = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
+caseBody = mergePlaintext <$> (string "{" *> streamTill (string "}"))
 
 boolCases :: Parser (Stream, Stream)
 boolCases = (,)

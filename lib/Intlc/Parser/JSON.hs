@@ -23,7 +23,7 @@ import qualified Intlc.ICU                        as ICU
 import           Intlc.Parser.Error               (JSONParseErr (..),
                                                    ParseErr (FailedJSONParse),
                                                    failingWith)
-import           Intlc.Parser.ICU                 (initialState, toMsg, token)
+import qualified Intlc.Parser.ICU                 as ICUP
 import           Prelude                          hiding (null)
 import           Text.Megaparsec                  hiding (State, Stream, Token,
                                                    many, some, token)
@@ -58,7 +58,8 @@ translation = obj $ intercalateEffect objSep $ Translation
 
 msg :: Parser ICU.Message
 msg = lift $ withRecovery recover p
-  where p = toMsg <$> runReaderT (char '"' *> manyTill token (char '"')) initialState
+  where p = runReaderT (char '"' *> ICUP.msg) icupState
+        icupState = ICUP.initialState { ICUP.endOfInput = void $ char '"' }
         recover e = error "absurd" <$ consume <* registerParseError e
         -- Once we've recovered we need to consume the rest of the message
         -- string so that parsing can continue beyond it.
