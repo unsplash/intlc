@@ -6,7 +6,7 @@ import           Intlc.Parser.Error    (MessageParseErr (..),
 import           Intlc.Parser.ICU
 import           Prelude
 import           Test.Hspec
-import           Test.Hspec.Megaparsec hiding (initialState)
+import           Test.Hspec.Megaparsec
 import           Text.Megaparsec       (runParser, eof)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
@@ -14,7 +14,7 @@ parseWith :: ParserState -> Parser a -> Text -> Either ParseFailure a
 parseWith s p = runParser (runReaderT p s) "test"
 
 parse :: Parser a -> Text -> Either ParseFailure a
-parse = parseWith $ initialState { endOfInput = eof }
+parse = parseWith $ emptyState { endOfInput = eof }
 
 spec :: Spec
 spec = describe "ICU parser" $ do
@@ -163,7 +163,7 @@ spec = describe "ICU parser" $ do
       parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (initialState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef]))
 
   describe "selectordinal" $ do
@@ -184,7 +184,7 @@ spec = describe "ICU parser" $ do
       parse ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (initialState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef]))
 
   describe "select" $ do

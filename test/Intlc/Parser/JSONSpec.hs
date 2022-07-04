@@ -6,7 +6,7 @@ import           Intlc.Parser.Error    (JSONParseErr (..), MessageParseErr (..),
                                         ParseErr (..), ParseFailure)
 import           Prelude
 import           Test.Hspec
-import           Test.Hspec.Megaparsec hiding (initialState)
+import           Test.Hspec.Megaparsec
 import           Text.Megaparsec       (ErrorFancy (ErrorCustom), ParseError)
 import           Text.RawString.QQ     (r)
 import qualified Intlc.ICU as ICU

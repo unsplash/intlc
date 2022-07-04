@@ -59,7 +59,7 @@ translation = obj $ intercalateEffect objSep $ Translation
 msg :: Parser ICU.Message
 msg = lift $ withRecovery recover p
   where p = runReaderT (char '"' *> ICUP.msg) icupState
-        icupState = ICUP.initialState { ICUP.endOfInput = void $ char '"' }
+        icupState = ICUP.emptyState { ICUP.endOfInput = void $ char '"' }
         recover e = error "absurd" <$ consume <* registerParseError e
         -- Once we've recovered we need to consume the rest of the message
         -- string so that parsing can continue beyond it.

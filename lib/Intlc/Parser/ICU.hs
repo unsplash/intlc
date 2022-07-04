@@ -33,8 +33,8 @@ data ParserState = ParserState
   , endOfInput    :: Parser ()
   }
 
-initialState :: ParserState
-initialState = ParserState
+emptyState :: ParserState
+emptyState = ParserState
   { pluralCtxName = Nothing
   , endOfInput = pure ()
   }
