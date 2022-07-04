@@ -68,11 +68,15 @@ token = choice
   , asks pluralCtxName >>= \case
       Just n  -> Interpolation n PluralRef <$ string "#"
       Nothing -> empty
-  , Plaintext <$> (try escaped <|> plaintext)
+  , Plaintext <$> plaintext
   ]
 
+-- Parse plaintext, including single quote escape sequences.
 plaintext :: Parser Text
-plaintext = T.singleton <$> L.charLiteral
+plaintext = choice
+  [ try escaped
+  , T.singleton <$> L.charLiteral
+  ]
 
 escaped :: Parser Text
 escaped = apos *> choice
@@ -80,7 +84,7 @@ escaped = apos *> choice
   [ "'" <$ apos
   -- Escape everything until another apostrophe, being careful of internal
   -- double escapes: "'{a''}'" -> "{a'}"
-  , try . fmap T.concat $ someTill (try escaped <|> plaintext) (try $ apos <* notFollowedBy apos)
+  , try . fmap T.concat $ someTill plaintext (try $ apos <* notFollowedBy apos)
   -- Escape the next syntax character as plaintext: "'{" -> "{"
   , T.singleton <$> syn
   ]
