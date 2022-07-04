@@ -80,22 +80,12 @@ escaped = apos *> choice
   [ "'" <$ apos
   -- Escape everything until another apostrophe, being careful of internal
   -- double escapes: "'{a''}'" -> "{a'}"
-  , try $ T.pack <$> someTillNotDouble L.charLiteral apos
+  , try . fmap T.concat $ someTill (try escaped <|> plaintext) (try $ apos <* notFollowedBy apos)
   -- Escape the next syntax character as plaintext: "'{" -> "{"
   , T.singleton <$> syn
   ]
   where apos = char '\''
         syn = char '{' <|> char '<'
-        -- Like `someTill`, but doesn't end upon encountering two `end` tokens,
-        -- instead consuming them as one and continuing. A little less abstract
-        -- though as we'll check for only a single end of input token.
-        someTillNotDouble p end = tryOne
-          where tryOne = (:) <$> p <*> go
-                go = choice
-                  [ (:) <$> try (end <* end) <*> go
-                  , (mempty <$ end)
-                  , tryOne
-                  ]
 
 callback :: Parser (Text, Type)
 callback = do
