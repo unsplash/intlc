@@ -103,7 +103,8 @@ escaped = apos *> choice
   , T.singleton <$> synAll
   ]
   where apos = char '\''
-        synAll = synOpen <|> synClose
+        synAll = synLone <|> synOpen <|> synClose
+        synLone = char '#'
         synOpen = char '{' <|> char '<'
         synClose = char '}' <|> char '>'
 

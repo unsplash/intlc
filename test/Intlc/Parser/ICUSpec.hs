@@ -81,6 +81,9 @@ spec = describe "ICU parser" $ do
           Message [Plaintext "a ", Interpolation "b" String, Plaintext " {c} ", Interpolation "d" String, Plaintext " e"]
         parse msg "a {b} 'c {d} e" `shouldParse`
           Message [Plaintext "a ", Interpolation "b" String, Plaintext " 'c ", Interpolation "d" String, Plaintext " e"]
+        parse msg "{n, plural, =42 {# '#}}" `shouldParse`
+          let xs = [Interpolation "n" PluralRef, Plaintext " #"]
+           in Message [Interpolation "n" $ Plural (Cardinal $ LitPlural (pure $ PluralCase (PluralExact "42") xs) Nothing)]
 
       it "escapes two single quotes as one single quote" $ do
         parse msg "This '{isn''t}' obvious." `shouldParse` Message [Plaintext "This {isn't} obvious."]
