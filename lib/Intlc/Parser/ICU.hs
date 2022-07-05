@@ -78,18 +78,24 @@ plaintext = choice
   , T.singleton <$> L.charLiteral
   ]
 
+-- Follows ICU 4.8+ spec, see:
+--   https://unicode-org.github.io/icu/userguide/format_parse/messages/#quotingescaping
 escaped :: Parser Text
 escaped = apos *> choice
-  -- Double escape two apostrophes as one: "''" -> "'"
+  -- Double escape two apostrophes as one, regardless of surrounding
+  -- syntax: "''" -> "'"
   [ "'" <$ apos
   -- Escape everything until another apostrophe, being careful of internal
   -- double escapes: "'{a''}'" -> "{a'}"
-  , try . fmap T.concat $ someTill plaintext (try $ apos <* notFollowedBy apos)
+  , let f x ys = x <> T.concat ys
+     in try $ f <$> (T.singleton <$> synOpen) <*> someTill plaintext (try $ apos <* notFollowedBy apos)
   -- Escape the next syntax character as plaintext: "'{" -> "{"
-  , T.singleton <$> syn
+  , T.singleton <$> synAll
   ]
   where apos = char '\''
-        syn = char '{' <|> char '<'
+        synAll = synOpen <|> synClose
+        synOpen = char '{' <|> char '<'
+        synClose = char '}' <|> char '>'
 
 callback :: Parser (Text, Type)
 callback = do

@@ -89,6 +89,7 @@ spec = describe "ICU parser" $ do
 
       it "ignores one single quote not immediately preceding a syntax character" $ do
         parse msg "'" `shouldParse` Message [Plaintext "'"]
+        parse msg "' '" `shouldParse` Message [Plaintext "' '"]
         parse msg "x'y" `shouldParse` Message [Plaintext "x'y"]
 
   describe "interpolation" $ do
