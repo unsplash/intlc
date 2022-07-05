@@ -86,9 +86,19 @@ escaped = apos *> choice
   -- syntax: "''" -> "'"
   [ "'" <$ apos
   -- Escape everything until another apostrophe, being careful of internal
-  -- double escapes: "'{a''}'" -> "{a'}"
-  , let f x ys = x <> T.concat ys
-     in try $ f <$> (T.singleton <$> synOpen) <*> someTill plaintext (try $ apos <* notFollowedBy apos)
+  -- double escapes: "'{a''}'" -> "{a'}". Must ensure it doesn't surpass the
+  -- bounds of the surrounding parser as per `endOfInput`.
+  , try $ do
+      eom <- asks endOfInput
+      head' <- T.singleton <$> synOpen
+      -- Try and parse until end of input or a lone apostrophe. If end of input
+      -- comes first then fail the parse.
+      (tail', wasEom) <- someTill_ plaintext $ choice
+        [       True  <$ eom
+        , try $ False <$ apos <* notFollowedBy apos
+        ]
+      guard (not wasEom)
+      pure $ head' <> T.concat tail'
   -- Escape the next syntax character as plaintext: "'{" -> "{"
   , T.singleton <$> synAll
   ]
