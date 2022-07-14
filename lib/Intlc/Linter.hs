@@ -37,6 +37,7 @@ interpolationsRule = go 0
     go _ [] = Nothing
     go n (x : xs) = go (n' x) $ maybeToMonoid (mys x) <> xs
       where
+        mys (Interpolation _ ( Callback _)) = Nothing
         mys (Interpolation _ ( Plural _)) = Nothing
         mys token                         = getStream token
         n' token = n + length (mys token)
