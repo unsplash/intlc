@@ -1,11 +1,13 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Intlc.Compiler (compileDataset, flatten)
-import           Intlc.Core     (Backend (TypeScript), Locale (Locale),
-                                 Translation (Translation))
+import           Intlc.Compiler    (compileDataset, compileFlattened,
+                                    expandRules, flatten)
+import           Intlc.Core        (Backend (..), Locale (Locale),
+                                    Translation (Translation))
 import           Intlc.ICU
-import           Prelude        hiding (one)
+import           Prelude           hiding (one)
 import           Test.Hspec
+import           Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "compiler" $ do
@@ -22,7 +24,20 @@ spec = describe "compiler" $ do
     it "validates keys aren't empty" $ do
       f [""] `shouldSatisfy` isLeft
 
-  describe "flatten" $ do
+  describe "compile flattened dataset" $ do
+    it "flattens messages and outputs JSON" $ do
+      compileFlattened (fromList
+        [ ("x", Translation (Message [Plaintext "xfoo"]) TypeScript Nothing)
+        , ("z", Translation (Message [Plaintext "zfoo"]) TypeScriptReact (Just "zbar"))
+        , ("y", Translation (Message [Plaintext "yfoo ", Interpolation "ybar" String]) TypeScript Nothing)
+        ])
+          `shouldBe` [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
+
+    it "escapes double quotes in JSON" $ do
+      compileFlattened (fromList [("x\"y", Translation (Message [Plaintext "\"z\""]) TypeScript Nothing)])
+        `shouldBe` [r|{"x\"y":{"message":"\"z\"","backend":"ts","description":null}}|]
+
+  describe "flatten message" $ do
     it "no-ops static" $ do
       flatten (Message [Plaintext "xyz"]) `shouldBe` Message [Plaintext "xyz"]
 
@@ -86,3 +101,33 @@ spec = describe "compiler" $ do
               )
 
       flatten x `shouldBe` y
+
+  describe "expanding rules" $ do
+    let f = expandRules
+
+    it "always contains every rule in the output" $ do
+      let c = PluralCase
+      let w = PluralWildcard mempty
+      let rule (PluralCase x _) = x
+      let g xs = sort (toList $ rule <$> f xs w)
+
+      g [] `shouldBe` universe
+      g [c Zero mempty] `shouldBe` universe
+      g [c Many mempty, c Zero mempty] `shouldBe` universe
+
+    it "copies the wildcard stream to new rules" $ do
+      let xs = [Plaintext "foo"]
+      let c = PluralCase
+      let w = PluralWildcard
+      let g ys = toList (f ys (w xs))
+
+      g [] `shouldBe` (flip c xs <$> (universe :: [PluralRule]))
+
+      g [c Many [Plaintext "bar"], c Zero mempty] `shouldBe`
+        [c Many [Plaintext "bar"], c Zero mempty, c One xs, c Two xs, c Few xs]
+
+    it "returns full list of rules unmodified (as non-empty)" $ do
+      let c x y = PluralCase x [Plaintext y]
+      let xs = [c Two "foo", c Many "", c Zero "bar", c One "baz", c Few ""]
+
+      flip f (PluralWildcard [Plaintext "any"]) xs `shouldBe` (fromList xs)

@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Intlc.Backend.JavaScript.Language where
 
 import           Intlc.Core (Locale)

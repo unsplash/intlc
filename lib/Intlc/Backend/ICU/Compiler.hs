@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 -- This module is essentially the inverse of the parsing we perform; it's
 -- semantically reversible in that respect if not precisely due to formatting,
 -- no preservation of the presence of defaults, etc.
@@ -42,7 +40,7 @@ dateTimeFmt Long   = "long"
 dateTimeFmt Full   = "full"
 
 cardinalPlural :: CardinalPlural -> Text
-cardinalPlural (LitPlural xs mw)     = unwords . toList $ (exactPluralCase <$> xs) <> foldMapM (pure . pluralWildcard) mw
+cardinalPlural (LitPlural xs mw)     = unwords $ toList (exactPluralCase <$> xs) <> foldMap (pure . pluralWildcard) mw
 cardinalPlural (RulePlural xs w)     = unwords . toList $ (rulePluralCase <$> xs) <> pure (pluralWildcard w)
 cardinalPlural (MixedPlural xs ys w) = unwords . toList $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (pluralWildcard w)
 

@@ -45,17 +45,18 @@ jobs:
       - uses: haskell/actions/hlint-setup@v2
       - uses: haskell/actions/hlint-run@v2
         with:
-          path: '["lib/", "cli/"]'
-  fmt:
-    name: Formatting
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      # stylish-haskell doesn't have a check/dry run option, so we'll run it
-      # against files in place and test if there are any diffs with Git.
-      - run: |
-          curl -sL https://raw.github.com/haskell/stylish-haskell/master/scripts/latest.sh | sh -s 'lib/ src/ test/ -ri'
-          git diff-index --exit-code HEAD
+          path: '["lib/", "cli/", "internal/"]'
+  # # Broken, see: https://github.com/unsplash/intlc/issues/151
+  # fmt:
+  #   name: Formatting
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     # stylish-haskell doesn't have a check/dry run option, so we'll run it
+  #     # against files in place and test if there are any diffs with Git.
+  #     - run: |
+  #         curl -sL https://raw.github.com/haskell/stylish-haskell/master/scripts/latest.sh | sh -s 'lib/ src/ test/ -ri'
+  #         git diff-index --exit-code HEAD
   typecheck-ts:
     name: Typecheck TypeScript
     runs-on: ubuntu-latest

@@ -47,7 +47,7 @@ The ICU message parser is a [recursive descent parser](https://en.wikipedia.org/
 
 For example, given an ICU message `hello <bold>{name}</bold>`, we’d first try parsing for an interpolation or tag, and failing that would parse plaintext, which we’d do until we encountered a reason to stop, in this case the tag opening character. We’ve stored "hello " as plaintext and will now continue along, this time succeeding in parsing the tag. We’ll now recursively parse inside the bounds of the tag, reusing the same top-level parser we were just using, this time parsing an interpolation. Having done this we’ve _consumed_ the entire input string and have successfully parsed a recursive list of nodes making up our [AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree).
 
-JSON parsing is handled internally for better interop with the ICU parser. JSON encoding is offloaded to [aeson](https://hackage.haskell.org/package/aeson).
+JSON parsing is handled internally for better interop with the ICU parser.
 
 ### Compilation
 

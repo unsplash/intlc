@@ -27,26 +27,38 @@ failingWith' :: MonadParsec ParseErr s m => Int -> MessageParseErr -> m a
 i `failingWith'` e = i `failingWith` FailedMsgParse e
 
 data ParserState = ParserState
+  -- Expected to be supplied internally.
   { pluralCtxName :: Maybe Text
+  -- Expected to be potentially supplied externally.
+  , endOfInput    :: Parser ()
   }
 
-initialState :: ParserState
-initialState = ParserState mempty
+emptyState :: ParserState
+emptyState = ParserState
+  { pluralCtxName = Nothing
+  , endOfInput = pure ()
+  }
 
 type Parser = ReaderT ParserState (Parsec ParseErr Text)
 
 ident :: Parser Text
 ident = T.pack <$> some letterChar
 
-toMsg :: Stream -> Message
-toMsg = Message . mergePlaintext
-
+-- Parse a message until the end of input parser matches.
 msg :: Parser Message
-msg = toMsg <$> manyTill token eof
+msg = msgTill =<< asks endOfInput
 
-eom :: Parser ()
-eom = void $ char '"'
+-- Parse a message until the provided parser matches.
+msgTill :: Parser a -> Parser Message
+msgTill = fmap (Message . mergePlaintext) . streamTill
 
+-- Parse a stream until the provided parser matches.
+streamTill :: Parser a -> Parser [Token]
+streamTill = manyTill token
+
+-- The core parser of this module. Parse as many of these as you'd like until
+-- reaching an anticipated delimiter, such as a double quote in the surrounding
+-- JSON string or end of input in a REPL.
 token :: Parser Token
 token = choice
   [ uncurry Interpolation <$> (interp <|> callback)
@@ -56,29 +68,45 @@ token = choice
   , asks pluralCtxName >>= \case
       Just n  -> Interpolation n PluralRef <$ string "#"
       Nothing -> empty
-  , Plaintext <$> (try escaped <|> plaintext)
+  , Plaintext <$> plaintext
   ]
 
+-- Parse plaintext, including single quote escape sequences.
 plaintext :: Parser Text
-plaintext = T.singleton <$> L.charLiteral
+plaintext = choice
+  [ try escaped
+  , T.singleton <$> L.charLiteral
+  ]
 
+-- Follows ICU 4.8+ spec, see:
+--   https://unicode-org.github.io/icu/userguide/format_parse/messages/#quotingescaping
 escaped :: Parser Text
 escaped = apos *> choice
-  -- Double escape two apostrophes as one: "''" -> "'"
+  -- Double escape two apostrophes as one, regardless of surrounding
+  -- syntax: "''" -> "'"
   [ "'" <$ apos
   -- Escape everything until another apostrophe, being careful of internal
-  -- double escapes: "'{a''}'" -> "{a'}"
-  , try $ T.pack <$> someTillNotDouble L.charLiteral apos
+  -- double escapes: "'{a''}'" -> "{a'}". Must ensure it doesn't surpass the
+  -- bounds of the surrounding parser as per `endOfInput`.
+  , try $ do
+      eom <- asks endOfInput
+      head' <- T.singleton <$> synOpen
+      -- Try and parse until end of input or a lone apostrophe. If end of input
+      -- comes first then fail the parse.
+      (tail', wasEom) <- someTill_ plaintext $ choice
+        [       True  <$ eom
+        , try $ False <$ apos <* notFollowedBy apos
+        ]
+      guard (not wasEom)
+      pure $ head' <> T.concat tail'
   -- Escape the next syntax character as plaintext: "'{" -> "{"
-  , T.singleton <$> syn
+  , T.singleton <$> synAll
   ]
   where apos = char '\''
-        syn = char '{' <|> char '<'
-        -- Like `someTill`, but doesn't end upon encountering two `end` tokens,
-        -- instead consuming them as one and continuing.
-        someTillNotDouble p end = tryOne
-          where tryOne = (:) <$> p <*> go
-                go = ((:) <$> try (end <* end) <*> go) <|> (mempty <$ end) <|> tryOne
+        synAll = synLone <|> synOpen <|> synClose
+        synLone = char '#'
+        synOpen = char '{' <|> char '<'
+        synClose = char '}' <|> char '>'
 
 callback :: Parser (Text, Type)
 callback = do
@@ -89,7 +117,10 @@ callback = do
     Right (ch, closePos, cname) -> if oname == cname
        then pure (oname, ch)
        else closePos `failingWith'` BadClosingCallbackTag oname cname
-    where children = Callback . mergePlaintext <$> manyTill token (lookAhead $ void (string "</") <|> eom)
+    where children = do
+            eom <- asks endOfInput
+            stream <- streamTill (lookAhead $ void (string "</") <|> eom)
+            pure . Callback . mergePlaintext $ stream
 
 interp :: Parser (Text, Type)
 interp = between (char '{') (char '}') $ do
@@ -107,7 +138,7 @@ interp = between (char '{') (char '}') $ do
             )
           , uncurry Select <$> (string "select" *> sep *> selectCases)
           ]
-        withPluralCtx n = withReaderT (const . ParserState . pure $ n)
+        withPluralCtx n = withReaderT (\x -> x { pluralCtxName = Just n })
 
 dateTimeFmt :: Parser DateTimeFmt
 dateTimeFmt = choice
@@ -118,7 +149,7 @@ dateTimeFmt = choice
   ]
 
 caseBody :: Parser Stream
-caseBody = mergePlaintext <$> (string "{" *> manyTill token (string "}"))
+caseBody = mergePlaintext <$> (string "{" *> streamTill (string "}"))
 
 boolCases :: Parser (Stream, Stream)
 boolCases = (,)
