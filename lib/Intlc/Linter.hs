@@ -35,10 +35,11 @@ interpolationsRule = go 0
     go :: Int -> Rule
     go 2 _ = Just TooManyInterpolations
     go _ [] = Nothing
-    go n (x : xs) = go n' $ maybeToMonoid mys <> xs
+    go n (x : xs) = go (n' x) $ maybeToMonoid (mys x) <> xs
       where
-        mys = getStream x
-        n' = n + length mys
+        mys (Interpolation _ ( Plural _)) = Nothing
+        mys token                         = getStream token
+        n' token = n + length (mys token)
 
 
 -- | Selects the first 128 characters of the Unicode character set,
