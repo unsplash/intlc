@@ -65,9 +65,8 @@ interpolationsRule = go 0
       where mys = getStream x
             n' = n + length mys
 
--- | Selects the first 128 characters of the Unicode character set,
--- corresponding to the ASCII character set.
--- and the special cases
+-- Allows any ASCII character as well as a handful of Unicode characters that
+-- we've established are safe for use with our vendor's tool.
 isAcceptedChar :: Char -> Bool
 isAcceptedChar c = isAscii c || c `elem` acceptedChars
   where acceptedChars = ['’','…','é','—','ƒ','“','”','–']
