@@ -35,9 +35,7 @@ main = getOpts >>= \case
       | otherwise      = pure ()
 
     printLine :: (Text, NonEmpty InternalLint) -> IO ()
-    printLine (k, es) = putStrLn (T.unpack k <> ": ") *> indent *> e
-      where
-          e :: IO ()
-          e = mapM_ putStrLn (toList . fmap (T.unpack . formatLintingError) $ es)
-          indent :: IO ()
-          indent = putStr " "
+    printLine (k, es) = putTextLn $ title <> msgs
+      where title = k <> ": \n"
+            msgs = T.intercalate "\n" . toList . fmap (indent . formatLintingError) $ es
+            indent = (" " <>)
