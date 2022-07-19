@@ -2,6 +2,7 @@ module Intlc.Linter where
 
 import qualified Data.Text  as T
 
+import           Data.Char  (isAscii)
 import           Data.These (These (..))
 import           Intlc.ICU
 import           Prelude
@@ -68,7 +69,7 @@ interpolationsRule = go 0
 -- corresponding to the ASCII character set.
 -- and the special cases
 isAcceptedChar :: Char -> Bool
-isAcceptedChar c = c < '\x80' || c `elem` acceptedChars
+isAcceptedChar c = isAscii c || c `elem` acceptedChars
   where acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 
 unsupportedUnicodeRule :: Rule InternalLint
