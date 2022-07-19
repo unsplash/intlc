@@ -31,13 +31,13 @@ main = getOpts >>= \case
 
     exit :: Dataset (NonEmpty InternalLint) -> IO ()
     exit sts
-      | M.size sts > 0 =   mapM_ printLine (M.assocs sts)
-      | otherwise = pure ()
+      | M.size sts > 0 = mapM_ printLine (M.assocs sts)
+      | otherwise      = pure ()
 
-    printLine :: (Text,NonEmpty InternalLint) -> IO()
-    printLine (k ,es) =  putStrLn (T.unpack k <> ": ") >> tab >> e
+    printLine :: (Text, NonEmpty InternalLint) -> IO ()
+    printLine (k, es) = putStrLn (T.unpack k <> ": ") >> tab >> e
       where
-          e::IO()
+          e :: IO ()
           e = mapM_ putStrLn (toList . fmap (T.unpack . formatLintingError) $ es)
-          tab:: IO()
+          tab :: IO ()
           tab = putStr " "

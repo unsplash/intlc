@@ -30,10 +30,12 @@ spec = describe "linter" $ do
       let lint = lintWith' unsupportedUnicodeRule
 
       it "does not lint text with emoji" $ do
-        lint (Message [Plaintext "Message with an emoji ❤️ 🥺"]) `shouldBe` Failure (pure $ InvalidNonAsciiCharacter(fromList "❤️🥺"))
+        lint (Message [Plaintext "Message with an emoji ❤️ 🥺"])
+          `shouldBe` Failure (pure $ InvalidNonAsciiCharacter (fromList "❤️🥺"))
 
       it "does not lint text that is deeply nested with emoji" $ do
-        lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [Plaintext "Message with an emoji 🥺"] [])]) `shouldBe` Failure (fromList [InvalidNonAsciiCharacter( fromList ['🥺'])])
+        lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [Plaintext "Message with an emoji 🥺"] [])])
+          `shouldBe` Failure (fromList [InvalidNonAsciiCharacter (fromList ['🥺'])])
 
       it "lints streams without emoji" $ do
         lint (Message [Plaintext "Text without emoji"]) `shouldBe` Success
@@ -57,13 +59,16 @@ spec = describe "linter" $ do
         lint (Message [Interpolation "Hello" (Callback []), Plaintext "hello"]) `shouldBe` Success
 
       it "does not lint streams with 2 or more complex interpolations" $ do
-        lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [] [])]) `shouldBe` Failure (pure TooManyInterpolations)
+        lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [] [])])
+          `shouldBe` Failure (pure TooManyInterpolations)
 
       it "does not lint nested streams" $ do
-        lint (Message [Interpolation "outer" (Callback [Interpolation "inner" (Callback [])])]) `shouldBe` Failure (pure TooManyInterpolations)
+        lint (Message [Interpolation "outer" (Callback [Interpolation "inner" (Callback [])])])
+          `shouldBe` Failure (pure TooManyInterpolations)
 
       it "does not lint complex interpolations with nested complex interpolations" $ do
-        lint (Message [Interpolation "outer" (Select (This (pure $ SelectCase "hello" [Interpolation "super_inner" (Callback [])])))]) `shouldBe` Failure (pure TooManyInterpolations)
+        lint (Message [Interpolation "outer" (Select (This (pure $ SelectCase "hello" [Interpolation "super_inner" (Callback [])])))])
+          `shouldBe` Failure (pure TooManyInterpolations)
 
       it "stops iterating after encountering two stream-interpolations" $ do
         let nested x = Interpolation "x" (Callback [x])

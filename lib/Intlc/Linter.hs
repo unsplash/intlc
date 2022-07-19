@@ -1,6 +1,6 @@
 module Intlc.Linter where
 
-import qualified Data.Text as T
+import qualified Data.Text  as T
 
 import           Data.These (These (..))
 import           Intlc.ICU
@@ -70,8 +70,8 @@ interpolationsRule = go 0
 acceptedChars :: String
 acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 
-isAcceptedChar                 :: Char -> Bool
-isAcceptedChar c               =  c <  '\x80' || c `elem` acceptedChars
+isAcceptedChar :: Char -> Bool
+isAcceptedChar c = c < '\x80' || c `elem` acceptedChars
 
 unsupportedUnicodeRule :: Rule InternalLint
 unsupportedUnicodeRule = output . nonAscii where
@@ -82,8 +82,7 @@ unsupportedUnicodeRule = output . nonAscii where
   nonAscii (x@Interpolation {}:ys) = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
 
 formatLintingError :: InternalLint -> Text
-formatLintingError TooManyInterpolations           = "Nested functions are not allowed"
+formatLintingError TooManyInterpolations            = "Nested functions are not allowed"
 formatLintingError (InvalidNonAsciiCharacter chars) = "Following characters are not allowed: " <> intercalateChars chars
-  where
-    intercalateChars:: NonEmpty Char -> Text
-    intercalateChars = T.intercalate " " . toList . fmap T.singleton
+  where intercalateChars:: NonEmpty Char -> Text
+        intercalateChars = T.intercalate " " . toList . fmap T.singleton
