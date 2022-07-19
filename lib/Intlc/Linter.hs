@@ -1,5 +1,8 @@
 module Intlc.Linter where
 
+import qualified Data.Text  as T
+
+import           Data.Char  (isAscii)
 import           Data.These (These (..))
 import           Intlc.ICU
 import           Prelude
@@ -10,14 +13,13 @@ data ExternalLint
 
 data InternalLint
   = TooManyInterpolations
-  deriving (Eq, Show)
+  | InvalidNonAsciiCharacter (NonEmpty Char)
+  deriving (Eq,Show)
 
 data Status a
   = Success
   | Failure (NonEmpty a)
   deriving (Eq, Show)
-
-type Rule a = Stream -> Maybe a
 
 statusToMaybe :: Status a -> Maybe (NonEmpty a)
 statusToMaybe Success      = Nothing
@@ -26,6 +28,23 @@ statusToMaybe (Failure xs) = Just xs
 maybeToStatus :: Maybe (NonEmpty a) -> Status a
 maybeToStatus Nothing   = Success
 maybeToStatus (Just xs) = Failure xs
+
+type Rule a = Stream -> Maybe a
+
+lintWith :: [Rule a] -> Message -> Status a
+lintWith rules (Message stream) = toStatus $ rules `flap` stream
+  where toStatus = maybeToStatus . nonEmpty . catMaybes
+
+lintExternal :: Message -> Status ExternalLint
+lintExternal = lintWith
+  [ redundantSelectRule
+  ]
+
+lintInternal :: Message -> Status InternalLint
+lintInternal = lintWith
+  [ interpolationsRule
+  , unsupportedUnicodeRule
+  ]
 
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule []     = Nothing
@@ -43,19 +62,33 @@ interpolationsRule = go 0
     go 2 _      = Just TooManyInterpolations
     go _ []     = Nothing
     go n (x:xs) = go n' $ maybeToMonoid mys <> xs
-      where mys = getStream x
-            n' = n + length mys
+      where
+        mys = getStream' x
+        n' = n + length mys
+        -- We can count streams to understand how often interpolations
+        -- occur, however we exclude callbacks and plurals from this. The
+        -- former because the vendor's tool has no issues parsing its syntax
+        -- and the latter because it's a special case that we can't rewrite.
+        getStream' (Interpolation _ (Callback {})) = Nothing
+        getStream' (Interpolation _ (Plural {}))   = Nothing
+        getStream' token                           = getStream token
 
-lintWith :: [Rule a] -> Message -> Status a
-lintWith rules (Message stream) = toStatus $ rules `flap` stream
-  where toStatus = maybeToStatus . nonEmpty . catMaybes
+-- Allows any ASCII character as well as a handful of Unicode characters that
+-- we've established are safe for use with our vendor's tool.
+isAcceptedChar :: Char -> Bool
+isAcceptedChar c = isAscii c || c `elem` acceptedChars
+  where acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 
-lintExternal :: Message -> Status ExternalLint
-lintExternal = lintWith
-  [ redundantSelectRule
-  ]
+unsupportedUnicodeRule :: Rule InternalLint
+unsupportedUnicodeRule = output . nonAscii where
+  output = fmap InvalidNonAsciiCharacter . nonEmpty . T.unpack
+  nonAscii :: Stream -> Text
+  nonAscii []                      = mempty
+  nonAscii (Plaintext x:ys)        = T.filter (not . isAcceptedChar) x <> nonAscii ys
+  nonAscii (x@Interpolation {}:ys) = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
 
-lintInternal :: Message -> Status InternalLint
-lintInternal = lintWith
-  [ interpolationsRule
-  ]
+formatLintingError :: InternalLint -> Text
+formatLintingError TooManyInterpolations            = "Nested functions are not allowed"
+formatLintingError (InvalidNonAsciiCharacter chars) = "Following characters are not allowed: " <> intercalateChars chars
+  where intercalateChars:: NonEmpty Char -> Text
+        intercalateChars = T.intercalate " " . toList . fmap T.singleton

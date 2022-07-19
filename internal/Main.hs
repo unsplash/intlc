@@ -11,6 +11,8 @@ import           Intlc.Linter
 import           Intlc.Parser                (parseDataset, printErr)
 import           Intlc.Parser.Error          (ParseFailure)
 import           Prelude                     hiding (filter)
+import           System.Exit                 (ExitCode (ExitFailure))
+
 
 main :: IO ()
 main = getOpts >>= \case
@@ -30,9 +32,11 @@ main = getOpts >>= \case
 
     exit :: Dataset (NonEmpty InternalLint) -> IO ()
     exit sts
-      | M.size sts > 0 = die . T.unpack . ("Errors\n" <>) . M.foldrWithKey mkLine mempty $ sts
-      | otherwise = pure ()
+      | M.size sts > 0 = mapM_ (putTextLn . uncurry printLine) (M.assocs sts) *> exitWith (ExitFailure 1)
+      | otherwise      = pure ()
 
-    mkLine :: Text -> NonEmpty InternalLint -> Text -> Text
-    mkLine k es acc = acc <> "\n" <> k <> ": " <> e
-      where e = T.intercalate ", " . toList . fmap show $ es
+    printLine :: Text -> NonEmpty InternalLint -> Text
+    printLine k es = title <> msgs
+      where title = k <> ": \n"
+            msgs = T.intercalate "\n" . toList . fmap (indent . formatLintingError) $ es
+            indent = (" " <>)
