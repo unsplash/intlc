@@ -2,6 +2,7 @@ module Intlc.Backend.TypeScript.Language where
 
 import           Data.List.NonEmpty (nub)
 import qualified Data.Map           as M
+import           Data.These         (These (..))
 import qualified Intlc.ICU          as ICU
 import           Prelude
 
@@ -48,21 +49,21 @@ fromToken ICU.Plaintext {}        = mempty
 fromToken (ICU.Interpolation x y) = fromInterp x y
 
 fromInterp :: Text -> ICU.Type -> UncollatedArgs
-fromInterp n (ICU.Bool xs ys)   = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
-fromInterp n ICU.String         = pure (n, TStr)
-fromInterp n ICU.Number         = pure (n, TNum)
-fromInterp n ICU.Date {}        = pure (n, TDate)
-fromInterp n ICU.Time {}        = pure (n, TDate)
-fromInterp n (ICU.Plural x)     = fromPlural n x
+fromInterp n (ICU.Bool xs ys)  = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
+fromInterp n ICU.String        = pure (n, TStr)
+fromInterp n ICU.Number        = pure (n, TNum)
+fromInterp n ICU.Date {}       = pure (n, TDate)
+fromInterp n ICU.Time {}       = pure (n, TDate)
+fromInterp n (ICU.Plural x)    = fromPlural n x
 -- Plural references are treated as a no-op.
-fromInterp _ ICU.PluralRef      = mempty
-fromInterp n (ICU.Select cs mw) = (n, t) : (fromSelectCase =<< toList cs) <> foldMap fromSelectWildcard mw
+fromInterp _ ICU.PluralRef     = mempty
+fromInterp n (ICU.Select x)    = case x of
+  (That w)     -> (n, TStr) : fromSelectWildcard w
+  (These cs w) -> (n, TStr) : (fromSelectCase =<< toList cs) <> fromSelectWildcard w
   -- When there's no wildcard case we can compile to a union of string literals.
-  where t = case mw of
-              Just _  -> TStr
-              Nothing -> TStrLitUnion $ caseLit <$> cs
-        caseLit (ICU.SelectCase x _) = x
-fromInterp n (ICU.Callback xs)  = (n, TEndo) : (fromToken =<< xs)
+  (This cs)    -> (n, TStrLitUnion (lit <$> cs)) : (fromSelectCase =<< toList cs)
+    where lit (ICU.SelectCase l _) = l
+fromInterp n (ICU.Callback xs) = (n, TEndo) : (fromToken =<< xs)
 
 fromPlural :: Text -> ICU.Plural -> UncollatedArgs
 fromPlural n (ICU.Cardinal (ICU.LitPlural ls mw))      = (n, t) : (fromExactPluralCase =<< toList ls) <> foldMap fromPluralWildcard mw
