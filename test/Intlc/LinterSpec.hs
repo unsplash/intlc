@@ -42,6 +42,8 @@ spec = describe "linter" $ do
 
     describe "interpolations" $ do
       let lint = lintWith' interpolationsRule
+      -- An example interpolation that's affected by this lint rule.
+      let f = Select . That . SelectWildcard
 
       it "lints streams with 1 plain text token" $ do
         lint (Message [Plaintext "yay"]) `shouldBe` Success
@@ -53,25 +55,28 @@ spec = describe "linter" $ do
         lint (Message [Interpolation "Hello" String]) `shouldBe` Success
 
       it "lints streams with 1 complex interpolation" $ do
-        lint (Message [Interpolation "Hello" (Callback [])]) `shouldBe` Success
+        lint (Message [Interpolation "Hello" (f [])]) `shouldBe` Success
 
       it "lints streams with 1 complex interpolation and 1 simple interpolation" $ do
-        lint (Message [Interpolation "Hello" (Callback []), Plaintext "hello"]) `shouldBe` Success
+        lint (Message [Interpolation "Hello" (f []), Plaintext "hello"]) `shouldBe` Success
+
+      it "lints plurals and callbacks" $ do
+        let cb = Callback []
+        lint (Message [Interpolation "x" cb, Interpolation "y" cb]) `shouldBe` Success
+
+        let p = Plural . Ordinal $ OrdinalPlural [] (pure $ PluralCase Zero []) (PluralWildcard [])
+        lint (Message [Interpolation "x" p, Interpolation "y" p]) `shouldBe` Success
 
       it "does not lint streams with 2 or more complex interpolations" $ do
-        lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [] [])])
+        lint (Message [Interpolation "Hello" (f []), Interpolation "Hello" (f [])])
           `shouldBe` Failure (pure TooManyInterpolations)
 
       it "does not lint nested streams" $ do
-        lint (Message [Interpolation "outer" (Callback [Interpolation "inner" (Callback [])])])
-          `shouldBe` Failure (pure TooManyInterpolations)
-
-      it "does not lint complex interpolations with nested complex interpolations" $ do
-        lint (Message [Interpolation "outer" (Select (This (pure $ SelectCase "hello" [Interpolation "super_inner" (Callback [])])))])
+        lint (Message [Interpolation "outer" (f [Interpolation "inner" (f [])])])
           `shouldBe` Failure (pure TooManyInterpolations)
 
       it "stops iterating after encountering two stream-interpolations" $ do
-        let nested x = Interpolation "x" (Callback [x])
+        let nested x = Interpolation "x" (f [x])
         let e = error "should not reach this item"
 
         lint (Message
