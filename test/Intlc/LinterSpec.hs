@@ -60,6 +60,13 @@ spec = describe "linter" $ do
       it "lints streams with 1 complex interpolation and 1 simple interpolation" $ do
         lint (Message [Interpolation "Hello" (f []), Plaintext "hello"]) `shouldBe` Success
 
+      it "lints plurals and callbacks" $ do
+        let cb = Callback []
+        lint (Message [Interpolation "x" cb, Interpolation "y" cb]) `shouldBe` Success
+
+        let p = Plural . Ordinal $ OrdinalPlural [] (pure $ PluralCase Zero []) (PluralWildcard [])
+        lint (Message [Interpolation "x" p, Interpolation "y" p]) `shouldBe` Success
+
       it "does not lint streams with 2 or more complex interpolations" $ do
         lint (Message [Interpolation "Hello" (f []), Interpolation "Hello" (f [])])
           `shouldBe` Failure (pure TooManyInterpolations)
