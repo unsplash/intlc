@@ -1,6 +1,7 @@
 module Intlc.Parser.JSONSpec (spec) where
 
 import           Intlc.Core
+import qualified Intlc.ICU             as ICU
 import           Intlc.Parser          (parseDataset)
 import           Intlc.Parser.Error    (JSONParseErr (..), MessageParseErr (..),
                                         ParseErr (..), ParseFailure)
@@ -9,7 +10,6 @@ import           Test.Hspec
 import           Test.Hspec.Megaparsec
 import           Text.Megaparsec       (ErrorFancy (ErrorCustom), ParseError)
 import           Text.RawString.QQ     (r)
-import qualified Intlc.ICU as ICU
 
 parse :: Text -> Either ParseFailure (Dataset Translation)
 parse = parseDataset "test"
