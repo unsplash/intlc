@@ -11,6 +11,7 @@ import           Intlc.Linter
 import           Intlc.Parser                (parseDataset, printErr)
 import           Intlc.Parser.Error          (ParseFailure)
 import           Prelude                     hiding (filter)
+import           System.Exit                 (ExitCode (ExitFailure))
 
 
 main :: IO ()
@@ -31,7 +32,7 @@ main = getOpts >>= \case
 
     exit :: Dataset (NonEmpty InternalLint) -> IO ()
     exit sts
-      | M.size sts > 0 = mapM_ (putTextLn . printLine) (M.assocs sts)
+      | M.size sts > 0 = mapM_ (putTextLn . printLine) (M.assocs sts) *> exitWith (ExitFailure 1)
       | otherwise      = pure ()
 
     printLine :: (Text, NonEmpty InternalLint) -> Text
