@@ -42,7 +42,7 @@ lintExternal = lintWith
 lintInternal :: Message -> Status InternalLint
 lintInternal = lintWith
   [ interpolationsRule
-  , noAsciiRule
+  , unsupportedUnicodeRule
   ]
 
 redundantSelectRule :: Rule ExternalLint
@@ -73,8 +73,8 @@ acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 isAcceptedChar                 :: Char -> Bool
 isAcceptedChar c               =  c <  '\x80' || c `elem` acceptedChars
 
-noAsciiRule :: Rule InternalLint
-noAsciiRule = output . nonAscii where
+unsupportedUnicodeRule :: Rule InternalLint
+unsupportedUnicodeRule = output . nonAscii where
   output = fmap InvalidNonAsciiCharacter . nonEmpty . T.unpack
   nonAscii :: Stream -> Text
   nonAscii []                      = mempty

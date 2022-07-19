@@ -27,7 +27,7 @@ spec = describe "linter" $ do
 
   describe "internal" $ do
     describe "unicode" $ do
-      let lint = lintWith' noAsciiRule
+      let lint = lintWith' unsupportedUnicodeRule
 
       it "does not lint text with emoji" $ do
         lint (Message [Plaintext "Message with an emoji ❤️ 🥺"]) `shouldBe` Failure (pure $ InvalidNonAsciiCharacter(fromList "❤️🥺"))
