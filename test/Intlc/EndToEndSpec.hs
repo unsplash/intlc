@@ -6,12 +6,13 @@ import           Intlc.Compiler             (compileDataset, expandPlurals)
 import           Intlc.Core                 (Locale (Locale))
 import           Intlc.Parser               (parseDataset)
 import           Intlc.Parser.Error         (ParseFailure)
-import           Intlc.Parser.ICU           (ParserState (ParserState), msg)
+import           Intlc.Parser.ICU           (ParserState (endOfInput),
+                                             emptyState, msg)
 import           Prelude
 import           System.FilePath            ((<.>), (</>))
 import           Test.Hspec
 import           Test.Hspec.Golden          (Golden (..), defaultGolden)
-import           Text.Megaparsec            (runParser)
+import           Text.Megaparsec            (eof, runParser)
 import           Text.RawString.QQ          (r)
 
 parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text
@@ -19,7 +20,7 @@ parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show)
 
 parseAndExpandMsg :: Text -> Either ParseFailure Text
 parseAndExpandMsg = fmap (compileMsg . expandPlurals) . parseMsg
-  where parseMsg = runParser (runReaderT msg (ParserState mempty)) "test"
+  where parseMsg = runParser (runReaderT msg (emptyState { endOfInput = eof })) "test"
 
 golden :: String -> Text -> Golden String
 golden name in' = baseCfg

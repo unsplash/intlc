@@ -7,7 +7,7 @@ import           Intlc.Parser.Error    (MessageParseErr (..),
 import           Intlc.Parser.ICU
 import           Prelude
 import           Test.Hspec
-import           Test.Hspec.Megaparsec hiding (initialState)
+import           Test.Hspec.Megaparsec
 import           Text.Megaparsec       (eof, runParser)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
@@ -15,7 +15,7 @@ parseWith :: ParserState -> Parser a -> Text -> Either ParseFailure a
 parseWith s p = runParser (runReaderT p s) "test"
 
 parse :: Parser a -> Text -> Either ParseFailure a
-parse = parseWith initialState
+parse = parseWith $ emptyState { endOfInput = eof }
 
 spec :: Spec
 spec = describe "ICU parser" $ do
@@ -82,6 +82,9 @@ spec = describe "ICU parser" $ do
           Message [Plaintext "a ", Interpolation "b" String, Plaintext " {c} ", Interpolation "d" String, Plaintext " e"]
         parse msg "a {b} 'c {d} e" `shouldParse`
           Message [Plaintext "a ", Interpolation "b" String, Plaintext " 'c ", Interpolation "d" String, Plaintext " e"]
+        parse msg "{n, plural, =42 {# '#}}" `shouldParse`
+          let xs = [Interpolation "n" PluralRef, Plaintext " #"]
+           in Message [Interpolation "n" $ Plural (Cardinal $ LitPlural (pure $ PluralCase (PluralExact "42") xs) Nothing)]
 
       it "escapes two single quotes as one single quote" $ do
         parse msg "This '{isn''t}' obvious." `shouldParse` Message [Plaintext "This {isn't} obvious."]
@@ -90,6 +93,7 @@ spec = describe "ICU parser" $ do
 
       it "ignores one single quote not immediately preceding a syntax character" $ do
         parse msg "'" `shouldParse` Message [Plaintext "'"]
+        parse msg "' '" `shouldParse` Message [Plaintext "' '"]
         parse msg "x'y" `shouldParse` Message [Plaintext "x'y"]
 
   describe "interpolation" $ do
@@ -164,7 +168,7 @@ spec = describe "ICU parser" $ do
       parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef]))
 
   describe "selectordinal" $ do
@@ -185,7 +189,7 @@ spec = describe "ICU parser" $ do
       parse ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (ParserState (Just "xyz")) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef]))
 
   describe "select" $ do

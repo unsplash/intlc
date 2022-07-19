@@ -1,12 +1,13 @@
 module Intlc.Parser.JSONSpec (spec) where
 
 import           Intlc.Core
+import qualified Intlc.ICU             as ICU
 import           Intlc.Parser          (parseDataset)
 import           Intlc.Parser.Error    (JSONParseErr (..), MessageParseErr (..),
                                         ParseErr (..), ParseFailure)
 import           Prelude
 import           Test.Hspec
-import           Test.Hspec.Megaparsec hiding (initialState)
+import           Test.Hspec.Megaparsec
 import           Text.Megaparsec       (ErrorFancy (ErrorCustom), ParseError)
 import           Text.RawString.QQ     (r)
 
@@ -77,4 +78,23 @@ spec = describe "JSON parser" $ do
       [ e 94 (FailedMsgParse $ NoClosingCallbackTag "foo")
       , e 163 (FailedMsgParse $ BadClosingCallbackTag "foo" "bar")
       , e 184 (FailedJSONParse $ DuplicateKey "dupeKey")
+      ]
+
+  it "doesn't parse interpolation escapes across message boundaries" $ do
+    let msg x = Translation { message = ICU.Message x, backend = TypeScript, mdesc = Nothing }
+
+    parse [r|{
+      "x": { "message": "a'" },
+      "y": { "message": "'b" }
+    }|] `shouldParse` fromList
+      [ ("x", msg [ICU.Plaintext "a'"])
+      , ("y", msg [ICU.Plaintext "'b"])
+      ]
+
+    parse [r|{
+      "x": { "message": "a'{b" },
+      "y": { "message": "c}'d" }
+    }|] `shouldParse` fromList
+      [ ("x", msg [ICU.Plaintext "a{b"])
+      , ("y", msg [ICU.Plaintext "c}'d"])
       ]
