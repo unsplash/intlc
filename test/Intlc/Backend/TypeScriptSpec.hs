@@ -1,6 +1,7 @@
 module Intlc.Backend.TypeScriptSpec (spec) where
 
 import qualified Data.Text                         as T
+import           Data.These                        (These (..))
 import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
 import           Intlc.Backend.TypeScript.Compiler (compileNamedExport,
                                                     compileTypeof)
@@ -28,7 +29,7 @@ golden strat compiler name msg = baseCfg
 spec :: Spec
 spec = describe "TypeScript compiler" $ do
   describe "golden" $ do
-    let msg = ICU.Message $
+    let msg = ICU.Message
           [ ICU.Plaintext "Hello "
           , ICU.Interpolation "bold" (ICU.Callback (pure $
               ICU.Interpolation "name" ICU.String
@@ -48,11 +49,11 @@ spec = describe "TypeScript compiler" $ do
           , ICU.Plaintext ", and the time is "
           , ICU.Interpolation "currTime" (ICU.Time ICU.Full)
           , ICU.Plaintext ". And just to recap, your name is "
-          , ICU.Interpolation "name" (ICU.Select (fromList
+          , ICU.Interpolation "name" (ICU.Select . This . fromList $
               [ ICU.SelectCase "Sam" [ICU.Plaintext "undoubtedly excellent"]
               , ICU.SelectCase "Ashley" [ICU.Plaintext "fairly good"]
               ]
-            ) Nothing)
+            )
           , ICU.Plaintext ". Finally, you are "
           , ICU.Interpolation "isDev" (ICU.Bool
             { ICU.trueCase = [ICU.Plaintext "a software engineer"]
@@ -92,13 +93,13 @@ spec = describe "TypeScript compiler" $ do
     -- Typechecking happens externally.
     it "typechecks nested selects" $ do
       golden TemplateLit (compileNamedExport TemplateLit (Locale "te-ST") "test") "nested-select" $
-        ICU.Message [ICU.Interpolation "x" $ flip ICU.Select Nothing $ (fromList
+        ICU.Message [ICU.Interpolation "x" . ICU.Select . This $ fromList
           [ ICU.SelectCase "a" []
-          , ICU.SelectCase "b" [ICU.Interpolation "x" $ flip ICU.Select Nothing $ (fromList
+          , ICU.SelectCase "b" [ICU.Interpolation "x" . ICU.Select . This $ fromList
             [ ICU.SelectCase "a" [] -- <-- without a workaround, TypeScript will have narrowed and reject this case
             , ICU.SelectCase "b" []
-            ])]
-          ])]
+            ]]
+          ]]
 
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
@@ -106,7 +107,7 @@ spec = describe "TypeScript compiler" $ do
     let fromArgs = fromList
 
     it "in select" $ do
-      let x = flip ICU.Select Nothing . pure $ ICU.SelectCase "foo" [ICU.Interpolation "y" ICU.String]
+      let x = ICU.Select . This . pure $ ICU.SelectCase "foo" [ICU.Interpolation "y" ICU.String]
       let ys =
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
               , ("y", pure TS.TStr)

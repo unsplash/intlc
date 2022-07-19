@@ -1,5 +1,6 @@
 module Intlc.Parser.ICUSpec (spec) where
 
+import           Data.These            (These (..))
 import           Intlc.ICU
 import           Intlc.Parser.Error    (MessageParseErr (..),
                                         ParseErr (FailedMsgParse), ParseFailure)
@@ -7,7 +8,7 @@ import           Intlc.Parser.ICU
 import           Prelude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec
-import           Text.Megaparsec       (runParser, eof)
+import           Text.Megaparsec       (eof, runParser)
 import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
 
 parseWith :: ParserState -> Parser a -> Text -> Either ParseFailure a
@@ -36,7 +37,7 @@ spec = describe "ICU parser" $ do
         parse msg "#" `shouldParse` Message [Plaintext "#"]
         parse msg "{x, select, y {#}}" `shouldParse`
           (Message . pure . Interpolation "x" $
-            Select (pure $ SelectCase "y" (pure $ Plaintext "#")) Nothing)
+            Select (This . pure $ SelectCase "y" (pure $ Plaintext "#")))
 
       it "parses as arg inside shallow plural" $ do
         let n = pure $ Interpolation "n" PluralRef
@@ -192,14 +193,16 @@ spec = describe "ICU parser" $ do
         Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef]))
 
   describe "select" $ do
+    let selectCases' = selectCases <* eof
+
     it "disallows wildcard not at the end" $ do
-      parse selectCases "foo {bar} other {baz}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Just (SelectWildcard [Plaintext "baz"]))
-      parse selectCases `shouldFailOn` "other {bar} foo {baz}"
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure $ SelectCase "foo" [Plaintext "bar"]) (SelectWildcard [Plaintext "baz"])
+      parse selectCases' `shouldFailOn` "other {bar} foo {baz}"
 
     it "tolerates empty cases" $ do
-      parse selectCases "x {} other {}" `shouldParse` (pure (SelectCase "x" []), Just (SelectWildcard []))
+      parse selectCases' "x {} other {}" `shouldParse` These (pure $ SelectCase "x" []) (SelectWildcard [])
 
-    it "requires at least one non-wildcard case" $ do
-      parse selectCases "foo {bar}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Nothing)
-      parse selectCases "foo {bar} other {baz}" `shouldParse` (pure (SelectCase "foo" [Plaintext "bar"]), Just (SelectWildcard [Plaintext "baz"]))
-      parse selectCases `shouldFailOn` "other {foo}"
+    it "allows no non-wildcard case" $ do
+      parse selectCases' "foo {bar}" `shouldParse` This (pure $ SelectCase "foo" [Plaintext "bar"])
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure $ SelectCase "foo" [Plaintext "bar"]) (SelectWildcard [Plaintext "baz"])
+      parse selectCases' "other {foo}" `shouldParse` That (SelectWildcard [Plaintext "foo"])

@@ -6,12 +6,13 @@ import           Intlc.Compiler             (compileDataset, expandPlurals)
 import           Intlc.Core                 (Locale (Locale))
 import           Intlc.Parser               (parseDataset)
 import           Intlc.Parser.Error         (ParseFailure)
-import           Intlc.Parser.ICU           (msg, emptyState, ParserState (endOfInput))
+import           Intlc.Parser.ICU           (ParserState (endOfInput),
+                                             emptyState, msg)
 import           Prelude
 import           System.FilePath            ((<.>), (</>))
 import           Test.Hspec
 import           Test.Hspec.Golden          (Golden (..), defaultGolden)
-import           Text.Megaparsec            (runParser, eof)
+import           Text.Megaparsec            (eof, runParser)
 import           Text.RawString.QQ          (r)
 
 parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text

@@ -8,8 +8,9 @@
 
 module Intlc.Backend.ICU.Compiler where
 
+import           Data.These (These (..), mergeTheseWith)
 import           Intlc.ICU
-import           Prelude   hiding (Type)
+import           Prelude    hiding (Type)
 
 compileMsg :: Message -> Text
 compileMsg (Message xs) = stream xs
@@ -30,7 +31,7 @@ interp n (Time fmt)                   = "{" <> n <> ", time, "          <> dateT
 interp n (Plural (Cardinal p))        = "{" <> n <> ", plural, "        <> cardinalPlural p <> "}"
 interp n (Plural (Ordinal p))         = "{" <> n <> ", selectordinal, " <> ordinalPlural p  <> "}"
 interp _ PluralRef                    = "#"
-interp n (Select xs y)                = "{" <> n <> ", select, "        <> select xs y      <> "}"
+interp n (Select x)                   = "{" <> n <> ", select, "        <> select x         <> "}"
 interp n (Callback xs)                = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
 
 dateTimeFmt :: DateTimeFmt -> Text
@@ -64,7 +65,7 @@ pluralRule Many = "many"
 pluralWildcard :: PluralWildcard -> Text
 pluralWildcard (PluralWildcard xs) = "other {" <> stream xs <> "}"
 
-select :: NonEmpty SelectCase -> Maybe SelectWildcard -> Text
-select xs mw = unwords . toList $ (case' <$> toList xs) <> foldMap (pure . wild) mw
+select :: These (NonEmpty SelectCase) SelectWildcard -> Text
+select = unwords . mergeTheseWith (toList . fmap case') (pure . wild) (<>)
   where case' (SelectCase n ys) = n <> " {" <> stream ys <> "}"
         wild (SelectWildcard ys) = "other {" <> stream ys <> "}"

@@ -23,6 +23,7 @@ common common
     , optics               ^>=0.4
     , relude               ^>=1.0
     , text                 ^>=1.2
+    , these                ^>=1.1
     , validation           ^>=1.1
   mixins:
       base hiding (Prelude)

@@ -27,19 +27,17 @@ main = getOpts >>= \case
     expandPlurals' = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals (message x) })
 
     lint' :: Dataset Translation -> IO ()
-    lint' = exit . M.mapMaybe (statusToMaybe . lint . message)
+    lint' = exit . M.mapMaybe (statusToMaybe . lintInternal . message)
 
-    exit :: Dataset (NonEmpty LintingError) -> IO ()
+    exit :: Dataset (NonEmpty InternalLint) -> IO ()
     exit sts
       | M.size sts > 0 =   mapM_ printLine (M.assocs sts)
       | otherwise = pure ()
 
-
-    printLine :: (Text,NonEmpty LintingError) -> IO()
+    printLine :: (Text,NonEmpty InternalLint) -> IO()
     printLine (k ,es) =  putStrLn (T.unpack k <> ": ") >> tab >> e
       where
           e::IO()
           e = mapM_ putStrLn (toList . fmap (T.unpack . formatLintingError) $ es)
           tab:: IO()
           tab = putStr " "
-
