@@ -61,12 +61,17 @@ interpolationsRule = go 0
     go :: Int -> Rule InternalLint
     go 2 _      = Just TooManyInterpolations
     go _ []     = Nothing
-    go n (x:xs) = go (n' x) $ maybeToMonoid (mys x) <> xs
+    go n (x:xs) = go n' $ maybeToMonoid mys <> xs
       where
-        mys (Interpolation _ (Callback {})) = Nothing
-        mys (Interpolation _ (Plural {}))   = Nothing
-        mys token                           = getStream token
-        n' token = n + length (mys token)
+        mys = getStream' x
+        n' = n + length mys
+        -- We can count streams to understand how often interpolations
+        -- occur, however we exclude callbacks and plurals from this. The
+        -- former because the vendor's tool has no issues parsing its syntax
+        -- and the latter because it's a special case that we can't rewrite.
+        getStream' (Interpolation _ (Callback {})) = Nothing
+        getStream' (Interpolation _ (Plural {}))   = Nothing
+        getStream' token                           = getStream token
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
