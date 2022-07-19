@@ -32,11 +32,11 @@ main = getOpts >>= \case
 
     exit :: Dataset (NonEmpty InternalLint) -> IO ()
     exit sts
-      | M.size sts > 0 = mapM_ (putTextLn . printLine) (M.assocs sts) *> exitWith (ExitFailure 1)
+      | M.size sts > 0 = mapM_ (putTextLn . uncurry printLine) (M.assocs sts) *> exitWith (ExitFailure 1)
       | otherwise      = pure ()
 
-    printLine :: (Text, NonEmpty InternalLint) -> Text
-    printLine (k, es) = title <> msgs
+    printLine :: Text -> NonEmpty InternalLint -> Text
+    printLine k es = title <> msgs
       where title = k <> ": \n"
             msgs = T.intercalate "\n" . toList . fmap (indent . formatLintingError) $ es
             indent = (" " <>)
