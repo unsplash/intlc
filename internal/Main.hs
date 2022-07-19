@@ -35,7 +35,7 @@ main = getOpts >>= \case
       | otherwise      = pure ()
 
     printLine :: (Text, NonEmpty InternalLint) -> IO ()
-    printLine (k, es) = putStrLn (T.unpack k <> ": ") >> tab >> e
+    printLine (k, es) = putStrLn (T.unpack k <> ": ") *> tab *> e
       where
           e :: IO ()
           e = mapM_ putStrLn (toList . fmap (T.unpack . formatLintingError) $ es)
