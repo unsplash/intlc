@@ -13,9 +13,9 @@ import           System.Exit        (ExitCode (ExitFailure))
 
 main :: IO ()
 main = getOpts >>= \case
-  Compile path loc -> tryGetParsed path >>= compile loc
-  Flatten path     -> tryGetParsed path >>= flatten
-  Lint    path     -> tryGetParsed path >>= lint
+  Compile path loc -> tryGetParsedAt path >>= compile loc
+  Flatten path     -> tryGetParsedAt path >>= flatten
+  Lint    path     -> tryGetParsedAt path >>= lint
 
 compile :: MonadIO m => Locale -> Dataset Translation -> m ()
 compile loc = compileDataset loc >>> \case
@@ -31,8 +31,8 @@ lint xs = do
   let msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs lints
   unless (M.null lints) $ putTextLn msg *> exitWith (ExitFailure 1)
 
-tryGetParsed :: MonadIO m => FilePath -> m (Dataset Translation)
-tryGetParsed = either (die . printErr) pure <=< getParsed
+tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset Translation)
+tryGetParsedAt = either (die . printErr) pure <=< getParsedAt
 
-getParsed :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
-getParsed x = parseDataset x <$> readFileText x
+getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
+getParsedAt x = parseDataset x <$> readFileText x
