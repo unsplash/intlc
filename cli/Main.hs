@@ -17,10 +17,12 @@ main = getOpts >>= \case
   Flatten path     -> tryGetParsed path >>= (compileFlattened >>> putTextLn)
   Lint    path     -> tryGetParsed path >>= lint
   where compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
-        lint = exit . M.mapMaybe (statusToMaybe . lintExternal . message)
-        exit :: Dataset (NonEmpty ExternalLint) -> IO ()
-        exit sts = unless (M.null sts) $ putTextLn msg *> exitWith (ExitFailure 1)
-          where msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs sts
+
+lint :: MonadIO m => Dataset Translation -> m ()
+lint xs = do
+  let lints = M.mapMaybe (statusToMaybe . lintExternal . message) xs
+  let msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs lints
+  unless (M.null lints) $ putTextLn msg *> exitWith (ExitFailure 1)
 
 tryGetParsed :: MonadIO m => FilePath -> m (Dataset Translation)
 tryGetParsed = either (die . printErr) pure <=< getParsed
