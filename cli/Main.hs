@@ -19,11 +19,8 @@ main = getOpts >>= \case
   where compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
         lint = exit . M.mapMaybe (statusToMaybe . lintExternal . message)
         exit :: Dataset (NonEmpty ExternalLint) -> IO ()
-        exit sts
-          | not (M.null sts) =
-            let msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs sts
-             in putTextLn msg *> exitWith (ExitFailure 1)
-          | otherwise      = pure ()
+        exit sts = unless (M.null sts) $ putTextLn msg *> exitWith (ExitFailure 1)
+          where msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs sts
 
 tryGetParsed :: MonadIO m => FilePath -> m (Dataset Translation)
 tryGetParsed = either (die . printErr) pure <=< getParsed
