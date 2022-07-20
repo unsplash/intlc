@@ -108,7 +108,8 @@ escaped = apos *> choice
 
 callback :: Parser (Text, Type)
 callback = do
-  (openPos, oname) <- (,) <$> (string "<" *> getOffset) <*> ident <* string ">"
+  (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> ident <* string ">"
+  when isClosing $ (openPos + 1) `failingWith'` NoOpeningCallbackTag oname
   mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
     Left _  -> openPos `failingWith'` NoClosingCallbackTag oname
@@ -119,6 +120,7 @@ callback = do
             eom <- asks endOfInput
             stream <- streamTill (lookAhead $ void (string "</") <|> eom)
             pure . Callback . mergePlaintext $ stream
+          closing = isJust <$> optional (char '/')
 
 interp :: Parser (Text, Type)
 interp = between (char '{') (char '}') $ do

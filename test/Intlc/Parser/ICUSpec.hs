@@ -131,19 +131,21 @@ spec = describe "ICU parser" $ do
         parse interp `shouldFailOn` "{x, time, miniature}"
 
   describe "callback" $ do
+    let e i = errFancy i . fancy . ErrorCustom . FailedMsgParse
+
     it "parses nested" $ do
       parse callback "<f><g>x{y}z</g></f>" `shouldParse`
         ("f", Callback [Interpolation "g" (Callback [Plaintext "x", Interpolation "y" String, Plaintext "z"])])
 
+    it "requires closing tag" $ do
+      parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
+
+    it "requires opening tag" $ do
+      parse callback "</hello> <there>" `shouldFailWith` e 2 (NoOpeningCallbackTag "hello")
+
     it "validates closing tag name" $ do
       parse callback "<hello></hello>" `shouldParse` ("hello", Callback [])
-      parse callback `shouldFailOn` "<hello></there>"
-
-    it "reports friendly error for bad closing tag" $ do
-      let e i = errFancy i . fancy . ErrorCustom . FailedMsgParse
-
-      parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
-      parse callback "<hello> </there>" `shouldFailWith` e 10 (BadClosingCallbackTag "hello" "there")
+      parse callback "<hello></there>" `shouldFailWith` e 9 (BadClosingCallbackTag "hello" "there")
 
     it "only accepts alphanumeric identifiers" $ do
       parse callback "<XyZ></XyZ>" `shouldParse` ("XyZ", Callback [])

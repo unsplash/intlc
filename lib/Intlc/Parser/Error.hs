@@ -24,6 +24,7 @@ data JSONParseErr
 data MessageParseErr
   = NoClosingCallbackTag Text
   | BadClosingCallbackTag Text Text
+  | NoOpeningCallbackTag Text
   deriving (Show, Eq, Ord)
 
 instance ShowErrorComponent ParseErr where
@@ -36,6 +37,7 @@ instance ShowErrorComponent JSONParseErr where
 instance ShowErrorComponent MessageParseErr where
   showErrorComponent (NoClosingCallbackTag x)    = "Callback tag <" <> T.unpack x <> "> not closed"
   showErrorComponent (BadClosingCallbackTag x y) = "Callback tag <" <> T.unpack x <> "> not closed, instead found </" <> T.unpack y <> ">"
+  showErrorComponent (NoOpeningCallbackTag x)    = "Callback tag </" <> T.unpack x <> "> not opened"
 
 failingWith :: MonadParsec e s m => Int -> e -> m a
 pos `failingWith` e = parseError . errFancy pos . fancy . ErrorCustom $ e
