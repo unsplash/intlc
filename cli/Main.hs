@@ -18,8 +18,9 @@ main = getOpts >>= \case
   Lint    path     -> tryGetParsed path >>= lint
 
 compile :: MonadIO m => Locale -> Dataset Translation -> m ()
-compile loc = either compilerDie putTextLn . compileDataset loc
-  where compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
+compile loc = compileDataset loc >>> \case
+  Left es -> die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList $ es
+  Right x -> putTextLn x
 
 flatten :: MonadIO m => Dataset Translation -> m ()
 flatten = putTextLn . compileFlattened
