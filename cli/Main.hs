@@ -20,7 +20,7 @@ main = getOpts >>= \case
         lint = exit . M.mapMaybe (statusToMaybe . lintExternal . message)
         exit :: Dataset (NonEmpty ExternalLint) -> IO ()
         exit sts
-          | M.size sts > 0 =
+          | not (M.null sts) =
             let msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs sts
              in putTextLn msg *> exitWith (ExitFailure 1)
           | otherwise      = pure ()
