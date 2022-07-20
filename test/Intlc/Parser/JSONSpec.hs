@@ -41,6 +41,9 @@ spec = describe "JSON parser" $ do
     succeedsOn [r|{ "f": { "message": "{foo}", "backend": null, "description": null } }|]
     succeedsOn [r|{ "f": { "message": "{foo}" } }|]
 
+  it "accepts trailing commas" $ do
+    succeedsOn [r|{ "f": { "message": "{foo}", }, }|]
+
   it "rejects duplicate keys" $ do
     parse [r|{
       "a": { "message": "{foo}" },
