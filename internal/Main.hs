@@ -2,6 +2,7 @@ module Main where
 
 import           CLI                         (Opts (..), getOpts)
 import qualified Data.Map                    as M
+import qualified Data.Text                   as T
 import           Data.Text.IO                (getContents)
 import           Intlc.Backend.JSON.Compiler (compileDataset)
 import           Intlc.Compiler              (expandPlurals)
@@ -15,21 +16,26 @@ import           System.Exit                 (ExitCode (ExitFailure))
 
 main :: IO ()
 main = getOpts >>= \case
-  Lint path     -> either parserDie lint =<< getParsed path
-  ExpandPlurals -> either parserDie expandPlurals' . parseDataset "stdin" =<< getContents
-  where
-    getParsed :: FilePath -> IO (Either ParseFailure (Dataset Translation))
-    getParsed x = parseDataset x <$> readFileText x
+  Lint path     -> tryGetParsedAt path >>= lint
+  ExpandPlurals -> tryGetParsedStdin >>= compileExpandedPlurals
 
-    parserDie = die . printErr
+lint :: MonadIO m => Dataset Translation -> m ()
+lint xs = do
+  let lints = M.mapMaybe (statusToMaybe . lintInternal . message) xs
+  let msg = T.intercalate "\n" $ uncurry formatInternalFailure <$> M.assocs lints
+  unless (M.null lints) $ putTextLn msg *> exitWith (ExitFailure 1)
 
-    expandPlurals' :: Dataset Translation -> IO ()
-    expandPlurals' = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals (message x) })
+compileExpandedPlurals :: MonadIO m => Dataset Translation -> m ()
+compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals (message x) })
 
-    lint :: Dataset Translation -> IO ()
-    lint = exit . M.mapMaybe (statusToMaybe . lintInternal . message)
+tryGetParsedStdin :: IO (Dataset Translation)
+tryGetParsedStdin = either (die . printErr) pure =<< getParsedStdin
 
-    exit :: Dataset (NonEmpty InternalLint) -> IO ()
-    exit sts
-      | M.size sts > 0 = mapM_ (putTextLn . uncurry formatInternalFailure) (M.assocs sts) *> exitWith (ExitFailure 1)
-      | otherwise      = pure ()
+tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset Translation)
+tryGetParsedAt = either (die . printErr) pure <=< getParsedAt
+
+getParsedStdin :: IO (Either ParseFailure (Dataset Translation))
+getParsedStdin = parseDataset "stdin" <$> getContents
+
+getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
+getParsedAt x = parseDataset x <$> readFileText x
