@@ -32,7 +32,10 @@ lint xs = do
   unless (M.null lints) $ putTextLn msg *> exitWith (ExitFailure 1)
 
 tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset Translation)
-tryGetParsedAt = either (die . printErr) pure <=< getParsedAt
+tryGetParsedAt = parserDie <=< getParsedAt
+
+parserDie :: MonadIO m => Either ParseFailure a -> m a
+parserDie = either (die . printErr) pure
 
 getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
 getParsedAt x = parseDataset x <$> readFileText x

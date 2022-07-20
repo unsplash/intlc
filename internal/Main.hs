@@ -29,10 +29,13 @@ compileExpandedPlurals :: MonadIO m => Dataset Translation -> m ()
 compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals (message x) })
 
 tryGetParsedStdin :: IO (Dataset Translation)
-tryGetParsedStdin = either (die . printErr) pure =<< getParsedStdin
+tryGetParsedStdin = parserDie =<< getParsedStdin
 
 tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset Translation)
-tryGetParsedAt = either (die . printErr) pure <=< getParsedAt
+tryGetParsedAt = parserDie <=< getParsedAt
+
+parserDie :: MonadIO m => Either ParseFailure a -> m a
+parserDie = either (die . printErr) pure
 
 getParsedStdin :: IO (Either ParseFailure (Dataset Translation))
 getParsedStdin = parseDataset "stdin" <$> getContents
