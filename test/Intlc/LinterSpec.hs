@@ -68,18 +68,11 @@ spec = describe "linter" $ do
         lint (Message [Interpolation "x" p, Interpolation "y" p]) `shouldBe` Success
 
       it "does not lint streams with 2 or more complex interpolations" $ do
-        lint (Message [Interpolation "Hello" (f []), Interpolation "Hello" (f [])])
-          `shouldBe` Failure (pure TooManyInterpolations)
+        lint (Message [Interpolation "x" (f []), Interpolation "y" (f [])])
+          `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y"]))
+        lint (Message [Interpolation "x" (f []), Interpolation "y" (f []), Interpolation "z" (f [])])
+          `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y", "z"]))
 
       it "does not lint nested streams" $ do
         lint (Message [Interpolation "outer" (f [Interpolation "inner" (f [])])])
-          `shouldBe` Failure (pure TooManyInterpolations)
-
-      it "stops iterating after encountering two stream-interpolations" $ do
-        let nested x = Interpolation "x" (f [x])
-        let e = error "should not reach this item"
-
-        lint (Message
-          [ nested (nested e)
-          , e
-          ]) `shouldBe` Failure (pure TooManyInterpolations)
+          `shouldBe` Failure (pure $ TooManyInterpolations ("outer" :| ["inner"]))

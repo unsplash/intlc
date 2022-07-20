@@ -15,7 +15,7 @@ data ExternalLint
   deriving (Eq, Show)
 
 data InternalLint
-  = TooManyInterpolations
+  = TooManyInterpolations (NonEmpty Text)
   | InvalidNonAsciiCharacter (NonEmpty Char)
   deriving (Eq,Show)
 
@@ -61,7 +61,7 @@ lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
-  TooManyInterpolations            -> "Nested functions are not allowed"
+  TooManyInterpolations xs         -> "Multiple complex interpolations: " <> T.intercalate ", " (toList xs)
   (InvalidNonAsciiCharacter chars) -> "Following characters are not allowed: " <> intercalateChars chars
     where intercalateChars:: NonEmpty Char -> Text
           intercalateChars = T.intercalate " " . toList . fmap T.singleton
@@ -81,23 +81,25 @@ redundantSelectRule (x:xs)
   where isRedundant (Interpolation _ (Select (That _w))) = True
         isRedundant _                                    = False
 
+-- Our translation vendor has poor support for ICU syntax, and their parser
+-- particularly struggles with interpolations. This rule limits the use of these
+-- interpolations to one per message, with caveats (see below "complex").
 interpolationsRule :: Rule InternalLint
-interpolationsRule = go 0
-  where
-    go :: Int -> Rule InternalLint
-    go 2 _      = Just TooManyInterpolations
-    go _ []     = Nothing
-    go n (x:xs) = go n' $ maybeToMonoid mys <> xs
-      where
-        mys = getStream' x
-        n' = n + length mys
-        -- We can count streams to understand how often interpolations
-        -- occur, however we exclude callbacks and plurals from this. The
-        -- former because the vendor's tool has no issues parsing its syntax
-        -- and the latter because it's a special case that we can't rewrite.
-        getStream' (Interpolation _ (Callback {})) = Nothing
-        getStream' (Interpolation _ (Plural {}))   = Nothing
-        getStream' token                           = getStream token
+interpolationsRule = count . complexIdents where
+  count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
+  count _        = Nothing
+  complexIdents []     = []
+  complexIdents (x:xs) = case getComplexStream x of
+    Nothing      -> complexIdents xs
+    Just (n, ys) -> n : complexIdents ys <> complexIdents xs
+  -- We can count streams to understand how often interpolations occur,
+  -- however we exclude callbacks and plurals from this. The former because
+  -- the vendor's tool has no issues parsing its syntax and the latter
+  -- because it's a special case that we can't rewrite.
+  getComplexStream (Interpolation _ (Callback {})) = Nothing
+  getComplexStream (Interpolation _ (Plural {}))   = Nothing
+  getComplexStream token@(Interpolation n _)       = (n,) <$> getStream token
+  getComplexStream Plaintext {}                    = Nothing
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
