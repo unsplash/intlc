@@ -46,6 +46,23 @@ lintInternal = lintWith
   , unsupportedUnicodeRule
   ]
 
+formatFailureWith :: (Functor f, Foldable f) => (a -> Text) -> Text -> f a -> Text
+formatFailureWith f k es = title <> msgs
+  where title = k <> ": \n"
+        msgs = T.intercalate "\n" . toList . fmap (indent . f) $ es
+        indent = (" " <>)
+
+formatExternalFailure :: (Functor f, Foldable f) => Text -> f ExternalLint -> Text
+formatExternalFailure = formatFailureWith $ \case
+  RedundantSelect -> "Redundant select found"
+
+formatInternalFailure :: (Functor f, Foldable f) => Text -> f InternalLint -> Text
+formatInternalFailure = formatFailureWith $ \case
+  TooManyInterpolations            -> "Nested functions are not allowed"
+  (InvalidNonAsciiCharacter chars) -> "Following characters are not allowed: " <> intercalateChars chars
+    where intercalateChars:: NonEmpty Char -> Text
+          intercalateChars = T.intercalate " " . toList . fmap T.singleton
+
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule []     = Nothing
 redundantSelectRule (x:xs)
@@ -86,9 +103,3 @@ unsupportedUnicodeRule = output . nonAscii where
   nonAscii []                      = mempty
   nonAscii (Plaintext x:ys)        = T.filter (not . isAcceptedChar) x <> nonAscii ys
   nonAscii (x@Interpolation {}:ys) = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
-
-formatLintingError :: InternalLint -> Text
-formatLintingError TooManyInterpolations            = "Nested functions are not allowed"
-formatLintingError (InvalidNonAsciiCharacter chars) = "Following characters are not allowed: " <> intercalateChars chars
-  where intercalateChars:: NonEmpty Char -> Text
-        intercalateChars = T.intercalate " " . toList . fmap T.singleton
