@@ -2,9 +2,6 @@
 -- parsers share the same error type, but we also need to avoid cyclic
 -- dependencies - so it all lives here.
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
-
 module Intlc.Parser.Error where
 
 import qualified Data.Text                     as T

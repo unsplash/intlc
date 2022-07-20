@@ -8,9 +8,6 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
-
 module Intlc.Parser.JSON where
 
 import           Control.Applicative.Permutations
