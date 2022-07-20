@@ -11,8 +11,6 @@ import           Intlc.Linter
 import           Intlc.Parser                (parseDataset, printErr)
 import           Intlc.Parser.Error          (ParseFailure)
 import           Prelude                     hiding (filter)
-import           System.Exit                 (ExitCode (ExitFailure))
-
 
 main :: IO ()
 main = getOpts >>= \case
@@ -23,7 +21,7 @@ lint :: MonadIO m => Dataset Translation -> m ()
 lint xs = do
   let lints = M.mapMaybe (statusToMaybe . lintInternal . message) xs
   let msg = T.intercalate "\n" $ uncurry formatInternalFailure <$> M.assocs lints
-  unless (M.null lints) $ putTextLn msg *> exitWith (ExitFailure 1)
+  unless (M.null lints) $ die (T.unpack msg)
 
 compileExpandedPlurals :: MonadIO m => Dataset Translation -> m ()
 compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals (message x) })
