@@ -25,5 +25,5 @@ main = getOpts >>= \case
           | M.size sts > 0 = mapM_ (putTextLn . uncurry formatExternalFailure) (M.assocs sts) *> exitWith (ExitFailure 1)
           | otherwise      = pure ()
 
-getParsed :: FilePath -> IO (Either ParseFailure (Dataset Translation))
+getParsed :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
 getParsed x = parseDataset x <$> readFileText x
