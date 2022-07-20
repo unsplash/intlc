@@ -16,6 +16,7 @@ Available options:
 Available commands:
   compile
   flatten
+  lint
 ```
 
 For example:
