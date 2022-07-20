@@ -20,7 +20,9 @@ main = getOpts >>= \case
         lint = exit . M.mapMaybe (statusToMaybe . lintExternal . message)
         exit :: Dataset (NonEmpty ExternalLint) -> IO ()
         exit sts
-          | M.size sts > 0 = mapM_ (putTextLn . uncurry formatExternalFailure) (M.assocs sts) *> exitWith (ExitFailure 1)
+          | M.size sts > 0 =
+            let msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs sts
+             in putTextLn msg *> exitWith (ExitFailure 1)
           | otherwise      = pure ()
 
 tryGetParsed :: MonadIO m => FilePath -> m (Dataset Translation)
