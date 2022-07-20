@@ -13,9 +13,9 @@ import           System.Exit        (ExitCode (ExitFailure))
 
 main :: IO ()
 main = getOpts >>= \case
-  Compile path loc -> either compilerDie putTextLn . compileDataset loc =<< tryGetParsed path
-  Flatten path     -> putTextLn . compileFlattened =<< tryGetParsed path
-  Lint    path     -> lint =<< tryGetParsed path
+  Compile path loc -> tryGetParsed path >>= (compileDataset loc >>> either compilerDie putTextLn)
+  Flatten path     -> tryGetParsed path >>= (compileFlattened >>> putTextLn)
+  Lint    path     -> tryGetParsed path >>= lint
   where compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
         lint = exit . M.mapMaybe (statusToMaybe . lintExternal . message)
         exit :: Dataset (NonEmpty ExternalLint) -> IO ()
