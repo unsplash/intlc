@@ -56,27 +56,21 @@ lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
         msg = T.intercalate "\n" $ uncurry fmt <$> M.assocs lints
 
 lintDatasetExternal :: Dataset Translation -> Maybe Text
-lintDatasetExternal = lintDatasetWith lintExternal formatExternalFailure
+lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
+  RedundantSelect -> "Redundant select found"
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
-lintDatasetInternal = lintDatasetWith lintInternal formatInternalFailure
+lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
+  TooManyInterpolations            -> "Nested functions are not allowed"
+  (InvalidNonAsciiCharacter chars) -> "Following characters are not allowed: " <> intercalateChars chars
+    where intercalateChars:: NonEmpty Char -> Text
+          intercalateChars = T.intercalate " " . toList . fmap T.singleton
 
 formatFailureWith :: (Functor f, Foldable f) => (a -> Text) -> Text -> f a -> Text
 formatFailureWith f k es = title <> msgs
   where title = k <> ": \n"
         msgs = T.intercalate "\n" . toList . fmap (indent . f) $ es
         indent = (" " <>)
-
-formatExternalFailure :: (Functor f, Foldable f) => Text -> f ExternalLint -> Text
-formatExternalFailure = formatFailureWith $ \case
-  RedundantSelect -> "Redundant select found"
-
-formatInternalFailure :: (Functor f, Foldable f) => Text -> f InternalLint -> Text
-formatInternalFailure = formatFailureWith $ \case
-  TooManyInterpolations            -> "Nested functions are not allowed"
-  (InvalidNonAsciiCharacter chars) -> "Following characters are not allowed: " <> intercalateChars chars
-    where intercalateChars:: NonEmpty Char -> Text
-          intercalateChars = T.intercalate " " . toList . fmap T.singleton
 
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule []     = Nothing
