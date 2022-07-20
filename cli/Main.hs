@@ -14,9 +14,12 @@ import           System.Exit        (ExitCode (ExitFailure))
 main :: IO ()
 main = getOpts >>= \case
   Compile path loc -> tryGetParsed path >>= (compileDataset loc >>> either compilerDie putTextLn)
-  Flatten path     -> tryGetParsed path >>= (compileFlattened >>> putTextLn)
+  Flatten path     -> tryGetParsed path >>= flatten
   Lint    path     -> tryGetParsed path >>= lint
   where compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
+
+flatten :: MonadIO m => Dataset Translation -> m ()
+flatten = putTextLn . compileFlattened
 
 lint :: MonadIO m => Dataset Translation -> m ()
 lint xs = do
