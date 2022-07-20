@@ -13,17 +13,18 @@ import           System.Exit        (ExitCode (ExitFailure))
 
 main :: IO ()
 main = getOpts >>= \case
-  Compile path loc -> tryCompile loc =<< getParsed path
-  Flatten path     -> either parserDie (putTextLn . compileFlattened) =<< getParsed path
-  Lint    path     -> either parserDie lint =<< getParsed path
-  where tryCompile l = either parserDie (either compilerDie putTextLn . compileDataset l)
-        parserDie = die . printErr
-        compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
+  Compile path loc -> either compilerDie putTextLn . compileDataset loc =<< tryGetParsed path
+  Flatten path     -> putTextLn . compileFlattened =<< tryGetParsed path
+  Lint    path     -> lint =<< tryGetParsed path
+  where compilerDie = die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList
         lint = exit . M.mapMaybe (statusToMaybe . lintExternal . message)
         exit :: Dataset (NonEmpty ExternalLint) -> IO ()
         exit sts
           | M.size sts > 0 = mapM_ (putTextLn . uncurry formatExternalFailure) (M.assocs sts) *> exitWith (ExitFailure 1)
           | otherwise      = pure ()
+
+tryGetParsed :: MonadIO m => FilePath -> m (Dataset Translation)
+tryGetParsed = either (die . printErr) pure <=< getParsed
 
 getParsed :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
 getParsed x = parseDataset x <$> readFileText x
