@@ -11,7 +11,7 @@ import           Intlc.ICU
 import           Prelude
 
 data ExternalLint
-  = RedundantSelect
+  = RedundantSelect (NonEmpty Text)
   deriving (Eq, Show)
 
 data InternalLint
@@ -57,7 +57,7 @@ lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
 
 lintDatasetExternal :: Dataset Translation -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
-  RedundantSelect -> "Redundant select found"
+  RedundantSelect xs -> "Redundant select: " <> T.intercalate ", " (toList xs)
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
@@ -72,14 +72,19 @@ formatFailureWith f k es = title <> msgs
         msgs = T.intercalate "\n" . toList . fmap (indent . f) $ es
         indent = (" " <>)
 
+-- Select interpolations with only wildcards are redundant: they could be
+-- replaced with plain string interpolations.
 redundantSelectRule :: Rule ExternalLint
-redundantSelectRule []     = Nothing
-redundantSelectRule (x:xs)
-  | isRedundant x = Just RedundantSelect
-  | otherwise     = redundantSelectRule xs
-  -- If there's only a wildcard it could have been a plain string instead.
-  where isRedundant (Interpolation _ (Select (That _w))) = True
-        isRedundant _                                    = False
+redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
+  idents :: Stream -> [Text]
+  idents []     = []
+  idents (x:xs) = mconcat
+    [ maybeToList (redundantIdent x)
+    , maybeToMonoid (idents <$> getStream x)
+    , idents xs
+    ]
+  redundantIdent (Interpolation n (Select (That _w))) = Just n
+  redundantIdent _                                    = Nothing
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of these

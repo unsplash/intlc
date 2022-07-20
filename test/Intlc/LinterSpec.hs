@@ -21,9 +21,11 @@ spec = describe "linter" $ do
         lint (Message [Interpolation "x" (Select $ These (pure $ SelectCase "y" []) (SelectWildcard []))])
           `shouldBe` Success
 
-      it "fails on select with only a wildcard" $ do
-        lint (Message [Interpolation "x" (Select $ That (SelectWildcard []))])
-          `shouldBe` Failure (pure RedundantSelect)
+      it "fails on selects with only a wildcard" $ do
+        let s = Select . That . SelectWildcard
+
+        lint (Message [Interpolation "x" (s [Interpolation "y" (s [])]), Interpolation "z" (s [])])
+          `shouldBe` Failure (pure $ RedundantSelect ("x" :| ["y", "z"]))
 
   describe "internal" $ do
     describe "unicode" $ do
