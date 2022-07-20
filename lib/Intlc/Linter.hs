@@ -1,9 +1,12 @@
 module Intlc.Linter where
 
-import qualified Data.Text  as T
+import qualified Data.Text           as T
 
-import           Data.Char  (isAscii)
-import           Data.These (These (..))
+import           Control.Monad.Extra (pureIf)
+import           Data.Char           (isAscii)
+import qualified Data.Map            as M
+import           Data.These          (These (..))
+import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
 
@@ -45,6 +48,18 @@ lintInternal = lintWith
   [ interpolationsRule
   , unsupportedUnicodeRule
   ]
+
+-- Get the printable output from linting an entire dataset, if any.
+lintDatasetWith :: (Message -> Status a) -> (Text -> NonEmpty a -> Text) -> Dataset Translation -> Maybe Text
+lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
+  where lints = M.mapMaybe (statusToMaybe . linter . message) xs
+        msg = T.intercalate "\n" $ uncurry fmt <$> M.assocs lints
+
+lintDatasetExternal :: Dataset Translation -> Maybe Text
+lintDatasetExternal = lintDatasetWith lintExternal formatExternalFailure
+
+lintDatasetInternal :: Dataset Translation -> Maybe Text
+lintDatasetInternal = lintDatasetWith lintInternal formatInternalFailure
 
 formatFailureWith :: (Functor f, Foldable f) => (a -> Text) -> Text -> f a -> Text
 formatFailureWith f k es = title <> msgs

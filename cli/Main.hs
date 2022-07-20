@@ -1,7 +1,6 @@
 module Main where
 
 import           CLI                (Opts (..), getOpts)
-import qualified Data.Map           as M
 import qualified Data.Text          as T
 import           Intlc.Compiler     (compileDataset, compileFlattened)
 import           Intlc.Core
@@ -25,10 +24,7 @@ flatten :: MonadIO m => Dataset Translation -> m ()
 flatten = putTextLn . compileFlattened
 
 lint :: MonadIO m => Dataset Translation -> m ()
-lint xs = do
-  let lints = M.mapMaybe (statusToMaybe . lintExternal . message) xs
-  let msg = T.intercalate "\n" $ uncurry formatExternalFailure <$> M.assocs lints
-  unless (M.null lints) $ die (T.unpack msg)
+lint xs = whenJust (lintDatasetExternal xs) $ die . T.unpack
 
 tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset Translation)
 tryGetParsedAt = parserDie <=< getParsedAt

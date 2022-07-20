@@ -1,7 +1,6 @@
 module Main where
 
 import           CLI                         (Opts (..), getOpts)
-import qualified Data.Map                    as M
 import qualified Data.Text                   as T
 import           Data.Text.IO                (getContents)
 import           Intlc.Backend.JSON.Compiler (compileDataset)
@@ -18,10 +17,7 @@ main = getOpts >>= \case
   ExpandPlurals -> tryGetParsedStdin >>= compileExpandedPlurals
 
 lint :: MonadIO m => Dataset Translation -> m ()
-lint xs = do
-  let lints = M.mapMaybe (statusToMaybe . lintInternal . message) xs
-  let msg = T.intercalate "\n" $ uncurry formatInternalFailure <$> M.assocs lints
-  unless (M.null lints) $ die (T.unpack msg)
+lint xs = whenJust (lintDatasetInternal xs) $ die . T.unpack
 
 compileExpandedPlurals :: MonadIO m => Dataset Translation -> m ()
 compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals (message x) })
