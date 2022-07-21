@@ -40,7 +40,7 @@ emptyState = ParserState
 type Parser = ReaderT ParserState (Parsec ParseErr Text)
 
 ident :: Parser Text
-ident = T.pack <$> some letterChar
+ident = label "alphabetic identifier" $ T.pack <$> some letterChar
 
 -- Parse a message until the end of input parser matches.
 msg :: Parser Message
