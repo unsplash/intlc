@@ -120,7 +120,7 @@ callback = do
             eom <- asks endOfInput
             stream <- streamTill (lookAhead $ void (string "</") <|> eom)
             pure . Callback . mergePlaintext $ stream
-          closing = isJust <$> optional (char '/')
+          closing = fmap isJust . hidden . optional . char $ '/'
 
 interp :: Parser (Text, Type)
 interp = between (char '{') (char '}') $ do
