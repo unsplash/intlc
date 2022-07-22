@@ -59,12 +59,11 @@ data CardinalPlural
   | CardinalInexact [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
   deriving (Show, Eq)
 
--- | Ordinal plurals require at least one rule case and therefore also a
--- wildcard. An ordinal plural without a rule case would make the use of this
--- construct redundant, and in such cases the consumer should instead use a
--- cardinal plural.
+-- | Ordinal plurals always require a wildcard as per their intended usage with
+-- rules, however as with the cardinal plural type we'll allow a wider set of
+-- suboptimal usages that we can then lint against.
 data OrdinalPlural
-  = OrdinalPlural [PluralCase PluralExact] (NonEmpty (PluralCase PluralRule)) PluralWildcard
+  = OrdinalPlural [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
   deriving (Show, Eq)
 
 data PluralCase a = PluralCase a Stream

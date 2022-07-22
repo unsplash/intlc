@@ -218,7 +218,7 @@ classifyCardinal xs mw = case (organisePluralCases xs, mw) of
 -- parser).
 classifyOrdinal :: Foldable f => f ParsedPluralCase -> PluralWildcard -> Maybe OrdinalPlural
 classifyOrdinal xs w = case organisePluralCases xs of
-  (ls, r:rs) -> Just $ OrdinalPlural ls (r:|rs) w
+  (ls, r:rs) -> Just $ OrdinalPlural ls (r:rs) w
   _          -> Nothing
 
 organisePluralCases :: Foldable f => f ParsedPluralCase -> ([PluralCase PluralExact], [PluralCase PluralRule])

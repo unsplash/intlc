@@ -89,7 +89,7 @@ expandPlurals (ICU.Message xs) = ICU.Message . flip mapTokens xs $ \case
     ICU.Cardinal (ICU.CardinalInexact exacts rules w) ->
       ICU.Cardinal $ ICU.CardinalInexact exacts (toList $ expandRules rules w) w
     ICU.Ordinal (ICU.OrdinalPlural exacts rules w) ->
-      ICU.Ordinal $ ICU.OrdinalPlural exacts (expandRules rules w) w
+      ICU.Ordinal $ ICU.OrdinalPlural exacts (toList $ expandRules rules w) w
   x -> x
 
 expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.PluralWildcard -> NonEmpty (ICU.PluralCase ICU.PluralRule)

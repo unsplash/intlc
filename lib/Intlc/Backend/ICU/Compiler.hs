@@ -46,7 +46,7 @@ cardinalPlural (CardinalInexact xs ys w) = unwords . mconcat $ [exactPluralCase 
 
 ordinalPlural :: OrdinalPlural -> Text
 ordinalPlural (OrdinalPlural xs ys w) = unwords $
-  (exactPluralCase <$> xs) <> (rulePluralCase <$> toList ys) <> pure (pluralWildcard w)
+  (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (pluralWildcard w)
 
 exactPluralCase :: PluralCase PluralExact -> Text
 exactPluralCase (PluralCase (PluralExact n) xs) = "=" <> n <> " {" <> stream xs <> "}"

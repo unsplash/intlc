@@ -89,10 +89,10 @@ fromPlural r p = case p of
           ruleRet = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
           lcs' = lc :| lcs
   ICU.Ordinal (ICU.OrdinalPlural [] rcs w)          -> Match r OrdinalPluralRuleCond <$> m
-    where m = NonLitMatchRet <$> (toList <$> fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+    where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
   ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w)    -> Match r LitCond <$> m
     where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
-          im = Match r OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (toList <$> fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
+          im = Match r OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromToken `mapM` xs)

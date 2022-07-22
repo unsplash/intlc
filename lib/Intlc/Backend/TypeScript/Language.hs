@@ -71,8 +71,8 @@ fromPlural :: Text -> ICU.Plural -> UncollatedArgs
 fromPlural n (ICU.Cardinal (ICU.CardinalExact ls))        = (n, t) : (fromExactPluralCase =<< toList ls)
   where t = TNumLitUnion $ caseLit <$> ls
         caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
-fromPlural n (ICU.Cardinal (ICU.CardinalInexact ls rs w)) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
-fromPlural n (ICU.Ordinal (ICU.OrdinalPlural ls rs w))    = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
+fromPlural n (ICU.Cardinal (ICU.CardinalInexact ls rs w)) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
+fromPlural n (ICU.Ordinal (ICU.OrdinalPlural ls rs w))    = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact _) xs) = fromToken =<< xs
