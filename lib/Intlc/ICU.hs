@@ -50,20 +50,13 @@ data Plural
   | Ordinal OrdinalPlural
   deriving (Show, Eq)
 
--- | Cardinal plurals can be split into four usages:
---
---   1. Literal number cases without a wildcard.
---   2. Literal number cases with a wildcard.
---   3. Rule cases with a wildcard.
---   3. Mixed cases with a wildcard.
---
--- Per the aforementioned usages, any cardinal plural with at least one rule
--- case must have a wildcard, and cardinal plurals without any rule cases can
--- optionally supply a wildcard.
+-- | The only cardinal plurals which do not require a wildcard are those
+-- consisting solely of literal/exact cases. This is because within the AST we
+-- only care about correctness and prospective type safety, not optimal use of
+-- ICU syntax.
 data CardinalPlural
-  = LitPlural (NonEmpty (PluralCase PluralExact)) (Maybe PluralWildcard)
-  | RulePlural (NonEmpty (PluralCase PluralRule)) PluralWildcard
-  | MixedPlural (NonEmpty (PluralCase PluralExact)) (NonEmpty (PluralCase PluralRule)) PluralWildcard
+  = CardinalExact (NonEmpty (PluralCase PluralExact))
+  | CardinalInexact [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
   deriving (Show, Eq)
 
 -- | Ordinal plurals require at least one rule case and therefore also a
@@ -127,17 +120,10 @@ getPluralStream (Cardinal x) = getCardinalStream x
 getPluralStream (Ordinal x)  = getOrdinalStream x
 
 getCardinalStream :: CardinalPlural -> Stream
-getCardinalStream (LitPlural xs mw) = join
-  [ getPluralCaseStream `concatMap` xs
-  , maybeToMonoid $ getPluralWildcardStream <$> mw
-  ]
-getCardinalStream (RulePlural xs w) = join
-  [ getPluralCaseStream `concatMap` xs
-  , getPluralWildcardStream w
-  ]
-getCardinalStream (MixedPlural xs ys w) = join
-  [ getPluralCaseStream `concatMap` xs
-  , getPluralCaseStream `concatMap` ys
+getCardinalStream (CardinalExact ls)        = getPluralCaseStream `concatMap` ls
+getCardinalStream (CardinalInexact ls rs w) = mconcat
+  [ getPluralCaseStream `concatMap` ls
+  , getPluralCaseStream `concatMap` rs
   , getPluralWildcardStream w
   ]
 

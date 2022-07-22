@@ -41,9 +41,8 @@ dateTimeFmt Long   = "long"
 dateTimeFmt Full   = "full"
 
 cardinalPlural :: CardinalPlural -> Text
-cardinalPlural (LitPlural xs mw)     = unwords $ toList (exactPluralCase <$> xs) <> foldMap (pure . pluralWildcard) mw
-cardinalPlural (RulePlural xs w)     = unwords . toList $ (rulePluralCase <$> xs) <> pure (pluralWildcard w)
-cardinalPlural (MixedPlural xs ys w) = unwords . toList $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (pluralWildcard w)
+cardinalPlural (CardinalExact xs)        = unwords . toList . fmap exactPluralCase $ xs
+cardinalPlural (CardinalInexact xs ys w) = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ pluralWildcard w]
 
 ordinalPlural :: OrdinalPlural -> Text
 ordinalPlural (OrdinalPlural xs ys w) = unwords $

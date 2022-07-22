@@ -205,39 +205,23 @@ pluralRule = choice
 pluralWildcard :: Parser PluralWildcard
 pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> caseBody)
 
--- | To simplify parsing cases we validate after-the-fact here. This achieves
--- two purposes. Firstly it enables us to fail the parse if the cases are not
--- exclusively literals and there's no wildcard (see below), and secondly it
--- allows us to organise the cases into the appropriate `Plural` constructors,
--- which in turn enables more efficient codegen later on.
---
---  =0 {}  =1 {}            -- Lit
---  =0 {}  =1 {} other {}   -- Lit
--- one {} two {} other {}   -- Rule
---  =0 {} one {} other {}   -- Mixed
---
+-- | To simplify parsing cases we validate after-the-fact here.
 classifyCardinal :: Foldable f => f ParsedPluralCase -> Maybe PluralWildcard -> Maybe CardinalPlural
-classifyCardinal xs mw =
-  case (organisePluralCases xs, mw) of
-    ((Just ls, Nothing), mw')     -> Just (LitPlural   ls mw')
-    ((Nothing, Just rs), Just w)  -> Just (RulePlural  rs w)
-    ((Just ls, Just rs), Just w)  -> Just (MixedPlural ls rs w)
-    -- Rule plurals require a wildcard.
-    ((_,       Just _),  Nothing) -> Nothing
-    -- We should have parsed and organised at least one case somewhere.
-    ((Nothing, Nothing), _)       -> Nothing
+classifyCardinal xs mw = case (organisePluralCases xs, mw) of
+  ((l:ls, []), Nothing) -> Just (CardinalExact (l:|ls))
+  ((ls, rs),   Just w)  -> Just (CardinalInexact ls rs w)
+  _                     -> Nothing
 
--- | This is simpler than its cardinal counterpart. Here we need only validate
--- that there is at least one rule case. This is performed here to simplify
--- supporting disordered cases in the parser (whereas validating the presence
--- of a wildcard at the end is trivial in the parser).
+-- | Here we need only validate that there is at least one rule case. This is
+-- performed here to simplify supporting disordered cases in the parser
+-- (whereas validating the presence of a wildcard at the end is trivial in the
+-- parser).
 classifyOrdinal :: Foldable f => f ParsedPluralCase -> PluralWildcard -> Maybe OrdinalPlural
-classifyOrdinal xs w =
-  case organisePluralCases xs of
-    (_, Nothing)   -> Nothing
-    (mls, Just rs) -> Just $ OrdinalPlural (foldMap toList mls) rs w
+classifyOrdinal xs w = case organisePluralCases xs of
+  (ls, r:rs) -> Just $ OrdinalPlural ls (r:|rs) w
+  _          -> Nothing
 
-organisePluralCases :: Foldable f => f ParsedPluralCase -> (Maybe (NonEmpty (PluralCase PluralExact)), Maybe (NonEmpty (PluralCase PluralRule)))
-organisePluralCases = bimap nonEmpty nonEmpty . foldr f mempty
+organisePluralCases :: Foldable f => f ParsedPluralCase -> ([PluralCase PluralExact], [PluralCase PluralRule])
+organisePluralCases = foldr f mempty
   where f (ParsedExact x) = first (x:)
         f (ParsedRule x)  = second (x:)

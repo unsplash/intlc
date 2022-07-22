@@ -36,7 +36,7 @@ spec = describe "TypeScript compiler" $ do
             ))
           , ICU.Plaintext "! You are "
           , ICU.Interpolation "age" (ICU.Plural (ICU.Cardinal
-              (ICU.MixedPlural
+              (ICU.CardinalInexact
               (pure (ICU.PluralCase (ICU.PluralExact "42") (pure (ICU.Plaintext "very cool"))))
               (pure (ICU.PluralCase ICU.Zero (pure (ICU.Plaintext "new around here"))))
               (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
@@ -115,7 +115,7 @@ spec = describe "TypeScript compiler" $ do
       fromToken x `shouldBe` fromArgs ys
 
     it "in cardinal plural" $ do
-      let x = ICU.Plural . ICU.Cardinal . flip ICU.LitPlural Nothing . pure $
+      let x = ICU.Plural . ICU.Cardinal . ICU.CardinalExact . pure $
                 ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation "y" ICU.String]
       let ys =
               [ ("x", pure (TS.TNumLitUnion (pure "42")))

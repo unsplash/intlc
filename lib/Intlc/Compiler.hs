@@ -85,11 +85,9 @@ flatten (ICU.Message xs) = ICU.Message . flattenStream $ xs
 expandPlurals :: ICU.Message -> ICU.Message
 expandPlurals (ICU.Message xs) = ICU.Message . flip mapTokens xs $ \case
   ICU.Interpolation n (ICU.Plural p) -> ICU.Interpolation n . ICU.Plural $ case p of
-    ICU.Cardinal (ICU.LitPlural {})                -> p
-    ICU.Cardinal (ICU.RulePlural rules w)          ->
-      ICU.Cardinal $ ICU.RulePlural (expandRules rules w) w
-    ICU.Cardinal (ICU.MixedPlural exacts rules w)  ->
-      ICU.Cardinal $ ICU.MixedPlural exacts (expandRules rules w) w
+    ICU.Cardinal (ICU.CardinalExact {})               -> p
+    ICU.Cardinal (ICU.CardinalInexact exacts rules w) ->
+      ICU.Cardinal $ ICU.CardinalInexact exacts (toList $ expandRules rules w) w
     ICU.Ordinal (ICU.OrdinalPlural exacts rules w) ->
       ICU.Ordinal $ ICU.OrdinalPlural exacts (expandRules rules w) w
   x -> x
@@ -141,10 +139,9 @@ mapSelectWildcard :: (ICU.Stream -> ICU.Stream) -> ICU.SelectWildcard -> ICU.Sel
 mapSelectWildcard f (ICU.SelectWildcard xs) = ICU.SelectWildcard (f xs)
 
 mapPluralStreams :: (ICU.Stream -> ICU.Stream) -> ICU.Plural -> ICU.Plural
-mapPluralStreams f (ICU.Cardinal (ICU.LitPlural xs mw))      = ICU.Cardinal $ ICU.LitPlural (mapPluralCase f <$> xs) (mapPluralWildcard f <$> mw)
-mapPluralStreams f (ICU.Cardinal (ICU.RulePlural xs w))      = ICU.Cardinal $ ICU.RulePlural (mapPluralCase f <$> xs) (mapPluralWildcard f w)
-mapPluralStreams f (ICU.Cardinal (ICU.MixedPlural xs ys w))  = ICU.Cardinal $ ICU.MixedPlural (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (mapPluralWildcard f w)
-mapPluralStreams f (ICU.Ordinal (ICU.OrdinalPlural xs ys w)) = ICU.Ordinal $ ICU.OrdinalPlural (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (mapPluralWildcard f w)
+mapPluralStreams f (ICU.Cardinal (ICU.CardinalExact xs))        = ICU.Cardinal $ ICU.CardinalExact (mapPluralCase f <$> xs)
+mapPluralStreams f (ICU.Cardinal (ICU.CardinalInexact xs ys w)) = ICU.Cardinal $ ICU.CardinalInexact (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (mapPluralWildcard f w)
+mapPluralStreams f (ICU.Ordinal (ICU.OrdinalPlural xs ys w))    = ICU.Ordinal $ ICU.OrdinalPlural (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (mapPluralWildcard f w)
 
 mapPluralCase :: (ICU.Stream -> ICU.Stream) -> ICU.PluralCase a -> ICU.PluralCase a
 mapPluralCase f (ICU.PluralCase x ys) = ICU.PluralCase x (f ys)

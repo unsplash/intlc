@@ -66,15 +66,13 @@ fromInterp n (ICU.Select x)    = case x of
 fromInterp n (ICU.Callback xs) = (n, TEndo) : (fromToken =<< xs)
 
 fromPlural :: Text -> ICU.Plural -> UncollatedArgs
-fromPlural n (ICU.Cardinal (ICU.LitPlural ls mw))      = (n, t) : (fromExactPluralCase =<< toList ls) <> foldMap fromPluralWildcard mw
-  -- When there's no wildcard case we can compile to a union of number literals.
-  where t = case mw of
-              Just _  -> TNum
-              Nothing -> TNumLitUnion $ caseLit <$> ls
+-- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
+-- union of number literals.
+fromPlural n (ICU.Cardinal (ICU.CardinalExact ls))        = (n, t) : (fromExactPluralCase =<< toList ls)
+  where t = TNumLitUnion $ caseLit <$> ls
         caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
-fromPlural n (ICU.Cardinal (ICU.RulePlural rs w))      = (n, TNum) : (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
-fromPlural n (ICU.Cardinal (ICU.MixedPlural ls rs w))  = (n, TNum) : (fromExactPluralCase =<< toList ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
-fromPlural n (ICU.Ordinal (ICU.OrdinalPlural ls rs w)) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
+fromPlural n (ICU.Cardinal (ICU.CardinalInexact ls rs w)) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
+fromPlural n (ICU.Ordinal (ICU.OrdinalPlural ls rs w))    = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< toList rs) <> fromPluralWildcard w
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact _) xs) = fromToken =<< xs
