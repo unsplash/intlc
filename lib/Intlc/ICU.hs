@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 -- This module defines an AST for ICU messages. We do not necessarily behave
 -- identically to other implementations.
 
