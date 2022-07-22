@@ -51,7 +51,7 @@ msgTill :: Parser a -> Parser Message
 msgTill = fmap (Message . mergePlaintext) . streamTill
 
 -- Parse a stream until the provided parser matches.
-streamTill :: Parser a -> Parser [Token]
+streamTill :: Parser a -> Parser Stream
 streamTill = manyTill token
 
 -- The core parser of this module. Parse as many of these as you'd like until
