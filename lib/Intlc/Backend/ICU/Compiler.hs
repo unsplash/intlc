@@ -8,7 +8,7 @@
 
 module Intlc.Backend.ICU.Compiler where
 
-import           Data.These (These (..), mergeTheseWith)
+import           Data.These (These (..))
 import           Intlc.ICU
 import           Prelude    hiding (Type)
 
@@ -66,6 +66,6 @@ pluralWildcard :: PluralWildcard -> Text
 pluralWildcard (PluralWildcard xs) = "other {" <> stream xs <> "}"
 
 select :: These (NonEmpty SelectCase) SelectWildcard -> Text
-select = unwords . mergeTheseWith (toList . fmap case') (pure . wild) (<>)
+select = unwords . bifoldMap (toList . fmap case') (pure . wild)
   where case' (SelectCase n ys) = n <> " {" <> stream ys <> "}"
         wild (SelectWildcard ys) = "other {" <> stream ys <> "}"

@@ -3,7 +3,7 @@
 
 module Intlc.ICU where
 
-import           Data.These (These (..), mergeTheseWith)
+import           Data.These (These (..))
 import           Prelude    hiding (Type)
 
 newtype Message = Message Stream
@@ -117,7 +117,7 @@ getStream (Interpolation _ t) = case t of
   PluralRef                  -> Nothing
   Bool {trueCase, falseCase} -> Just $ trueCase <> falseCase
   Plural x                   -> Just $ getPluralStream x
-  Select x                   -> Just . mergeTheseWith (concatMap f) g (<>) $ x
+  Select x                   -> Just . bifoldMap (concatMap f) g $ x
     where f (SelectCase _ xs)  = xs
           g (SelectWildcard w) = w
   Callback xs                -> Just xs
