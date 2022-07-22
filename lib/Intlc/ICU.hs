@@ -22,59 +22,6 @@ data Token
   | Interpolation Text Type
   deriving (Show, Eq)
 
--- | Merges any sibling `Plaintext` tokens in a `Stream`.
-mergePlaintext :: Stream -> Stream
-mergePlaintext []                               = []
-mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x <> y) : zs
-mergePlaintext (x:ys)                           = x : mergePlaintext ys
-
-getStream :: Token -> Maybe Stream
-getStream Plaintext {}        = Nothing
-getStream (Interpolation _ t) = case t of
-  String                     -> Nothing
-  Number                     -> Nothing
-  Date {}                    -> Nothing
-  Time {}                    -> Nothing
-  PluralRef                  -> Nothing
-  Bool {trueCase, falseCase} -> Just $ trueCase <> falseCase
-  Plural x                   -> Just $ getPluralStream x
-  Select x                   -> Just . mergeTheseWith (concatMap f) g (<>) $ x
-    where f (SelectCase _ xs)  = xs
-          g (SelectWildcard w) = w
-  Callback xs                -> Just xs
-
-getPluralStream :: Plural -> Stream
-getPluralStream (Cardinal x) = getCardinalStream x
-getPluralStream (Ordinal x)  = getOrdinalStream x
-
-getCardinalStream :: CardinalPlural -> Stream
-getCardinalStream (LitPlural xs mw) = join
-  [ getPluralCaseStream `concatMap` xs
-  , maybeToMonoid $ getPluralWildcardStream <$> mw
-  ]
-getCardinalStream (RulePlural xs w) = join
-  [ getPluralCaseStream `concatMap` xs
-  , getPluralWildcardStream w
-  ]
-getCardinalStream (MixedPlural xs ys w) = join
-  [ getPluralCaseStream `concatMap` xs
-  , getPluralCaseStream `concatMap` ys
-  , getPluralWildcardStream w
-  ]
-
-getOrdinalStream :: OrdinalPlural -> Stream
-getOrdinalStream (OrdinalPlural xs ys w) = join
-  [ getPluralCaseStream `concatMap` xs
-  , getPluralCaseStream `concatMap` ys
-  , getPluralWildcardStream w
-  ]
-
-getPluralCaseStream :: PluralCase a -> Stream
-getPluralCaseStream (PluralCase _ xs) = xs
-
-getPluralWildcardStream :: PluralWildcard -> Stream
-getPluralWildcardStream (PluralWildcard xs) = xs
-
 -- We diverge from icu4j by supporting a boolean type, and not necessarily
 -- requiring wildcard cases.
 data Type
@@ -153,3 +100,56 @@ data SelectCase = SelectCase Text Stream
 
 newtype SelectWildcard = SelectWildcard Stream
   deriving (Show, Eq)
+
+-- | Merges any sibling `Plaintext` tokens in a `Stream`.
+mergePlaintext :: Stream -> Stream
+mergePlaintext []                               = []
+mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x <> y) : zs
+mergePlaintext (x:ys)                           = x : mergePlaintext ys
+
+getStream :: Token -> Maybe Stream
+getStream Plaintext {}        = Nothing
+getStream (Interpolation _ t) = case t of
+  String                     -> Nothing
+  Number                     -> Nothing
+  Date {}                    -> Nothing
+  Time {}                    -> Nothing
+  PluralRef                  -> Nothing
+  Bool {trueCase, falseCase} -> Just $ trueCase <> falseCase
+  Plural x                   -> Just $ getPluralStream x
+  Select x                   -> Just . mergeTheseWith (concatMap f) g (<>) $ x
+    where f (SelectCase _ xs)  = xs
+          g (SelectWildcard w) = w
+  Callback xs                -> Just xs
+
+getPluralStream :: Plural -> Stream
+getPluralStream (Cardinal x) = getCardinalStream x
+getPluralStream (Ordinal x)  = getOrdinalStream x
+
+getCardinalStream :: CardinalPlural -> Stream
+getCardinalStream (LitPlural xs mw) = join
+  [ getPluralCaseStream `concatMap` xs
+  , maybeToMonoid $ getPluralWildcardStream <$> mw
+  ]
+getCardinalStream (RulePlural xs w) = join
+  [ getPluralCaseStream `concatMap` xs
+  , getPluralWildcardStream w
+  ]
+getCardinalStream (MixedPlural xs ys w) = join
+  [ getPluralCaseStream `concatMap` xs
+  , getPluralCaseStream `concatMap` ys
+  , getPluralWildcardStream w
+  ]
+
+getOrdinalStream :: OrdinalPlural -> Stream
+getOrdinalStream (OrdinalPlural xs ys w) = join
+  [ getPluralCaseStream `concatMap` xs
+  , getPluralCaseStream `concatMap` ys
+  , getPluralWildcardStream w
+  ]
+
+getPluralCaseStream :: PluralCase a -> Stream
+getPluralCaseStream (PluralCase _ xs) = xs
+
+getPluralWildcardStream :: PluralWildcard -> Stream
+getPluralWildcardStream (PluralWildcard xs) = xs
