@@ -134,7 +134,7 @@ interp = between (char '{') (char '}') $ do
           , Time <$> (string "time" *> sep *> dateTimeFmt)
           , Plural <$> withPluralCtx n (
                   string "plural" *> sep *> cardinalPluralCases
-              <|> string "selectordinal" *> sep *> ordinalPluralCases
+              <|> string "selectordinal" *> sep *> ordinalCases
             )
           , Select <$> (string "select" *> sep *> selectCases)
           ]
@@ -174,15 +174,16 @@ cardinalPluralCases = tryClassify =<< p
     where tryClassify = maybe empty pure . uncurry classifyCardinal
           p = (,) <$> disorderedPluralCases <*> optional pluralWildcard
 
-ordinalPluralCases :: Parser Plural
-ordinalPluralCases = tryClassify =<< p
-    where tryClassify = maybe empty pure . uncurry classifyOrdinal
-          p = (,) <$> disorderedPluralCases <*> pluralWildcard
+ordinalCases :: Parser Plural
+ordinalCases = uncurry Ordinal <$> mixedPluralCases <*> pluralWildcard
 
 -- Need to lift parsed plural cases into this type to make the list homogeneous.
 data ParsedPluralCase
   = ParsedExact (PluralCase PluralExact)
   | ParsedRule (PluralCase PluralRule)
+
+mixedPluralCases :: Parser ([PluralCase PluralExact], [PluralCase PluralRule])
+mixedPluralCases = organisePluralCases <$> disorderedPluralCases
 
 disorderedPluralCases :: Parser [ParsedPluralCase]
 disorderedPluralCases = flip sepEndBy hspace1 $ choice
@@ -211,14 +212,6 @@ classifyCardinal xs mw = case (organisePluralCases xs, mw) of
   ((l:ls, []), Nothing) -> Just (CardinalExact (l:|ls))
   ((ls, rs),   Just w)  -> Just (CardinalInexact ls rs w)
   _                     -> Nothing
-
--- | Here we need only validate that there is at least one rule case. This is
--- performed here to simplify supporting disordered cases in the parser
--- (whereas validating the presence of a wildcard at the end is trivial in the
--- parser).
-classifyOrdinal :: Foldable f => f ParsedPluralCase -> PluralWildcard -> Maybe Plural
-classifyOrdinal xs w = case organisePluralCases xs of
-  (ls, rs) -> Just $ Ordinal ls rs w
 
 organisePluralCases :: Foldable f => f ParsedPluralCase -> ([PluralCase PluralExact], [PluralCase PluralRule])
 organisePluralCases = foldr f mempty
