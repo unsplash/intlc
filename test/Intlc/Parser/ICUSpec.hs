@@ -174,24 +174,24 @@ spec = describe "ICU parser" $ do
         CardinalInexact (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
 
   describe "selectordinal" $ do
+    let ordinalPluralCases' = ordinalPluralCases <* eof
+
     it "disallows wildcard not at the end" $ do
-      parse ordinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
-      parse ordinalPluralCases `shouldFailOn` "other {bar} one {foo}"
+      parse ordinalPluralCases' `shouldSucceedOn` "one {foo} other {bar}"
+      parse ordinalPluralCases' `shouldFailOn` "other {bar} one {foo}"
 
     it "tolerates empty cases" $ do
-      parse ordinalPluralCases `shouldSucceedOn` "one {} other {}"
+      parse ordinalPluralCases' `shouldSucceedOn` "one {} other {}"
 
-    it "requires at least one rule" $ do
-      parse ordinalPluralCases `shouldFailOn` "other {foo}"
-      parse ordinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
-      parse ordinalPluralCases `shouldSucceedOn` "one {foo} two {bar} other {baz}"
+    it "tolerates no non-wildcard cases" $ do
+      parse ordinalPluralCases' `shouldSucceedOn` "other {foo}"
 
     it "requires a wildcard" $ do
-      parse ordinalPluralCases `shouldFailOn`    "=0 {foo} one {bar}"
-      parse ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse ordinalPluralCases' `shouldFailOn`    "=0 {foo} one {bar}"
+      parse ordinalPluralCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalPluralCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Ordinal (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
 
   describe "select" $ do
