@@ -152,25 +152,25 @@ spec = describe "ICU parser" $ do
       parse callback `shouldFailOn` "<x y></x y>"
 
   describe "plural" $ do
+    let cardinalPluralCases' = cardinalPluralCases <* eof
+
     it "disallows wildcard not at the end" $ do
-      parse cardinalPluralCases `shouldSucceedOn` "=1 {foo} other {bar}"
-      parse cardinalPluralCases `shouldFailOn` "other {bar} =1 {foo}"
+      parse cardinalPluralCases' `shouldSucceedOn` "=1 {foo} other {bar}"
+      parse cardinalPluralCases' `shouldFailOn` "other {bar} =1 {foo}"
 
     it "tolerates empty cases" $ do
-      parse cardinalPluralCases `shouldSucceedOn` "=1 {} other {}"
+      parse cardinalPluralCases' `shouldSucceedOn` "=1 {} other {}"
 
-    it "requires at least one non-wildcard case" $ do
-      parse cardinalPluralCases `shouldFailOn` "other {foo}"
-      parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} other {bar}"
-      parse cardinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
+    it "tolerates no non-wildcard cases" $ do
+      parse cardinalPluralCases' `shouldSucceedOn` "other {foo}"
 
     it "requires a wildcard if there are any rule cases" $ do
-      parse cardinalPluralCases `shouldFailOn`    "=0 {foo} one {bar}"
-      parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
-      parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} =1 {bar}"
+      parse cardinalPluralCases' `shouldFailOn`    "=0 {foo} one {bar}"
+      parse cardinalPluralCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse cardinalPluralCases' `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
         CardinalInexact (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
 
   describe "selectordinal" $ do

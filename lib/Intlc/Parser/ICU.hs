@@ -184,8 +184,8 @@ data ParsedPluralCase
   = ParsedExact (PluralCase PluralExact)
   | ParsedRule (PluralCase PluralRule)
 
-disorderedPluralCases :: Parser (NonEmpty ParsedPluralCase)
-disorderedPluralCases = flip NE.sepEndBy1 hspace1 $ choice
+disorderedPluralCases :: Parser [ParsedPluralCase]
+disorderedPluralCases = flip sepEndBy hspace1 $ choice
   [ (ParsedExact .) . PluralCase <$> pluralExact <* hspace1 <*> caseBody
   , (ParsedRule .)  . PluralCase <$> pluralRule  <* hspace1 <*> caseBody
   ]
