@@ -66,7 +66,7 @@ spec = describe "linter" $ do
         let cb = Callback []
         lint (Message [Interpolation "x" cb, Interpolation "y" cb]) `shouldBe` Success
 
-        let p = Plural . Ordinal $ OrdinalPlural [] (pure $ PluralCase Zero []) (PluralWildcard [])
+        let p = Plural $ Ordinal [] (pure $ PluralCase Zero []) (PluralWildcard [])
         lint (Message [Interpolation "x" p, Interpolation "y" p]) `shouldBe` Success
 
       it "does not lint streams with 2 or more complex interpolations" $ do

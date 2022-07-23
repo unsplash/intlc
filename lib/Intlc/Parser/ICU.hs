@@ -170,12 +170,12 @@ selectCases = choice
         wildcardName = "other"
 
 cardinalPluralCases :: Parser Plural
-cardinalPluralCases = fmap Cardinal . tryClassify =<< p
+cardinalPluralCases = tryClassify =<< p
     where tryClassify = maybe empty pure . uncurry classifyCardinal
           p = (,) <$> disorderedPluralCases <*> optional pluralWildcard
 
 ordinalPluralCases :: Parser Plural
-ordinalPluralCases = fmap Ordinal . tryClassify =<< p
+ordinalPluralCases = tryClassify =<< p
     where tryClassify = maybe empty pure . uncurry classifyOrdinal
           p = (,) <$> disorderedPluralCases <*> pluralWildcard
 
@@ -206,7 +206,7 @@ pluralWildcard :: Parser PluralWildcard
 pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> caseBody)
 
 -- | To simplify parsing cases we validate after-the-fact here.
-classifyCardinal :: Foldable f => f ParsedPluralCase -> Maybe PluralWildcard -> Maybe CardinalPlural
+classifyCardinal :: Foldable f => f ParsedPluralCase -> Maybe PluralWildcard -> Maybe Plural
 classifyCardinal xs mw = case (organisePluralCases xs, mw) of
   ((l:ls, []), Nothing) -> Just (CardinalExact (l:|ls))
   ((ls, rs),   Just w)  -> Just (CardinalInexact ls rs w)
@@ -216,9 +216,9 @@ classifyCardinal xs mw = case (organisePluralCases xs, mw) of
 -- performed here to simplify supporting disordered cases in the parser
 -- (whereas validating the presence of a wildcard at the end is trivial in the
 -- parser).
-classifyOrdinal :: Foldable f => f ParsedPluralCase -> PluralWildcard -> Maybe OrdinalPlural
+classifyOrdinal :: Foldable f => f ParsedPluralCase -> PluralWildcard -> Maybe Plural
 classifyOrdinal xs w = case organisePluralCases xs of
-  (ls, r:rs) -> Just $ OrdinalPlural ls (r:rs) w
+  (ls, r:rs) -> Just $ Ordinal ls (r:rs) w
   _          -> Nothing
 
 organisePluralCases :: Foldable f => f ParsedPluralCase -> ([PluralCase PluralExact], [PluralCase PluralRule])

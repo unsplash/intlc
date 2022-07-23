@@ -45,25 +45,18 @@ data DateTimeFmt
   | Full
   deriving (Show, Eq)
 
-data Plural
-  = Cardinal CardinalPlural
-  | Ordinal OrdinalPlural
-  deriving (Show, Eq)
-
 -- | The only cardinal plurals which do not require a wildcard are those
 -- consisting solely of literal/exact cases. This is because within the AST we
 -- only care about correctness and prospective type safety, not optimal use of
 -- ICU syntax.
-data CardinalPlural
-  = CardinalExact (NonEmpty (PluralCase PluralExact))
-  | CardinalInexact [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
-  deriving (Show, Eq)
-
--- | Ordinal plurals always require a wildcard as per their intended usage with
+--
+-- Ordinal plurals always require a wildcard as per their intended usage with
 -- rules, however as with the cardinal plural type we'll allow a wider set of
 -- suboptimal usages that we can then lint against.
-data OrdinalPlural
-  = OrdinalPlural [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
+data Plural
+  = CardinalExact (NonEmpty (PluralCase PluralExact))
+  | CardinalInexact [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
+  | Ordinal [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
   deriving (Show, Eq)
 
 data PluralCase a = PluralCase a Stream
@@ -115,19 +108,13 @@ getStream (Interpolation _ t) = case t of
   Callback xs                -> Just xs
 
 getPluralStream :: Plural -> Stream
-getPluralStream (Cardinal x) = getCardinalStream x
-getPluralStream (Ordinal x)  = getOrdinalStream x
-
-getCardinalStream :: CardinalPlural -> Stream
-getCardinalStream (CardinalExact ls)        = getPluralCaseStream `concatMap` ls
-getCardinalStream (CardinalInexact ls rs w) = mconcat
+getPluralStream (CardinalExact ls)        = getPluralCaseStream `concatMap` ls
+getPluralStream (CardinalInexact ls rs w) = mconcat
   [ getPluralCaseStream `concatMap` ls
   , getPluralCaseStream `concatMap` rs
   , getPluralWildcardStream w
   ]
-
-getOrdinalStream :: OrdinalPlural -> Stream
-getOrdinalStream (OrdinalPlural xs ys w) = join
+getPluralStream (Ordinal xs ys w)         = mconcat
   [ getPluralCaseStream `concatMap` xs
   , getPluralCaseStream `concatMap` ys
   , getPluralWildcardStream w

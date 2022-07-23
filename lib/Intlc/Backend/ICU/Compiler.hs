@@ -23,13 +23,16 @@ token (Plaintext x)       = x
 token (Interpolation x y) = interp x y
 
 interp :: Text -> Type -> Text
-interp n Bool { trueCase, falseCase } = "{" <> n <> ", boolean, true {" <> stream trueCase <> "} false {" <> stream falseCase <> "}}"
+interp n Bool { trueCase, falseCase } = "{" <> n <> ", boolean, true {" <> stream trueCase  <> "} false {" <> stream falseCase <> "}}"
 interp n String                       = "{" <> n <> "}"
 interp n Number                       = "{" <> n <> ", number}"
 interp n (Date fmt)                   = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
 interp n (Time fmt)                   = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-interp n (Plural (Cardinal p))        = "{" <> n <> ", plural, "        <> cardinalPlural p <> "}"
-interp n (Plural (Ordinal p))         = "{" <> n <> ", selectordinal, " <> ordinalPlural p  <> "}"
+interp n (Plural p)                   = "{" <> n <> ", " <> typ <> ", " <> plural p         <> "}"
+  where typ = case p of
+          CardinalExact {}   -> "plural"
+          CardinalInexact {} -> "plural"
+          Ordinal {}         -> "selectordinal"
 interp _ PluralRef                    = "#"
 interp n (Select x)                   = "{" <> n <> ", select, "        <> select x         <> "}"
 interp n (Callback xs)                = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
@@ -40,12 +43,10 @@ dateTimeFmt Medium = "medium"
 dateTimeFmt Long   = "long"
 dateTimeFmt Full   = "full"
 
-cardinalPlural :: CardinalPlural -> Text
-cardinalPlural (CardinalExact xs)        = unwords . toList . fmap exactPluralCase $ xs
-cardinalPlural (CardinalInexact xs ys w) = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ pluralWildcard w]
-
-ordinalPlural :: OrdinalPlural -> Text
-ordinalPlural (OrdinalPlural xs ys w) = unwords $
+plural :: Plural -> Text
+plural (CardinalExact xs)        = unwords . toList . fmap exactPluralCase $ xs
+plural (CardinalInexact xs ys w) = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ pluralWildcard w]
+plural (Ordinal xs ys w)         = unwords $
   (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (pluralWildcard w)
 
 exactPluralCase :: PluralCase PluralExact -> Text

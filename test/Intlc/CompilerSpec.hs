@@ -63,13 +63,13 @@ spec = describe "compiler" $ do
       let one = PluralCase One [Plaintext "a dog"]
       let onef = PluralCase One [Plaintext "I have a dog"]
 
-      flatten (Message [Plaintext "I have ", Interpolation "count" (Plural (Cardinal (CardinalInexact [] (pure one) other)))]) `shouldBe`
-        Message (pure $ Interpolation "count" (Plural (Cardinal (CardinalInexact [] (pure onef) otherf))))
+      flatten (Message [Plaintext "I have ", Interpolation "count" (Plural (CardinalInexact [] (pure one) other))]) `shouldBe`
+        Message (pure $ Interpolation "count" (Plural (CardinalInexact [] (pure onef) otherf)))
 
     it "flattens deep interpolations" $ do
-      let x = Message $
+      let x = Message
             [ Plaintext "I have "
-            , Interpolation "count" . Plural . Cardinal $ CardinalInexact
+            , Interpolation "count" . Plural $ CardinalInexact
               []
               (pure $ PluralCase One [Plaintext "a dog"])
               (PluralWildcard
@@ -83,7 +83,7 @@ spec = describe "compiler" $ do
             , Plaintext "!"
             ]
       let y = Message . pure $
-            Interpolation "count" . Plural . Cardinal $ CardinalInexact
+            Interpolation "count" . Plural $ CardinalInexact
               []
               (pure $ PluralCase One [Plaintext "I have a dog!"])
               (PluralWildcard
@@ -133,4 +133,4 @@ spec = describe "compiler" $ do
       let c x y = PluralCase x [Plaintext y]
       let xs = [c Two "foo", c Many "", c Zero "bar", c One "baz", c Few ""]
 
-      flip f (PluralWildcard [Plaintext "any"]) xs `shouldBe` (fromList xs)
+      f xs (PluralWildcard [Plaintext "any"]) `shouldBe` fromList xs

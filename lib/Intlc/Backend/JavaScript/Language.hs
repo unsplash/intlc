@@ -79,18 +79,18 @@ fromInterp nraw t =
 
 fromPlural :: Ref -> ICU.Plural -> ASTCompiler Match
 fromPlural r p = case p of
-  ICU.Cardinal (ICU.CardinalExact lcs)              -> Match r LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)
-  ICU.Cardinal (ICU.CardinalInexact lcs [] w)       -> Match r LitCond <$> ret
+  ICU.CardinalExact lcs              -> Match r LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)
+  ICU.CardinalInexact lcs [] w       -> Match r LitCond <$> ret
     where ret = NonLitMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
-  ICU.Cardinal (ICU.CardinalInexact [] rcs w)       -> Match r CardinalPluralRuleCond <$> ret
+  ICU.CardinalInexact [] rcs w       -> Match r CardinalPluralRuleCond <$> ret
     where ret = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-  ICU.Cardinal (ICU.CardinalInexact (lc:lcs) rcs w) -> Match r LitCond <$> litRet
+  ICU.CardinalInexact (lc:lcs) rcs w -> Match r LitCond <$> litRet
     where litRet = RecMatchRet <$> (fromExactPluralCase `mapM` lcs') <*> (Match r CardinalPluralRuleCond <$> ruleRet)
           ruleRet = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
           lcs' = lc :| lcs
-  ICU.Ordinal (ICU.OrdinalPlural [] rcs w)          -> Match r OrdinalPluralRuleCond <$> m
+  ICU.Ordinal [] rcs w               -> Match r OrdinalPluralRuleCond <$> m
     where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-  ICU.Ordinal (ICU.OrdinalPlural (lc:lcs) rcs w)    -> Match r LitCond <$> m
+  ICU.Ordinal (lc:lcs) rcs w         -> Match r LitCond <$> m
     where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
           im = Match r OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
 
