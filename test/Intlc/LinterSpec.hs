@@ -27,6 +27,33 @@ spec = describe "linter" $ do
         lint (Message [Interpolation "x" (s [Interpolation "y" (s [])]), Interpolation "z" (s [])])
           `shouldBe` Failure (pure $ RedundantSelect ("x" :| ["y", "z"]))
 
+    describe "redundant plural" $ do
+      let lint = lintWith' redundantPluralRule
+
+      it "succeeds on exact cardinal plural" $ do
+        lint (Message [Interpolation "x" (Plural $ CardinalExact (pure $ PluralCase (PluralExact "42") []))])
+          `shouldBe` Success
+
+      it "succeeds on ordinal plural with any non-wildcard case" $ do
+        lint (Message [Interpolation "x" (Plural $ Ordinal [PluralCase (PluralExact "42") []] [] (PluralWildcard []))])
+          `shouldBe` Success
+        lint (Message [Interpolation "x" (Plural $ Ordinal [] [PluralCase  Two []] (PluralWildcard []))])
+          `shouldBe` Success
+
+      it "succeeds on inexact cardinal plural with any non-wildcard case" $ do
+        lint (Message [Interpolation "x" (Plural $ CardinalInexact [PluralCase (PluralExact "42") []] [] (PluralWildcard []))])
+          `shouldBe` Success
+        lint (Message [Interpolation "x" (Plural $ CardinalInexact [] [PluralCase  Two []] (PluralWildcard []))])
+          `shouldBe` Success
+
+      it "fails on ordinal plural with only a wildcard" $ do
+        lint (Message [Interpolation "x" (Plural $ Ordinal [] [] (PluralWildcard []))])
+          `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
+
+      it "fails on inexact cardinal plural with only a wildcard" $ do
+        lint (Message [Interpolation "x" (Plural $ CardinalInexact [] [] (PluralWildcard []))])
+          `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
+
   describe "internal" $ do
     describe "unicode" $ do
       let lint = lintWith' unsupportedUnicodeRule
