@@ -12,6 +12,7 @@ import           Prelude
 
 data ExternalLint
   = RedundantSelect (NonEmpty Text)
+  | RedundantPlural (NonEmpty Text)
   deriving (Eq, Show)
 
 data InternalLint
@@ -41,6 +42,7 @@ lintWith rules (Message stream) = toStatus $ rules `flap` stream
 lintExternal :: Message -> Status ExternalLint
 lintExternal = lintWith
   [ redundantSelectRule
+  , redundantPluralRule
   ]
 
 lintInternal :: Message -> Status InternalLint
@@ -58,6 +60,7 @@ lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
 lintDatasetExternal :: Dataset Translation -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
   RedundantSelect xs -> "Redundant select: " <> T.intercalate ", " (toList xs)
+  RedundantPlural xs -> "Redundant plural: " <> T.intercalate ", " (toList xs)
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
@@ -85,6 +88,23 @@ redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
     ]
   redundantIdent (Interpolation n (Select (That _w))) = Just n
   redundantIdent _                                    = Nothing
+
+-- Plural interpolations with only wildcards are redundant: they could be
+-- replaced with plain number interpolations.
+redundantPluralRule :: Rule ExternalLint
+redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
+  idents :: Stream -> [Text]
+  idents []     = []
+  idents (x:xs) = mconcat
+    [ maybeToList (redundantIdent x)
+    , maybeToMonoid (idents <$> getStream x)
+    , idents xs
+    ]
+  redundantIdent (Interpolation n (Plural p)) = case p of
+    CardinalInexact [] [] _ -> Just n
+    Ordinal [] [] _         -> Just n
+    _                       -> Nothing
+  redundantIdent _                            = Nothing
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of these
