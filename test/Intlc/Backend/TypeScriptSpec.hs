@@ -35,13 +35,13 @@ spec = describe "TypeScript compiler" $ do
               ICU.Interpolation "name" ICU.String
             ))
           , ICU.Plaintext "! You are "
-          , ICU.Interpolation "age" (ICU.Plural (ICU.Cardinal
-              (ICU.MixedPlural
-              (pure (ICU.PluralCase (ICU.PluralExact "42") (pure (ICU.Plaintext "very cool"))))
-              (pure (ICU.PluralCase ICU.Zero (pure (ICU.Plaintext "new around here"))))
-              (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
+          , ICU.Interpolation "age" (ICU.Plural
+              (ICU.CardinalInexact
+                (pure (ICU.PluralCase (ICU.PluralExact "42") (pure (ICU.Plaintext "very cool"))))
+                (pure (ICU.PluralCase ICU.Zero (pure (ICU.Plaintext "new around here"))))
+                (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
               )
-            ))
+            )
           , ICU.Plaintext ". Regardless, the magic number is most certainly "
           , ICU.Interpolation "magicNumber" ICU.Number
           , ICU.Plaintext "! The date is "
@@ -115,7 +115,7 @@ spec = describe "TypeScript compiler" $ do
       fromToken x `shouldBe` fromArgs ys
 
     it "in cardinal plural" $ do
-      let x = ICU.Plural . ICU.Cardinal . flip ICU.LitPlural Nothing . pure $
+      let x = ICU.Plural . ICU.CardinalExact . pure $
                 ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation "y" ICU.String]
       let ys =
               [ ("x", pure (TS.TNumLitUnion (pure "42")))
@@ -124,7 +124,7 @@ spec = describe "TypeScript compiler" $ do
       fromToken x `shouldBe` fromArgs ys
 
     it "in ordinal plural" $ do
-      let x = ICU.Plural . ICU.Ordinal $ ICU.OrdinalPlural
+      let x = ICU.Plural $ ICU.Ordinal
                 [ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation "foo" (ICU.Date ICU.Short)]]
                 (pure $ ICU.PluralCase ICU.Few [ICU.Interpolation "bar" ICU.String])
                 (ICU.PluralWildcard [ICU.Interpolation "baz" ICU.Number])

@@ -42,24 +42,24 @@ spec = describe "ICU parser" $ do
       it "parses as arg inside shallow plural" $ do
         let n = pure $ Interpolation "n" PluralRef
         parse msg "{n, plural, one {#} other {#}}" `shouldParse`
-          (Message . pure . Interpolation "n" . Plural . Cardinal $
-            RulePlural (pure $ PluralCase One n) (PluralWildcard n))
+          (Message . pure . Interpolation "n" . Plural $
+            CardinalInexact [] (pure $ PluralCase One n) (PluralWildcard n))
 
       it "parses as nearest arg inside deep plural" $ do
         let n = pure $ Interpolation "n" PluralRef
         let i = pure $ Interpolation "i" PluralRef
         parse msg "{n, plural, one {{i, plural, one {#} other {#}}} other {#}}" `shouldParse`
-          (Message . pure . Interpolation "n" . Plural . Cardinal $
-            RulePlural (pure $ PluralCase One (
-              pure . Interpolation "i" . Plural . Cardinal $
-                RulePlural (pure $ PluralCase One i) (PluralWildcard i)
+          (Message . pure . Interpolation "n" . Plural $
+            CardinalInexact [] (pure $ PluralCase One (
+              pure . Interpolation "i" . Plural $
+                CardinalInexact [] (pure $ PluralCase One i) (PluralWildcard i)
             )) (PluralWildcard n))
 
       it "parses as arg nested inside other interpolation" $ do
         let n = pure $ Interpolation "n" PluralRef
         parse msg "{n, plural, one {<f>#</f>} other {#}}" `shouldParse`
-          (Message . pure . Interpolation "n" . Plural . Cardinal $
-            RulePlural (pure $ PluralCase One (
+          (Message . pure . Interpolation "n" . Plural $
+            CardinalInexact [] (pure $ PluralCase One (
               pure . Interpolation "f" . Callback $ n
             )) (PluralWildcard n))
 
@@ -84,7 +84,7 @@ spec = describe "ICU parser" $ do
           Message [Plaintext "a ", Interpolation "b" String, Plaintext " 'c ", Interpolation "d" String, Plaintext " e"]
         parse msg "{n, plural, =42 {# '#}}" `shouldParse`
           let xs = [Interpolation "n" PluralRef, Plaintext " #"]
-           in Message [Interpolation "n" $ Plural (Cardinal $ LitPlural (pure $ PluralCase (PluralExact "42") xs) Nothing)]
+           in Message [Interpolation "n" $ Plural (CardinalExact (pure $ PluralCase (PluralExact "42") xs))]
 
       it "escapes two single quotes as one single quote" $ do
         parse msg "This '{isn''t}' obvious." `shouldParse` Message [Plaintext "This {isn't} obvious."]
@@ -152,47 +152,47 @@ spec = describe "ICU parser" $ do
       parse callback `shouldFailOn` "<x y></x y>"
 
   describe "plural" $ do
+    let cardinalCases' = cardinalCases <* eof
+
     it "disallows wildcard not at the end" $ do
-      parse cardinalPluralCases `shouldSucceedOn` "=1 {foo} other {bar}"
-      parse cardinalPluralCases `shouldFailOn` "other {bar} =1 {foo}"
+      parse cardinalCases' `shouldSucceedOn` "=1 {foo} other {bar}"
+      parse cardinalCases' `shouldFailOn` "other {bar} =1 {foo}"
 
     it "tolerates empty cases" $ do
-      parse cardinalPluralCases `shouldSucceedOn` "=1 {} other {}"
+      parse cardinalCases' `shouldSucceedOn` "=1 {} other {}"
 
-    it "requires at least one non-wildcard case" $ do
-      parse cardinalPluralCases `shouldFailOn` "other {foo}"
-      parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} other {bar}"
-      parse cardinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
+    it "tolerates no non-wildcard cases" $ do
+      parse cardinalCases' `shouldSucceedOn` "other {foo}"
 
     it "requires a wildcard if there are any rule cases" $ do
-      parse cardinalPluralCases `shouldFailOn`    "=0 {foo} one {bar}"
-      parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
-      parse cardinalPluralCases `shouldSucceedOn` "=0 {foo} =1 {bar}"
+      parse cardinalCases' `shouldFailOn`    "=0 {foo} one {bar}"
+      parse cardinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse cardinalCases' `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef]))
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
+        CardinalInexact (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
 
   describe "selectordinal" $ do
+    let ordinalCases' = ordinalCases <* eof
+
     it "disallows wildcard not at the end" $ do
-      parse ordinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
-      parse ordinalPluralCases `shouldFailOn` "other {bar} one {foo}"
+      parse ordinalCases' `shouldSucceedOn` "one {foo} other {bar}"
+      parse ordinalCases' `shouldFailOn` "other {bar} one {foo}"
 
     it "tolerates empty cases" $ do
-      parse ordinalPluralCases `shouldSucceedOn` "one {} other {}"
+      parse ordinalCases' `shouldSucceedOn` "one {} other {}"
 
-    it "requires at least one rule" $ do
-      parse ordinalPluralCases `shouldFailOn` "other {foo}"
-      parse ordinalPluralCases `shouldSucceedOn` "one {foo} other {bar}"
-      parse ordinalPluralCases `shouldSucceedOn` "one {foo} two {bar} other {baz}"
+    it "tolerates no non-wildcard cases" $ do
+      parse ordinalCases' `shouldSucceedOn` "other {foo}"
 
     it "requires a wildcard" $ do
-      parse ordinalPluralCases `shouldFailOn`    "=0 {foo} one {bar}"
-      parse ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parse ordinalCases' `shouldFailOn`    "=0 {foo} one {bar}"
+      parse ordinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        Cardinal (MixedPlural (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef]))
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
+        Ordinal (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
 
   describe "select" $ do
     let selectCases' = selectCases <* eof
