@@ -133,7 +133,7 @@ interp = between (char '{') (char '}') $ do
           , Date <$> (string "date" *> sep *> dateTimeFmt)
           , Time <$> (string "time" *> sep *> dateTimeFmt)
           , Plural <$> withPluralCtx n (
-                  string "plural" *> sep *> cardinalPluralCases
+                  string "plural" *> sep *> cardinalCases
               <|> string "selectordinal" *> sep *> ordinalCases
             )
           , Select <$> (string "select" *> sep *> selectCases)
@@ -169,30 +169,27 @@ selectCases = choice
         name = try $ mfilter (/= wildcardName) ident
         wildcardName = "other"
 
-cardinalPluralCases :: Parser Plural
-cardinalPluralCases = tryClassify =<< p
-    where tryClassify = maybe empty pure . uncurry classifyCardinal
-          p = (,) <$> disorderedPluralCases <*> optional pluralWildcard
+cardinalCases :: Parser Plural
+cardinalCases = try cardinalInexactCases <|> cardinalExactCases
+
+cardinalExactCases :: Parser Plural
+cardinalExactCases = CardinalExact <$> NE.sepEndBy1 pluralExactCase hspace1
+
+cardinalInexactCases :: Parser Plural
+cardinalInexactCases = uncurry CardinalInexact <$> mixedPluralCases <*> pluralWildcard
 
 ordinalCases :: Parser Plural
 ordinalCases = uncurry Ordinal <$> mixedPluralCases <*> pluralWildcard
 
--- Need to lift parsed plural cases into this type to make the list homogeneous.
-data ParsedPluralCase
-  = ParsedExact (PluralCase PluralExact)
-  | ParsedRule (PluralCase PluralRule)
-
 mixedPluralCases :: Parser ([PluralCase PluralExact], [PluralCase PluralRule])
-mixedPluralCases = organisePluralCases <$> disorderedPluralCases
+mixedPluralCases = partitionEithers <$> sepEndBy (eitherP pluralExactCase pluralRuleCase) hspace1
 
-disorderedPluralCases :: Parser [ParsedPluralCase]
-disorderedPluralCases = flip sepEndBy hspace1 $ choice
-  [ (ParsedExact .) . PluralCase <$> pluralExact <* hspace1 <*> caseBody
-  , (ParsedRule .)  . PluralCase <$> pluralRule  <* hspace1 <*> caseBody
-  ]
+pluralExactCase :: Parser (PluralCase PluralExact)
+pluralExactCase = PluralCase <$> pluralExact <* hspace1 <*> caseBody
+  where pluralExact = PluralExact . T.pack <$> (string "=" *> some numberChar)
 
-pluralExact :: Parser PluralExact
-pluralExact = PluralExact . T.pack <$> (string "=" *> some numberChar)
+pluralRuleCase :: Parser (PluralCase PluralRule)
+pluralRuleCase = PluralCase <$> pluralRule <* hspace1 <*> caseBody
 
 pluralRule :: Parser PluralRule
 pluralRule = choice
@@ -205,15 +202,3 @@ pluralRule = choice
 
 pluralWildcard :: Parser PluralWildcard
 pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> caseBody)
-
--- | To simplify parsing cases we validate after-the-fact here.
-classifyCardinal :: Foldable f => f ParsedPluralCase -> Maybe PluralWildcard -> Maybe Plural
-classifyCardinal xs mw = case (organisePluralCases xs, mw) of
-  ((l:ls, []), Nothing) -> Just (CardinalExact (l:|ls))
-  ((ls, rs),   Just w)  -> Just (CardinalInexact ls rs w)
-  _                     -> Nothing
-
-organisePluralCases :: Foldable f => f ParsedPluralCase -> ([PluralCase PluralExact], [PluralCase PluralRule])
-organisePluralCases = foldr f mempty
-  where f (ParsedExact x) = first (x:)
-        f (ParsedRule x)  = second (x:)
