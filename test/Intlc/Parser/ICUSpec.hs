@@ -191,8 +191,8 @@ spec = describe "ICU parser" $ do
       parse ordinalPluralCases `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
-      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        CardinalInexact (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalPluralCases "=0 {foo} few {bar} other {baz #}" `shouldParse`
+        Ordinal (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
 
   describe "select" $ do
     let selectCases' = selectCases <* eof
