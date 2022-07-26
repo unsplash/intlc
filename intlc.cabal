@@ -5,13 +5,11 @@ license:                   MIT
 build-type:                Simple
 
 common common
-  default-language:        Haskell2010
+  default-language:        GHC2021
   default-extensions:
     LambdaCase
-    NamedFieldPuns
     NoImplicitPrelude
     OverloadedStrings
-    TupleSections
   ghc-options:
     -Wall
   build-depends:
