@@ -114,7 +114,7 @@ extractFirstArg :: (ICU.Type -> Maybe a) -> ICU.Stream -> Maybe (Text, ICU.Strea
 extractFirstArg f xs = firstJust arg (zip [0..] xs)
   where arg (i, ICU.Interpolation n t) = (n, ls, , rs) <$> f t
           where (ls, rs) = second safeTail (splitAt i xs)
-                safeTail = maybeToMonoid . fmap tail . nonEmpty
+                safeTail = foldMap tail . nonEmpty
         arg _ = Nothing
 
 extractFirstSelect :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUSelect, ICU.Stream)
