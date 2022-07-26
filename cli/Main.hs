@@ -33,4 +33,4 @@ parserDie :: MonadIO m => Either ParseFailure a -> m a
 parserDie = either (die . printErr) pure
 
 getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
-getParsedAt x = parseDataset x <$> readFileText x
+getParsedAt x = parseDataset x . decodeUtf8 <$> readFileBS x

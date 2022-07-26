@@ -35,4 +35,4 @@ getParsedStdin :: IO (Either ParseFailure (Dataset Translation))
 getParsedStdin = parseDataset "stdin" <$> getContents
 
 getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
-getParsedAt x = parseDataset x <$> readFileText x
+getParsedAt x = parseDataset x . decodeUtf8 <$> readFileBS x
