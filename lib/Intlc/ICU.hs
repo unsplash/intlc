@@ -45,33 +45,18 @@ data DateTimeFmt
   | Full
   deriving (Show, Eq)
 
+-- | The only cardinal plurals which do not require a wildcard are those
+-- consisting solely of literal/exact cases. This is because within the AST we
+-- only care about correctness and prospective type safety, not optimal use of
+-- ICU syntax.
+--
+-- Ordinal plurals always require a wildcard as per their intended usage with
+-- rules, however as with the cardinal plural type we'll allow a wider set of
+-- suboptimal usages that we can then lint against.
 data Plural
-  = Cardinal CardinalPlural
-  | Ordinal OrdinalPlural
-  deriving (Show, Eq)
-
--- | Cardinal plurals can be split into four usages:
---
---   1. Literal number cases without a wildcard.
---   2. Literal number cases with a wildcard.
---   3. Rule cases with a wildcard.
---   3. Mixed cases with a wildcard.
---
--- Per the aforementioned usages, any cardinal plural with at least one rule
--- case must have a wildcard, and cardinal plurals without any rule cases can
--- optionally supply a wildcard.
-data CardinalPlural
-  = LitPlural (NonEmpty (PluralCase PluralExact)) (Maybe PluralWildcard)
-  | RulePlural (NonEmpty (PluralCase PluralRule)) PluralWildcard
-  | MixedPlural (NonEmpty (PluralCase PluralExact)) (NonEmpty (PluralCase PluralRule)) PluralWildcard
-  deriving (Show, Eq)
-
--- | Ordinal plurals require at least one rule case and therefore also a
--- wildcard. An ordinal plural without a rule case would make the use of this
--- construct redundant, and in such cases the consumer should instead use a
--- cardinal plural.
-data OrdinalPlural
-  = OrdinalPlural [PluralCase PluralExact] (NonEmpty (PluralCase PluralRule)) PluralWildcard
+  = CardinalExact (NonEmpty (PluralCase PluralExact))
+  | CardinalInexact [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
+  | Ordinal [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
   deriving (Show, Eq)
 
 data PluralCase a = PluralCase a Stream
@@ -123,26 +108,13 @@ getStream (Interpolation _ t) = case t of
   Callback xs                -> Just xs
 
 getPluralStream :: Plural -> Stream
-getPluralStream (Cardinal x) = getCardinalStream x
-getPluralStream (Ordinal x)  = getOrdinalStream x
-
-getCardinalStream :: CardinalPlural -> Stream
-getCardinalStream (LitPlural xs mw) = join
-  [ getPluralCaseStream `concatMap` xs
-  , maybeToMonoid $ getPluralWildcardStream <$> mw
-  ]
-getCardinalStream (RulePlural xs w) = join
-  [ getPluralCaseStream `concatMap` xs
+getPluralStream (CardinalExact ls)        = getPluralCaseStream `concatMap` ls
+getPluralStream (CardinalInexact ls rs w) = mconcat
+  [ getPluralCaseStream `concatMap` ls
+  , getPluralCaseStream `concatMap` rs
   , getPluralWildcardStream w
   ]
-getCardinalStream (MixedPlural xs ys w) = join
-  [ getPluralCaseStream `concatMap` xs
-  , getPluralCaseStream `concatMap` ys
-  , getPluralWildcardStream w
-  ]
-
-getOrdinalStream :: OrdinalPlural -> Stream
-getOrdinalStream (OrdinalPlural xs ys w) = join
+getPluralStream (Ordinal xs ys w)         = mconcat
   [ getPluralCaseStream `concatMap` xs
   , getPluralCaseStream `concatMap` ys
   , getPluralWildcardStream w
