@@ -9,6 +9,7 @@ common common
   default-extensions:
     LambdaCase
     NoImplicitPrelude
+    OverloadedRecordDot
     OverloadedStrings
   ghc-options:
     -Wall
