@@ -44,7 +44,7 @@ compileFlattened :: Dataset Translation -> Text
 compileFlattened = JSON.compileDataset . mapMsgs flatten
 
 mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
-mapMsgs f = fmap $ \x -> x { message = f (message x) }
+mapMsgs f = fmap $ \x -> x { message = f x.message }
 
 -- Map every token, included those nested, in a `Stream`. Order is unspecified.
 -- The children of a token, if any, will be traversed after the provided
@@ -113,7 +113,8 @@ extractFirstBool = extractFirstArg $ \case
 extractFirstArg :: (ICU.Type -> Maybe a) -> ICU.Stream -> Maybe (Text, ICU.Stream, a, ICU.Stream)
 extractFirstArg f xs = firstJust arg (zip [0..] xs)
   where arg (i, ICU.Interpolation n t) = (n, ls, , rs) <$> f t
-          where (ls, _:rs) = splitAt i xs
+          where (ls, rs) = second safeTail (splitAt i xs)
+                safeTail = foldMap tail . nonEmpty
         arg _ = Nothing
 
 extractFirstSelect :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUSelect, ICU.Stream)
