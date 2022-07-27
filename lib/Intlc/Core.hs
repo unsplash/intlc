@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Intlc.Core where
 
 import           Intlc.ICU (Message)

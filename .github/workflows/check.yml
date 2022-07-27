@@ -15,7 +15,7 @@ jobs:
       - uses: haskell/actions/setup@v2
         id: setup-haskell
         with:
-          ghc-version: 9.2.2
+          ghc-version: 8.10.7
       - run: cabal freeze
       - uses: actions/cache@v3
         with:
@@ -30,7 +30,7 @@ jobs:
       - uses: haskell/actions/setup@v2
         id: setup-haskell
         with:
-          ghc-version: 9.2.2
+          ghc-version: 8.10.7
       - run: cabal freeze
       - uses: actions/cache@v3
         with:

@@ -6,6 +6,8 @@
 --   * Consume all whitespace after tokens where possible.
 --   * Therefore, assume no whitespace before tokens.
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module Intlc.Parser.JSON where
 
 import           Control.Applicative.Permutations

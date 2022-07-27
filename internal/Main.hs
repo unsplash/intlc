@@ -20,7 +20,7 @@ lint :: MonadIO m => Dataset Translation -> m ()
 lint xs = whenJust (lintDatasetInternal xs) $ die . T.unpack
 
 compileExpandedPlurals :: MonadIO m => Dataset Translation -> m ()
-compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals x.message })
+compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals (message x) })
 
 tryGetParsedStdin :: IO (Dataset Translation)
 tryGetParsedStdin = parserDie =<< getParsedStdin
@@ -35,4 +35,4 @@ getParsedStdin :: IO (Either ParseFailure (Dataset Translation))
 getParsedStdin = parseDataset "stdin" <$> getContents
 
 getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
-getParsedAt x = parseDataset x . decodeUtf8 <$> readFileBS x
+getParsedAt x = parseDataset x <$> readFileText x
