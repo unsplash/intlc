@@ -19,7 +19,7 @@
             #
             # Thus we've pinned nixpkgs to the last commit before 9.2.2 was bumped up to 9.2.3.
             haskell.compiler.ghc922
-            haskell.packages.ghc922.cabal-install
+            cabal-install
             haskell.packages.ghc922.hspec-golden
 
             # For typechecking golden output
