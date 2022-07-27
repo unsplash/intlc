@@ -52,7 +52,7 @@ intlc intentially breaks with the ICU spec where there's high value in doing so 
 
 ## Contributing
 
-Check out `ARCHITECTURE.md`. Currently building against GHC 9.2.3.
+Check out `ARCHITECTURE.md`. Currently building against GHC 8.10.7.
 
 ## Publishing new release
 
