@@ -35,12 +35,11 @@ spec = describe "TypeScript compiler" $ do
               ICU.String "name"
             )
           , ICU.Plaintext "! You are "
-          , ICU.Plural "age"
-              (ICU.CardinalInexact
-                (pure (ICU.PluralCase (ICU.PluralExact "42") (pure (ICU.Plaintext "very cool"))))
-                (pure (ICU.PluralCase ICU.Zero (pure (ICU.Plaintext "new around here"))))
-                (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
-              )
+          , ICU.CardinalInexact
+              "age"
+              (pure (ICU.PluralCase (ICU.PluralExact "42") (pure (ICU.Plaintext "very cool"))))
+              (pure (ICU.PluralCase ICU.Zero (pure (ICU.Plaintext "new around here"))))
+              (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
           , ICU.Plaintext ". Regardless, the magic number is most certainly "
           , ICU.Number "magicNumber"
           , ICU.Plaintext "! The date is "
@@ -114,7 +113,7 @@ spec = describe "TypeScript compiler" $ do
       fromNode x `shouldBe` fromArgs ys
 
     it "in cardinal plural" $ do
-      let x = ICU.Plural "x" . ICU.CardinalExact . pure $
+      let x = ICU.CardinalExact "x" . pure $
                 ICU.PluralCase (ICU.PluralExact "42") [ICU.String "y"]
       let ys =
               [ ("x", pure (TS.TNumLitUnion (pure "42")))
@@ -123,7 +122,7 @@ spec = describe "TypeScript compiler" $ do
       fromNode x `shouldBe` fromArgs ys
 
     it "in ordinal plural" $ do
-      let x = ICU.Plural "x" $ ICU.Ordinal
+      let x = ICU.Ordinal "x"
                 [ICU.PluralCase (ICU.PluralExact "42") [ICU.Date "foo" ICU.Short]]
                 (pure $ ICU.PluralCase ICU.Few [ICU.String "bar"])
                 (ICU.PluralWildcard [ICU.Number "baz"])

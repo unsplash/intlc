@@ -133,10 +133,10 @@ interp = between (char '{') (char '}') $ do
           , Number n <$ string "number"
           , Date n <$> (string "date" *> sep *> dateTimeFmt)
           , Time n <$> (string "time" *> sep *> dateTimeFmt)
-          , Plural n <$> withPluralCtx n (
-                  string "plural" *> sep *> cardinalCases
-              <|> string "selectordinal" *> sep *> ordinalCases
-            )
+          , withPluralCtx n $ choice
+              [ string "plural"        *> sep *> cardinalCases n
+              , string "selectordinal" *> sep *> ordinalCases n
+              ]
           , Select n <$> (string "select" *> sep *> selectCases)
           ]
         withPluralCtx n = withReaderT (\x -> x { pluralCtxName = Just n })
@@ -170,17 +170,17 @@ selectCases = choice
         name = try $ mfilter (/= wildcardName) ident
         wildcardName = "other"
 
-cardinalCases :: Parser Plural
-cardinalCases = try cardinalInexactCases <|> cardinalExactCases
+cardinalCases :: Arg -> Parser Node
+cardinalCases n = try (cardinalInexactCases n) <|> cardinalExactCases n
 
-cardinalExactCases :: Parser Plural
-cardinalExactCases = CardinalExact <$> NE.sepEndBy1 pluralExactCase hspace1
+cardinalExactCases :: Arg -> Parser Node
+cardinalExactCases n = CardinalExact n <$> NE.sepEndBy1 pluralExactCase hspace1
 
-cardinalInexactCases :: Parser Plural
-cardinalInexactCases = uncurry CardinalInexact <$> mixedPluralCases <*> pluralWildcard
+cardinalInexactCases :: Arg -> Parser Node
+cardinalInexactCases n = uncurry (CardinalInexact n) <$> mixedPluralCases <*> pluralWildcard
 
-ordinalCases :: Parser Plural
-ordinalCases = uncurry Ordinal <$> mixedPluralCases <*> pluralWildcard
+ordinalCases :: Arg -> Parser Node
+ordinalCases n = uncurry (Ordinal n) <$> mixedPluralCases <*> pluralWildcard
 
 mixedPluralCases :: Parser ([PluralCase PluralExact], [PluralCase PluralRule])
 mixedPluralCases = partitionEithers <$> sepEndBy (eitherP pluralExactCase pluralRuleCase) hspace1

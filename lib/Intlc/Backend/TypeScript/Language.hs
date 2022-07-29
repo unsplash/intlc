@@ -51,7 +51,13 @@ fromNode (ICU.String n)      = pure (n, TStr)
 fromNode (ICU.Number n)      = pure (n, TNum)
 fromNode (ICU.Date n _)      = pure (n, TDate)
 fromNode (ICU.Time n _)      = pure (n, TDate)
-fromNode (ICU.Plural n x)    = fromPlural n x
+-- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
+-- union of number literals.
+fromNode (ICU.CardinalExact n ls)        = (n, t) : (fromExactPluralCase =<< toList ls)
+  where t = TNumLitUnion $ caseLit <$> ls
+        caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
+fromNode (ICU.CardinalInexact n ls rs w) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
+fromNode (ICU.Ordinal n ls rs w)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
 -- Plural references are treated as a no-op.
 fromNode ICU.PluralRef {}    = mempty
 fromNode (ICU.Select n x)    = case x of
@@ -61,15 +67,6 @@ fromNode (ICU.Select n x)    = case x of
   (This cs)    -> (n, TStrLitUnion (lit <$> cs)) : (fromSelectCase =<< toList cs)
     where lit (ICU.SelectCase l _) = l
 fromNode (ICU.Callback n xs) = (n, TEndo) : (fromNode =<< xs)
-
-fromPlural :: ICU.Arg -> ICU.Plural -> UncollatedArgs
--- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
--- union of number literals.
-fromPlural n (ICU.CardinalExact ls)        = (n, t) : (fromExactPluralCase =<< toList ls)
-  where t = TNumLitUnion $ caseLit <$> ls
-        caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
-fromPlural n (ICU.CardinalInexact ls rs w) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
-fromPlural n (ICU.Ordinal ls rs w)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact _) xs) = fromNode =<< xs

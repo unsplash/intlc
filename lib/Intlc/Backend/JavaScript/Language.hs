@@ -57,7 +57,21 @@ fromNode (ICU.String n)      = pure $ TStr n
 fromNode (ICU.Number n)      = pure $ TNum n
 fromNode (ICU.Date n x)      = pure $ TDate n x
 fromNode (ICU.Time n x)      = pure $ TTime n x
-fromNode (ICU.Plural n x)    = TMatch <$> fromPlural n x
+fromNode (ICU.CardinalExact n lcs)              = TMatch . Match n LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)
+fromNode (ICU.CardinalInexact n lcs [] w)       = TMatch . Match n LitCond <$> ret
+    where ret = NonLitMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
+fromNode (ICU.CardinalInexact n [] rcs w)       = TMatch . Match n CardinalPluralRuleCond <$> ret
+    where ret = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+fromNode (ICU.CardinalInexact n (lc:lcs) rcs w) = TMatch . Match n LitCond <$> litRet
+    where litRet = RecMatchRet <$> (fromExactPluralCase `mapM` lcs') <*> (Match n CardinalPluralRuleCond <$> ruleRet)
+          ruleRet = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+          lcs' = lc :| lcs
+fromNode (ICU.Ordinal n [] rcs w)               = TMatch . Match n OrdinalPluralRuleCond <$> m
+    where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
+fromNode (ICU.Ordinal n (lc:lcs) rcs w)         = TMatch . Match n LitCond <$> m
+    where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
+          im = Match n OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
+
 fromNode (ICU.PluralRef n)   = pure $ TNum n
 fromNode (ICU.Select n x)    = case x of
       (This cs)    -> TMatch . Match n LitCond . LitMatchRet <$> ret
@@ -67,23 +81,6 @@ fromNode (ICU.Select n x)    = case x of
       (These cs w) -> TMatch . Match n LitCond <$> ret
         where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> fromSelectWildcard w
 fromNode (ICU.Callback n xs) = TApply n <$> (fromNode `mapM` xs)
-
-fromPlural :: ICU.Arg -> ICU.Plural -> ASTCompiler Match
-fromPlural r p = case p of
-  ICU.CardinalExact lcs              -> Match r LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)
-  ICU.CardinalInexact lcs [] w       -> Match r LitCond <$> ret
-    where ret = NonLitMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
-  ICU.CardinalInexact [] rcs w       -> Match r CardinalPluralRuleCond <$> ret
-    where ret = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-  ICU.CardinalInexact (lc:lcs) rcs w -> Match r LitCond <$> litRet
-    where litRet = RecMatchRet <$> (fromExactPluralCase `mapM` lcs') <*> (Match r CardinalPluralRuleCond <$> ruleRet)
-          ruleRet = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-          lcs' = lc :| lcs
-  ICU.Ordinal [] rcs w               -> Match r OrdinalPluralRuleCond <$> m
-    where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-  ICU.Ordinal (lc:lcs) rcs w         -> Match r LitCond <$> m
-    where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
-          im = Match r OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
 fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromNode `mapM` xs)

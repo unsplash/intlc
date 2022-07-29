@@ -31,27 +31,27 @@ spec = describe "linter" $ do
       let lint = lintWith' redundantPluralRule
 
       it "succeeds on exact cardinal plural" $ do
-        lint (Message [Plural "x" $ CardinalExact (pure $ PluralCase (PluralExact "42") [])])
+        lint (Message [CardinalExact "x" (pure $ PluralCase (PluralExact "42") [])])
           `shouldBe` Success
 
       it "succeeds on ordinal plural with any non-wildcard case" $ do
-        lint (Message [Plural "x" $ Ordinal [PluralCase (PluralExact "42") []] [] (PluralWildcard [])])
+        lint (Message [Ordinal "x" [PluralCase (PluralExact "42") []] [] (PluralWildcard [])])
           `shouldBe` Success
-        lint (Message [Plural "x" $ Ordinal [] [PluralCase  Two []] (PluralWildcard [])])
+        lint (Message [Ordinal "x" [] [PluralCase  Two []] (PluralWildcard [])])
           `shouldBe` Success
 
       it "succeeds on inexact cardinal plural with any non-wildcard case" $ do
-        lint (Message [Plural "x" $ CardinalInexact [PluralCase (PluralExact "42") []] [] (PluralWildcard [])])
+        lint (Message [CardinalInexact "x" [PluralCase (PluralExact "42") []] [] (PluralWildcard [])])
           `shouldBe` Success
-        lint (Message [Plural "x" $ CardinalInexact [] [PluralCase  Two []] (PluralWildcard [])])
+        lint (Message [CardinalInexact "x" [] [PluralCase  Two []] (PluralWildcard [])])
           `shouldBe` Success
 
       it "fails on ordinal plural with only a wildcard" $ do
-        lint (Message [Plural "x" $ Ordinal [] [] (PluralWildcard [])])
+        lint (Message [Ordinal "x" [] [] (PluralWildcard [])])
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
       it "fails on inexact cardinal plural with only a wildcard" $ do
-        lint (Message [Plural "x" $ CardinalInexact [] [] (PluralWildcard [])])
+        lint (Message [CardinalInexact "x" [] [] (PluralWildcard [])])
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
   describe "internal" $ do
@@ -93,7 +93,7 @@ spec = describe "linter" $ do
         let cb = flip Callback mempty
         lint (Message [cb "x", cb "y"]) `shouldBe` Success
 
-        let p n = Plural n $ Ordinal [] (pure $ PluralCase Zero []) (PluralWildcard [])
+        let p n = Ordinal n [] (pure $ PluralCase Zero []) (PluralWildcard [])
         lint (Message [p "x", p "y"]) `shouldBe` Success
 
       it "does not lint streams with 2 or more complex interpolations" $ do

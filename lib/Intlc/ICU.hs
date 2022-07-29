@@ -33,7 +33,17 @@ data Node
   | Number Arg
   | Date Arg DateTimeFmt
   | Time Arg DateTimeFmt
-  | Plural Arg Plural
+  -- The only cardinal plurals which do not require a wildcard are those
+  -- consisting solely of literal/exact cases. This is because within the AST we
+  -- only care about correctness and prospective type safety, not optimal use of
+  -- ICU syntax.
+  --
+  -- Ordinal plurals always require a wildcard as per their intended usage with
+  -- rules, however as with the cardinal plural type we'll allow a wider set of
+  -- suboptimal usages that we can then lint against.
+  | CardinalExact Arg (NonEmpty (PluralCase PluralExact))
+  | CardinalInexact Arg [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
+  | Ordinal Arg [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
   | PluralRef Arg
@@ -46,20 +56,6 @@ data DateTimeFmt
   | Medium
   | Long
   | Full
-  deriving (Show, Eq)
-
--- | The only cardinal plurals which do not require a wildcard are those
--- consisting solely of literal/exact cases. This is because within the AST we
--- only care about correctness and prospective type safety, not optimal use of
--- ICU syntax.
---
--- Ordinal plurals always require a wildcard as per their intended usage with
--- rules, however as with the cardinal plural type we'll allow a wider set of
--- suboptimal usages that we can then lint against.
-data Plural
-  = CardinalExact (NonEmpty (PluralCase PluralExact))
-  | CardinalInexact [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
-  | Ordinal [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
   deriving (Show, Eq)
 
 data PluralCase a = PluralCase a Stream
@@ -106,24 +102,21 @@ getNamedStream Date {}         = Nothing
 getNamedStream Time {}         = Nothing
 getNamedStream PluralRef {}    = Nothing
 getNamedStream x@(Bool {})     = Just (name x, trueCase x <> falseCase x)
-getNamedStream (Plural n x)    = Just (n, getPluralStream x)
-getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap f) g $ x
-    where f (SelectCase _ xs)  = xs
-          g (SelectWildcard w) = w
-getNamedStream (Callback n xs) = Just (n, xs)
-
-getPluralStream :: Plural -> Stream
-getPluralStream (CardinalExact ls)        = getPluralCaseStream `concatMap` ls
-getPluralStream (CardinalInexact ls rs w) = mconcat
+getNamedStream (CardinalExact n ls)        = Just (n, getPluralCaseStream `concatMap` ls)
+getNamedStream (CardinalInexact n ls rs w) = Just . (n,) $ mconcat
   [ getPluralCaseStream `concatMap` ls
   , getPluralCaseStream `concatMap` rs
   , getPluralWildcardStream w
   ]
-getPluralStream (Ordinal xs ys w)         = mconcat
+getNamedStream (Ordinal n xs ys w)         = Just . (n,) $ mconcat
   [ getPluralCaseStream `concatMap` xs
   , getPluralCaseStream `concatMap` ys
   , getPluralWildcardStream w
   ]
+getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap f) g $ x
+    where f (SelectCase _ xs)  = xs
+          g (SelectWildcard w) = w
+getNamedStream (Callback n xs) = Just (n, xs)
 
 getPluralCaseStream :: PluralCase a -> Stream
 getPluralCaseStream (PluralCase _ xs) = xs

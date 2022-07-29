@@ -25,11 +25,12 @@ node (String n)      = "{" <> unArg n <> "}"
 node (Number n)      = "{" <> unArg n <> ", number}"
 node (Date n fmt)    = "{" <> unArg n <> ", date, "          <> dateTimeFmt fmt  <> "}"
 node (Time n fmt)    = "{" <> unArg n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-node (Plural n p)    = "{" <> unArg n <> ", " <> typ <> ", " <> plural p         <> "}"
-  where typ = case p of
-          CardinalExact {}   -> "plural"
-          CardinalInexact {} -> "plural"
-          Ordinal {}         -> "selectordinal"
+node (CardinalExact n xs)        = "{" <> unArg n <> ", plural, " <> cases <> "}"
+  where cases = unwords . toList . fmap exactPluralCase $ xs
+node (CardinalInexact n xs ys w) = "{" <> unArg n <> ", plural, " <> cases <> "}"
+  where cases = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ pluralWildcard w]
+node (Ordinal n xs ys w)         = "{" <> unArg n <> ", selectordinal, " <> cases <> "}"
+  where cases = unwords $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (pluralWildcard w)
 node PluralRef {}    = "#"
 node (Select n x)    = "{" <> unArg n <> ", select, "        <> select x         <> "}"
 node (Callback n xs) = "<" <> unArg n <> ">"                 <> stream xs        <> "</" <> unArg n <> ">"
@@ -39,12 +40,6 @@ dateTimeFmt Short  = "short"
 dateTimeFmt Medium = "medium"
 dateTimeFmt Long   = "long"
 dateTimeFmt Full   = "full"
-
-plural :: Plural -> Text
-plural (CardinalExact xs)        = unwords . toList . fmap exactPluralCase $ xs
-plural (CardinalInexact xs ys w) = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ pluralWildcard w]
-plural (Ordinal xs ys w)         = unwords $
-  (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (pluralWildcard w)
 
 exactPluralCase :: PluralCase PluralExact -> Text
 exactPluralCase (PluralCase (PluralExact n) xs) = "=" <> n <> " {" <> stream xs <> "}"
