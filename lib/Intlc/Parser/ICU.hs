@@ -1,6 +1,6 @@
 -- This module follows the following whitespace rules:
---   * Consume all whitespace after tokens where possible.
---   * Therefore, assume no whitespace before tokens.
+--   * Consume all whitespace after nodes where possible.
+--   * Therefore, assume no whitespace before nodes.
 
 module Intlc.Parser.ICU where
 
@@ -14,8 +14,7 @@ import           Intlc.Parser.Error                       (MessageParseErr (..),
                                                            failingWith)
 import           Prelude                                  hiding (Type)
 import           Text.Megaparsec                          hiding (State, Stream,
-                                                           Token, many, some,
-                                                           token)
+                                                           many, some)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer               as L
 
@@ -53,13 +52,13 @@ msgTill = fmap (Message . mergePlaintext) . streamTill
 
 -- Parse a stream until the provided parser matches.
 streamTill :: Parser a -> Parser Stream
-streamTill = manyTill token
+streamTill = manyTill node
 
 -- The core parser of this module. Parse as many of these as you'd like until
 -- reaching an anticipated delimiter, such as a double quote in the surrounding
 -- JSON string or end of input in a REPL.
-token :: Parser Token
-token = choice
+node :: Parser Node
+node = choice
   [ interp
   , callback
   -- Plural cases support interpolating the number/argument in context with
@@ -108,7 +107,7 @@ escaped = apos *> choice
         synOpen = char '{' <|> char '<'
         synClose = char '}' <|> char '>'
 
-callback :: Parser Token
+callback :: Parser Node
 callback = do
   (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> arg <* string ">"
   when isClosing $ (openPos + 1) `failingWith'` NoOpeningCallbackTag oname
@@ -124,7 +123,7 @@ callback = do
             pure . Callback n . mergePlaintext $ stream
           closing = fmap isJust . hidden . optional . char $ '/'
 
-interp :: Parser Token
+interp :: Parser Node
 interp = between (char '{') (char '}') $ do
   n <- arg
   option (String n) (sep *> body n)

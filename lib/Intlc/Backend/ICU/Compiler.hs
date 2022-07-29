@@ -15,24 +15,24 @@ import           Prelude    hiding (Type)
 compileMsg :: Message -> Text
 compileMsg (Message xs) = stream xs
 
-stream :: Foldable f => f Token -> Text
-stream = foldMap token
+stream :: Foldable f => f Node -> Text
+stream = foldMap node
 
-token :: Token -> Text
-token (Plaintext x)   = x
-token x@(Bool {})     = "{" <> (unArg . name $ x) <> ", boolean, true {" <> stream (trueCase x)  <> "} false {" <> stream (falseCase x) <> "}}"
-token (String n)      = "{" <> unArg n <> "}"
-token (Number n)      = "{" <> unArg n <> ", number}"
-token (Date n fmt)    = "{" <> unArg n <> ", date, "          <> dateTimeFmt fmt  <> "}"
-token (Time n fmt)    = "{" <> unArg n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-token (Plural n p)    = "{" <> unArg n <> ", " <> typ <> ", " <> plural p         <> "}"
+node :: Node -> Text
+node (Plaintext x)   = x
+node x@(Bool {})     = "{" <> (unArg . name $ x) <> ", boolean, true {" <> stream (trueCase x)  <> "} false {" <> stream (falseCase x) <> "}}"
+node (String n)      = "{" <> unArg n <> "}"
+node (Number n)      = "{" <> unArg n <> ", number}"
+node (Date n fmt)    = "{" <> unArg n <> ", date, "          <> dateTimeFmt fmt  <> "}"
+node (Time n fmt)    = "{" <> unArg n <> ", time, "          <> dateTimeFmt fmt  <> "}"
+node (Plural n p)    = "{" <> unArg n <> ", " <> typ <> ", " <> plural p         <> "}"
   where typ = case p of
           CardinalExact {}   -> "plural"
           CardinalInexact {} -> "plural"
           Ordinal {}         -> "selectordinal"
-token PluralRef {}    = "#"
-token (Select n x)    = "{" <> unArg n <> ", select, "        <> select x         <> "}"
-token (Callback n xs) = "<" <> unArg n <> ">"                 <> stream xs        <> "</" <> unArg n <> ">"
+node PluralRef {}    = "#"
+node (Select n x)    = "{" <> unArg n <> ", select, "        <> select x         <> "}"
+node (Callback n xs) = "<" <> unArg n <> ">"                 <> stream xs        <> "</" <> unArg n <> ">"
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"

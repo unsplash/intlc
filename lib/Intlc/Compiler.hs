@@ -45,11 +45,11 @@ compileFlattened = JSON.compileDataset . mapMsgs flatten
 mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
 mapMsgs f = fmap $ \x -> x { message = f (message x) }
 
--- Map every token, included those nested, in a `Stream`. Order is unspecified.
--- The children of a token, if any, will be traversed after the provided
--- function is applied.
-mapTokens :: (ICU.Token -> ICU.Token) -> ICU.Stream -> ICU.Stream
-mapTokens f = fmap $ f >>> \case
+-- Map every `Node`, included those nested, in a `Stream`. Order is
+-- unspecified. The children of a node, if any, will be traversed after the
+-- provided function is applied.
+mapNodes :: (ICU.Node -> ICU.Node) -> ICU.Stream -> ICU.Stream
+mapNodes f = fmap $ f >>> \case
   ICU.Bool n xs ys  -> ICU.Bool n (f <$> xs) (f <$> ys)
   ICU.Plural n y    -> ICU.Plural n $ mapPluralStreams (fmap f) y
   ICU.Select n y    -> ICU.Select n $ mapSelectStreams (fmap f) y
@@ -74,7 +74,7 @@ flatten = ICU.Message . go [] . ICU.unMessage
 -- Added plural rules inherit the content of the wildcard. Output order of
 -- rules is unspecified.
 expandPlurals :: ICU.Message -> ICU.Message
-expandPlurals (ICU.Message xs) = ICU.Message . flip mapTokens xs $ \case
+expandPlurals (ICU.Message xs) = ICU.Message . flip mapNodes xs $ \case
   ICU.Plural n p -> ICU.Plural n $ case p of
     ICU.CardinalExact {}               -> p
     ICU.CardinalInexact exacts rules w ->

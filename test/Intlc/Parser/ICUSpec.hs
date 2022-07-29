@@ -169,7 +169,7 @@ spec = describe "ICU parser" $ do
       parse cardinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
       parse cardinalCases' `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
-    it "parses literal and plural cases, wildcard, and interpolation token" $ do
+    it "parses literal and plural cases, wildcard, and interpolation node" $ do
       parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
         CardinalInexact (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", PluralRef "xyz"])
 
@@ -190,7 +190,7 @@ spec = describe "ICU parser" $ do
       parse ordinalCases' `shouldFailOn`    "=0 {foo} one {bar}"
       parse ordinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
-    it "parses literal and plural cases, wildcard, and interpolation token" $ do
+    it "parses literal and plural cases, wildcard, and interpolation node" $ do
       parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Ordinal (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", PluralRef "xyz"])
 

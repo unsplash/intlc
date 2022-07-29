@@ -74,10 +74,10 @@ spec = describe "linter" $ do
       -- An example interpolation that's affected by this lint rule.
       let f n = Select n . That . SelectWildcard
 
-      it "lints streams with 1 plain text token" $ do
+      it "lints streams with 1 plain text node" $ do
         lint (Message [Plaintext "yay"]) `shouldBe` Success
 
-      it "lints streams with 2 or more plain text token" $ do
+      it "lints streams with 2 or more plain text node" $ do
         lint (Message [Plaintext "yay", Plaintext "Hello"]) `shouldBe` Success
 
       it "lints streams with 1 simple interpolation" $ do

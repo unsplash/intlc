@@ -12,7 +12,7 @@ newtype Message = Message Stream
 unMessage :: Message -> Stream
 unMessage (Message xs) = xs
 
-type Stream = [Token]
+type Stream = [Node]
 
 newtype Arg = Arg Text
   deriving (Show, Eq, Ord, IsString)
@@ -20,13 +20,13 @@ newtype Arg = Arg Text
 unArg :: Arg -> Text
 unArg (Arg x) = x
 
--- | A token is either an interpolation - some sort of identifier for input -
--- or mere plaintext. A collection of tokens make up any message. A non-empty
--- message without any interpolation will be a single `Plaintext` token.
+-- | A `Node` is either an interpolation - some sort of identifier for input -
+-- or mere plaintext. A collection of nodes make up any message. A non-empty
+-- message without any interpolation will be a single `Plaintext` node.
 --
 -- On interpolations we diverge from icu4j by supporting a boolean type, and
 -- not necessarily requiring wildcard cases.
-data Token
+data Node
   = Plaintext Text
   | Bool { name :: Arg, trueCase :: Stream, falseCase :: Stream }
   | String Arg
@@ -89,16 +89,16 @@ data SelectCase = SelectCase Text Stream
 newtype SelectWildcard = SelectWildcard Stream
   deriving (Show, Eq)
 
--- | Merges any sibling `Plaintext` tokens in a `Stream`.
+-- | Merges any sibling `Plaintext` nodes in a `Stream`.
 mergePlaintext :: Stream -> Stream
 mergePlaintext []                               = []
 mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x <> y) : zs
 mergePlaintext (x:ys)                           = x : mergePlaintext ys
 
-getStream :: Token -> Maybe Stream
+getStream :: Node -> Maybe Stream
 getStream = fmap snd . getNamedStream
 
-getNamedStream :: Token -> Maybe (Arg, Stream)
+getNamedStream :: Node -> Maybe (Arg, Stream)
 getNamedStream Plaintext {}    = Nothing
 getNamedStream String {}       = Nothing
 getNamedStream Number {}       = Nothing

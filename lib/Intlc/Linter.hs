@@ -124,7 +124,7 @@ interpolationsRule = count . complexIdents where
   getComplexStream Callback {}  = Nothing
   getComplexStream Plural {}    = Nothing
   getComplexStream Plaintext {} = Nothing
-  getComplexStream token        = getNamedStream token
+  getComplexStream x            = getNamedStream x
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.

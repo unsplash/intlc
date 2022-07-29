@@ -102,7 +102,7 @@ spec = describe "TypeScript compiler" $ do
 
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
-    let fromToken = args . TS.fromMsg TS.TFragment . ICU.Message . pure
+    let fromNode = args . TS.fromMsg TS.TFragment . ICU.Message . pure
     let fromArgs = fromList
 
     it "in select" $ do
@@ -111,7 +111,7 @@ spec = describe "TypeScript compiler" $ do
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
               , ("y", pure TS.TStr)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys
 
     it "in cardinal plural" $ do
       let x = ICU.Plural "x" . ICU.CardinalExact . pure $
@@ -120,7 +120,7 @@ spec = describe "TypeScript compiler" $ do
               [ ("x", pure (TS.TNumLitUnion (pure "42")))
               , ("y", pure TS.TStr)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys
 
     it "in ordinal plural" $ do
       let x = ICU.Plural "x" $ ICU.Ordinal
@@ -133,7 +133,7 @@ spec = describe "TypeScript compiler" $ do
               , ("bar", pure TS.TStr)
               , ("baz", pure TS.TNum)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys
 
     it "in boolean" $ do
       let x = ICU.Bool "x"
@@ -144,4 +144,4 @@ spec = describe "TypeScript compiler" $ do
               , ("y", pure TS.TStr)
               , ("z", pure TS.TNum)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys
