@@ -36,31 +36,31 @@ spec = describe "ICU parser" $ do
       it "parses as plaintext outside of plurals" $ do
         parse msg "#" `shouldParse` Message [Plaintext "#"]
         parse msg "{x, select, y {#}}" `shouldParse`
-          (Message . pure . Interpolation "x" $
-            Select (This . pure $ SelectCase "y" (pure $ Plaintext "#")))
+          (Message . pure $
+            Select "x" (This . pure $ SelectCase "y" (pure $ Plaintext "#")))
 
       it "parses as arg inside shallow plural" $ do
-        let n = pure $ Interpolation "n" PluralRef
+        let n = pure $ PluralRef "n"
         parse msg "{n, plural, one {#} other {#}}" `shouldParse`
-          (Message . pure . Interpolation "n" . Plural $
+          (Message . pure . Plural "n" $
             CardinalInexact [] (pure $ PluralCase One n) (PluralWildcard n))
 
       it "parses as nearest arg inside deep plural" $ do
-        let n = pure $ Interpolation "n" PluralRef
-        let i = pure $ Interpolation "i" PluralRef
+        let n = pure $ PluralRef "n"
+        let i = pure $ PluralRef "i"
         parse msg "{n, plural, one {{i, plural, one {#} other {#}}} other {#}}" `shouldParse`
-          (Message . pure . Interpolation "n" . Plural $
+          (Message . pure . Plural "n" $
             CardinalInexact [] (pure $ PluralCase One (
-              pure . Interpolation "i" . Plural $
+              pure . Plural "i" $
                 CardinalInexact [] (pure $ PluralCase One i) (PluralWildcard i)
             )) (PluralWildcard n))
 
       it "parses as arg nested inside other interpolation" $ do
-        let n = pure $ Interpolation "n" PluralRef
+        let n = pure $ PluralRef "n"
         parse msg "{n, plural, one {<f>#</f>} other {#}}" `shouldParse`
-          (Message . pure . Interpolation "n" . Plural $
+          (Message . pure . Plural "n" $
             CardinalInexact [] (pure $ PluralCase One (
-              pure . Interpolation "f" . Callback $ n
+              pure . Callback "f" $ n
             )) (PluralWildcard n))
 
     describe "escaping" $ do
@@ -70,7 +70,7 @@ spec = describe "ICU parser" $ do
         parse msg "'<notATag>hello</notATag>'" `shouldParse`
           Message [Plaintext "<notATag>hello</notATag>"]
         parse msg "a {b} '{c}' {d} e" `shouldParse`
-          Message [Plaintext "a ", Interpolation "b" String, Plaintext " {c} ", Interpolation "d" String, Plaintext " e"]
+          Message [Plaintext "a ", String "b", Plaintext " {c} ", String "d", Plaintext " e"]
         parse msg "'<f>'" `shouldParse` Message [Plaintext "<f>"]
         parse msg "'<f>x</f>'" `shouldParse` Message [Plaintext "<f>x</f>"]
         parse msg "'<f>x</g>'" `shouldParse` Message [Plaintext "<f>x</g>"]
@@ -79,17 +79,17 @@ spec = describe "ICU parser" $ do
         parse msg "This is not an interpolation: '{word}" `shouldParse` Message [Plaintext "This is not an interpolation: {word}"]
         parse msg "'<notATag>" `shouldParse` Message [Plaintext "<notATag>"]
         parse msg "a {b} '{c} {d} e" `shouldParse`
-          Message [Plaintext "a ", Interpolation "b" String, Plaintext " {c} ", Interpolation "d" String, Plaintext " e"]
+          Message [Plaintext "a ", String "b", Plaintext " {c} ", String "d", Plaintext " e"]
         parse msg "a {b} 'c {d} e" `shouldParse`
-          Message [Plaintext "a ", Interpolation "b" String, Plaintext " 'c ", Interpolation "d" String, Plaintext " e"]
+          Message [Plaintext "a ", String "b", Plaintext " 'c ", String "d", Plaintext " e"]
         parse msg "{n, plural, =42 {# '#}}" `shouldParse`
-          let xs = [Interpolation "n" PluralRef, Plaintext " #"]
-           in Message [Interpolation "n" $ Plural (CardinalExact (pure $ PluralCase (PluralExact "42") xs))]
+          let xs = [PluralRef "n", Plaintext " #"]
+           in Message [Plural "n" (CardinalExact (pure $ PluralCase (PluralExact "42") xs))]
 
       it "escapes two single quotes as one single quote" $ do
         parse msg "This '{isn''t}' obvious." `shouldParse` Message [Plaintext "This {isn't} obvious."]
         parse msg "a {b} ''{c}'' {d} e" `shouldParse`
-          Message [Plaintext "a ", Interpolation "b" String, Plaintext " '", Interpolation "c" String, Plaintext "' ", Interpolation "d" String, Plaintext " e"]
+          Message [Plaintext "a ", String "b", Plaintext " '", String "c", Plaintext "' ", String "d", Plaintext " e"]
 
       it "ignores one single quote not immediately preceding a syntax character" $ do
         parse msg "'" `shouldParse` Message [Plaintext "'"]
@@ -98,10 +98,10 @@ spec = describe "ICU parser" $ do
 
   describe "interpolation" $ do
     it "interpolates appropriately" $ do
-      parse interp "{x}" `shouldParse` ("x", String)
+      parse interp "{x}" `shouldParse` String "x"
 
     it "only accepts alphanumeric identifiers" $ do
-      parse interp "{XyZ}" `shouldParse` ("XyZ", String)
+      parse interp "{XyZ}" `shouldParse` String "XyZ"
       parse interp `shouldFailOn` "{x y}"
 
     it "disallows bad types" $ do
@@ -110,7 +110,7 @@ spec = describe "ICU parser" $ do
 
     describe "bool" $ do
       it "requires both bool cases" $ do
-        parse interp "{x, boolean, true {y} false {z}}" `shouldParse` ("x", Bool [Plaintext "y"] [Plaintext "z"])
+        parse interp "{x, boolean, true {y} false {z}}" `shouldParse` Bool "x" [Plaintext "y"] [Plaintext "z"]
         parse interp `shouldFailOn` "{x, boolean, true {y}}"
         parse interp `shouldFailOn` "{x, boolean, false {y}}"
 
@@ -122,12 +122,12 @@ spec = describe "ICU parser" $ do
 
     describe "date" $ do
       it "disallows bad formats" $ do
-        parse interp "{x, date, short}" `shouldParse` ("x", Date Short)
+        parse interp "{x, date, short}" `shouldParse` Date "x" Short
         parse interp `shouldFailOn` "{x, date, miniature}"
 
     describe "time" $ do
       it "disallows bad formats" $ do
-        parse interp "{x, time, short}" `shouldParse` ("x", Time Short)
+        parse interp "{x, time, short}" `shouldParse` Time "x" Short
         parse interp `shouldFailOn` "{x, time, miniature}"
 
   describe "callback" $ do
@@ -135,7 +135,7 @@ spec = describe "ICU parser" $ do
 
     it "parses nested" $ do
       parse callback "<f><g>x{y}z</g></f>" `shouldParse`
-        ("f", Callback [Interpolation "g" (Callback [Plaintext "x", Interpolation "y" String, Plaintext "z"])])
+        Callback "f" [Callback "g" [Plaintext "x", String "y", Plaintext "z"]]
 
     it "requires closing tag" $ do
       parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
@@ -144,11 +144,11 @@ spec = describe "ICU parser" $ do
       parse callback "</hello> <there>" `shouldFailWith` e 2 (NoOpeningCallbackTag "hello")
 
     it "validates closing tag name" $ do
-      parse callback "<hello></hello>" `shouldParse` ("hello", Callback [])
+      parse callback "<hello></hello>" `shouldParse` Callback "hello" []
       parse callback "<hello></there>" `shouldFailWith` e 9 (BadClosingCallbackTag "hello" "there")
 
     it "only accepts alphanumeric identifiers" $ do
-      parse callback "<XyZ></XyZ>" `shouldParse` ("XyZ", Callback [])
+      parse callback "<XyZ></XyZ>" `shouldParse` Callback "XyZ" []
       parse callback `shouldFailOn` "<x y></x y>"
 
   describe "plural" $ do
@@ -171,7 +171,7 @@ spec = describe "ICU parser" $ do
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
       parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        CardinalInexact (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
+        CardinalInexact (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", PluralRef "xyz"])
 
   describe "selectordinal" $ do
     let ordinalCases' = ordinalCases <* eof
@@ -192,7 +192,7 @@ spec = describe "ICU parser" $ do
 
     it "parses literal and plural cases, wildcard, and interpolation token" $ do
       parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        Ordinal (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", Interpolation "xyz" PluralRef])
+        Ordinal (pure $ PluralCase (PluralExact "0") [Plaintext "foo"]) (pure $ PluralCase Few [Plaintext "bar"]) (PluralWildcard [Plaintext "baz ", PluralRef "xyz"])
 
   describe "select" $ do
     let selectCases' = selectCases <* eof

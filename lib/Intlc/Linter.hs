@@ -86,8 +86,8 @@ redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
     , maybeToMonoid (idents <$> getStream x)
     , idents xs
     ]
-  redundantIdent (Interpolation n (Select (That _w))) = Just n
-  redundantIdent _                                    = Nothing
+  redundantIdent (Select n (That _w)) = Just n
+  redundantIdent _                    = Nothing
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
@@ -100,11 +100,11 @@ redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
     , maybeToMonoid (idents <$> getStream x)
     , idents xs
     ]
-  redundantIdent (Interpolation n (Plural p)) = case p of
+  redundantIdent (Plural n p) = case p of
     CardinalInexact [] [] _ -> Just n
     Ordinal [] [] _         -> Just n
     _                       -> Nothing
-  redundantIdent _                            = Nothing
+  redundantIdent _            = Nothing
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of these
@@ -121,10 +121,10 @@ interpolationsRule = count . complexIdents where
   -- however we exclude callbacks and plurals from this. The former because
   -- the vendor's tool has no issues parsing its syntax and the latter
   -- because it's a special case that we can't rewrite.
-  getComplexStream (Interpolation _ (Callback {})) = Nothing
-  getComplexStream (Interpolation _ (Plural {}))   = Nothing
-  getComplexStream token@(Interpolation n _)       = (n,) <$> getStream token
-  getComplexStream Plaintext {}                    = Nothing
+  getComplexStream Callback {}  = Nothing
+  getComplexStream Plural {}    = Nothing
+  getComplexStream Plaintext {} = Nothing
+  getComplexStream token        = getNamedStream token
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
@@ -136,6 +136,6 @@ unsupportedUnicodeRule :: Rule InternalLint
 unsupportedUnicodeRule = output . nonAscii where
   output = fmap InvalidNonAsciiCharacter . nonEmpty . T.unpack
   nonAscii :: Stream -> Text
-  nonAscii []                      = mempty
-  nonAscii (Plaintext x:ys)        = T.filter (not . isAcceptedChar) x <> nonAscii ys
-  nonAscii (x@Interpolation {}:ys) = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
+  nonAscii []               = mempty
+  nonAscii (Plaintext x:ys) = T.filter (not . isAcceptedChar) x <> nonAscii ys
+  nonAscii (x:ys)           = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys

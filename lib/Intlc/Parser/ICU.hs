@@ -57,12 +57,13 @@ streamTill = manyTill token
 -- JSON string or end of input in a REPL.
 token :: Parser Token
 token = choice
-  [ uncurry Interpolation <$> (interp <|> callback)
+  [ interp
+  , callback
   -- Plural cases support interpolating the number/argument in context with
   -- `#`. When there's no such context, fail the parse in effect treating it
   -- as plaintext.
   , asks pluralCtxName >>= \case
-      Just n  -> Interpolation n PluralRef <$ string "#"
+      Just n  -> PluralRef n <$ string "#"
       Nothing -> empty
   , Plaintext <$> plaintext
   ]
@@ -104,37 +105,37 @@ escaped = apos *> choice
         synOpen = char '{' <|> char '<'
         synClose = char '}' <|> char '>'
 
-callback :: Parser (Text, Type)
+callback :: Parser Token
 callback = do
   (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> ident <* string ">"
   when isClosing $ (openPos + 1) `failingWith'` NoOpeningCallbackTag oname
-  mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
+  mrest <- observing ((,,) <$> children oname <* string "</" <*> getOffset <*> ident <* string ">")
   case mrest of
     Left _  -> openPos `failingWith'` NoClosingCallbackTag oname
     Right (ch, closePos, cname) -> if oname == cname
-       then pure (oname, ch)
+       then pure ch
        else closePos `failingWith'` BadClosingCallbackTag oname cname
-    where children = do
+    where children n = do
             eom <- asks endOfInput
             stream <- streamTill (lookAhead $ void (string "</") <|> eom)
-            pure . Callback . mergePlaintext $ stream
+            pure . Callback n . mergePlaintext $ stream
           closing = fmap isJust . hidden . optional . char $ '/'
 
-interp :: Parser (Text, Type)
+interp :: Parser Token
 interp = between (char '{') (char '}') $ do
   n <- ident
-  (n,) <$> option String (sep *> body n)
+  option (String n) (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice
-          [ uncurry Bool <$> (string "boolean" *> sep *> boolCases)
-          , Number <$ string "number"
-          , Date <$> (string "date" *> sep *> dateTimeFmt)
-          , Time <$> (string "time" *> sep *> dateTimeFmt)
-          , Plural <$> withPluralCtx n (
+          [ uncurry (Bool n) <$> (string "boolean" *> sep *> boolCases)
+          , Number n <$ string "number"
+          , Date n <$> (string "date" *> sep *> dateTimeFmt)
+          , Time n <$> (string "time" *> sep *> dateTimeFmt)
+          , Plural n <$> withPluralCtx n (
                   string "plural" *> sep *> cardinalCases
               <|> string "selectordinal" *> sep *> ordinalCases
             )
-          , Select <$> (string "select" *> sep *> selectCases)
+          , Select n <$> (string "select" *> sep *> selectCases)
           ]
         withPluralCtx n = withReaderT (\x -> x { pluralCtxName = Just n })
 

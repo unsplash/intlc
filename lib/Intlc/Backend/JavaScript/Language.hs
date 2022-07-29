@@ -51,31 +51,25 @@ fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
 fromKeyedMsg n (ICU.Message xs) = Stmt n <$> (fromToken `mapM` xs)
 
 fromToken :: ICU.Token -> ASTCompiler Expr
-fromToken (ICU.Plaintext x)       = pure $ TPrint x
-fromToken (ICU.Interpolation x y) = fromInterp x y
-
-fromInterp :: Text -> ICU.Type -> ASTCompiler Expr
-fromInterp nraw t =
-  case t of
-    ICU.Bool { ICU.trueCase, ICU.falseCase } -> do
-      x <- fromBoolCase True trueCase
-      y <- fromBoolCase False falseCase
-      pure . TMatch . Match n LitCond . LitMatchRet $ x :| [y]
-    ICU.String      -> pure $ TStr n
-    ICU.Number      -> pure $ TNum n
-    ICU.Date x      -> pure $ TDate n x
-    ICU.Time x      -> pure $ TTime n x
-    ICU.Plural x    -> TMatch <$> fromPlural n x
-    ICU.PluralRef   -> pure $ TNum n
-    ICU.Select x    -> case x of
-      (This cs)    -> TMatch . Match n LitCond . LitMatchRet <$> ret
+fromToken (ICU.Plaintext x)   = pure $ TPrint x
+fromToken x@ICU.Bool {}       = do
+      l <- fromBoolCase True (ICU.trueCase x)
+      r <- fromBoolCase False (ICU.falseCase x)
+      pure . TMatch . Match (Ref $ ICU.name x) LitCond . LitMatchRet $ l :| [r]
+fromToken (ICU.String n)      = pure $ TStr (Ref n)
+fromToken (ICU.Number n)      = pure $ TNum (Ref n)
+fromToken (ICU.Date n x)      = pure $ TDate (Ref n) x
+fromToken (ICU.Time n x)      = pure $ TTime (Ref n) x
+fromToken (ICU.Plural n x)    = TMatch <$> fromPlural (Ref n) x
+fromToken (ICU.PluralRef n)   = pure $ TNum (Ref n)
+fromToken (ICU.Select n x)    = case x of
+      (This cs)    -> TMatch . Match (Ref n) LitCond . LitMatchRet <$> ret
         where ret = fromSelectCase `mapM` cs
-      (That w)     -> TMatch . Match n LitCond <$> ret
+      (That w)     -> TMatch . Match (Ref n) LitCond <$> ret
         where ret = NonLitMatchRet mempty <$> fromSelectWildcard w
-      (These cs w) -> TMatch . Match n LitCond <$> ret
+      (These cs w) -> TMatch . Match (Ref n) LitCond <$> ret
         where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> fromSelectWildcard w
-    ICU.Callback xs -> TApply n <$> (fromToken `mapM` xs)
-  where n = Ref nraw
+fromToken (ICU.Callback n xs) = TApply (Ref n) <$> (fromToken `mapM` xs)
 
 fromPlural :: Ref -> ICU.Plural -> ASTCompiler Match
 fromPlural r p = case p of

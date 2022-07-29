@@ -17,25 +17,22 @@ type Stream = [Token]
 -- | A token is either an interpolation - some sort of identifier for input -
 -- or mere plaintext. A collection of tokens make up any message. A non-empty
 -- message without any interpolation will be a single `Plaintext` token.
+--
+-- On interpolations we diverge from icu4j by supporting a boolean type, and
+-- not necessarily requiring wildcard cases.
 data Token
   = Plaintext Text
-  | Interpolation Text Type
-  deriving (Show, Eq)
-
--- We diverge from icu4j by supporting a boolean type, and not necessarily
--- requiring wildcard cases.
-data Type
-  = Bool { trueCase :: Stream, falseCase :: Stream }
-  | String
-  | Number
-  | Date DateTimeFmt
-  | Time DateTimeFmt
-  | Plural Plural
+  | Bool { name :: Text, trueCase :: Stream, falseCase :: Stream }
+  | String Text
+  | Number Text
+  | Date Text DateTimeFmt
+  | Time Text DateTimeFmt
+  | Plural Text Plural
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
-  | PluralRef
-  | Select (These (NonEmpty SelectCase) SelectWildcard)
-  | Callback Stream
+  | PluralRef Text
+  | Select Text (These (NonEmpty SelectCase) SelectWildcard)
+  | Callback Text Stream
   deriving (Show, Eq)
 
 data DateTimeFmt
@@ -93,19 +90,21 @@ mergePlaintext (Plaintext x : Plaintext y : zs) = mergePlaintext $ Plaintext (x 
 mergePlaintext (x:ys)                           = x : mergePlaintext ys
 
 getStream :: Token -> Maybe Stream
-getStream Plaintext {}        = Nothing
-getStream (Interpolation _ t) = case t of
-  String                     -> Nothing
-  Number                     -> Nothing
-  Date {}                    -> Nothing
-  Time {}                    -> Nothing
-  PluralRef                  -> Nothing
-  Bool {trueCase, falseCase} -> Just $ trueCase <> falseCase
-  Plural x                   -> Just $ getPluralStream x
-  Select x                   -> Just . bifoldMap (concatMap f) g $ x
+getStream = fmap snd . getNamedStream
+
+getNamedStream :: Token -> Maybe (Text, Stream)
+getNamedStream Plaintext {}    = Nothing
+getNamedStream String {}       = Nothing
+getNamedStream Number {}       = Nothing
+getNamedStream Date {}         = Nothing
+getNamedStream Time {}         = Nothing
+getNamedStream PluralRef {}    = Nothing
+getNamedStream x@(Bool {})     = Just (name x, trueCase x <> falseCase x)
+getNamedStream (Plural n x)    = Just (n, getPluralStream x)
+getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap f) g $ x
     where f (SelectCase _ xs)  = xs
           g (SelectWildcard w) = w
-  Callback xs                -> Just xs
+getNamedStream (Callback n xs) = Just (n, xs)
 
 getPluralStream :: Plural -> Stream
 getPluralStream (CardinalExact ls)        = getPluralCaseStream `concatMap` ls

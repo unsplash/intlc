@@ -30,7 +30,7 @@ spec = describe "compiler" $ do
       compileFlattened (fromList
         [ ("x", Translation (Message [Plaintext "xfoo"]) TypeScript Nothing)
         , ("z", Translation (Message [Plaintext "zfoo"]) TypeScriptReact (Just "zbar"))
-        , ("y", Translation (Message [Plaintext "yfoo ", Interpolation "ybar" String]) TypeScript Nothing)
+        , ("y", Translation (Message [Plaintext "yfoo ", String "ybar"]) TypeScript Nothing)
         ])
           `shouldBe` [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
 
@@ -50,12 +50,12 @@ spec = describe "compiler" $ do
         let other = SelectWildcard [Plaintext "many dogs"]
         let otherf = SelectWildcard [Plaintext "I have many dogs"]
 
-        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select $ These (pure foo) other)]) `shouldBe`
-          Message (pure $ Interpolation "thing" (Select $ These (pure foof) otherf))
+        flatten (Message [Plaintext "I have ", Select "thing" $ These (pure foo) other]) `shouldBe`
+          Message (pure . Select "thing" $ These (pure foof) otherf)
 
       it "without a wildcard" $ do
-        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select $ This (pure foo))]) `shouldBe`
-          Message (pure $ Interpolation "thing" (Select $ This (pure foof)))
+        flatten (Message [Plaintext "I have ", Select "thing" $ This (pure foo)]) `shouldBe`
+          Message (pure . Select "thing" $ This (pure foof))
 
     it "flattens shallow plural" $ do
       let other = PluralWildcard [Plaintext "many dogs"]
@@ -63,19 +63,19 @@ spec = describe "compiler" $ do
       let one = PluralCase One [Plaintext "a dog"]
       let onef = PluralCase One [Plaintext "I have a dog"]
 
-      flatten (Message [Plaintext "I have ", Interpolation "count" (Plural (CardinalInexact [] (pure one) other))]) `shouldBe`
-        Message (pure $ Interpolation "count" (Plural (CardinalInexact [] (pure onef) otherf)))
+      flatten (Message [Plaintext "I have ", Plural "count" (CardinalInexact [] (pure one) other)]) `shouldBe`
+        Message (pure $ Plural "count" (CardinalInexact [] (pure onef) otherf))
 
     it "flattens deep interpolations" $ do
       let x = Message
             [ Plaintext "I have "
-            , Interpolation "count" . Plural $ CardinalInexact
+            , Plural "count" $ CardinalInexact
               []
               (pure $ PluralCase One [Plaintext "a dog"])
               (PluralWildcard
-                [ Interpolation "count" Number
+                [ Number "count"
                 , Plaintext " dogs, the newest of which is "
-                , Interpolation "name" . Select $ These
+                , Select "name" $ These
                   (pure $ SelectCase "hodor" [Plaintext "Hodor"])
                   (SelectWildcard [Plaintext "unknown"])
                 ]
@@ -83,20 +83,20 @@ spec = describe "compiler" $ do
             , Plaintext "!"
             ]
       let y = Message . pure $
-            Interpolation "count" . Plural $ CardinalInexact
+            Plural "count" $ CardinalInexact
               []
               (pure $ PluralCase One [Plaintext "I have a dog!"])
               (PluralWildcard
-                [ Interpolation "name" . Select $ These
+                [ Select "name" $ These
                   (pure $ SelectCase "hodor"
                     [ Plaintext "I have "
-                    , Interpolation "count" Number
+                    , Number "count"
                     , Plaintext " dogs, the newest of which is Hodor!"
                     ]
                   )
                   (SelectWildcard
                     [ Plaintext "I have "
-                    , Interpolation "count" Number
+                    , Number "count"
                     , Plaintext " dogs, the newest of which is unknown!"
                     ]
                   )

@@ -19,23 +19,20 @@ stream :: Foldable f => f Token -> Text
 stream = foldMap token
 
 token :: Token -> Text
-token (Plaintext x)       = x
-token (Interpolation x y) = interp x y
-
-interp :: Text -> Type -> Text
-interp n Bool { trueCase, falseCase } = "{" <> n <> ", boolean, true {" <> stream trueCase  <> "} false {" <> stream falseCase <> "}}"
-interp n String                       = "{" <> n <> "}"
-interp n Number                       = "{" <> n <> ", number}"
-interp n (Date fmt)                   = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
-interp n (Time fmt)                   = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-interp n (Plural p)                   = "{" <> n <> ", " <> typ <> ", " <> plural p         <> "}"
+token (Plaintext x)   = x
+token x@(Bool {})     = "{" <> name x <> ", boolean, true {" <> stream (trueCase x)  <> "} false {" <> stream (falseCase x) <> "}}"
+token (String n)      = "{" <> n <> "}"
+token (Number n)      = "{" <> n <> ", number}"
+token (Date n fmt)    = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
+token (Time n fmt)    = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
+token (Plural n p)    = "{" <> n <> ", " <> typ <> ", " <> plural p         <> "}"
   where typ = case p of
           CardinalExact {}   -> "plural"
           CardinalInexact {} -> "plural"
           Ordinal {}         -> "selectordinal"
-interp _ PluralRef                    = "#"
-interp n (Select x)                   = "{" <> n <> ", select, "        <> select x         <> "}"
-interp n (Callback xs)                = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
+token PluralRef {}    = "#"
+token (Select n x)    = "{" <> n <> ", select, "        <> select x         <> "}"
+token (Callback n xs) = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"

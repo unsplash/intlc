@@ -50,29 +50,20 @@ mapMsgs f = fmap $ \x -> x { message = f (message x) }
 -- function is applied.
 mapTokens :: (ICU.Token -> ICU.Token) -> ICU.Stream -> ICU.Stream
 mapTokens f = fmap $ f >>> \case
-  x@(ICU.Plaintext {})      -> x
-  x@(ICU.Interpolation n t) -> case t of
-    ICU.Bool xs ys  -> g $ ICU.Bool (h xs) (h ys)
-    ICU.Plural y    -> g . ICU.Plural $ mapPluralStreams h y
-    ICU.Select y    -> g . ICU.Select $ mapSelectStreams h y
-    ICU.Callback ys -> g . ICU.Callback . h $ ys
-    _               -> x
-    where g = ICU.Interpolation n
-          h = fmap f
-
+  ICU.Bool n xs ys  -> ICU.Bool n (f <$> xs) (f <$> ys)
+  ICU.Plural n y    -> ICU.Plural n $ mapPluralStreams (fmap f) y
+  ICU.Select n y    -> ICU.Select n $ mapSelectStreams (fmap f) y
+  ICU.Callback n ys -> ICU.Callback n (f <$> ys)
+  x                 -> x
 
 flatten :: ICU.Message -> ICU.Message
 flatten = ICU.Message . go [] . ICU.unMessage
   where go :: ICU.Stream -> ICU.Stream -> ICU.Stream
-        go prev [] = prev
-        go prev (curr@(ICU.Interpolation name typ) : next) =
-          let toStream = pure . ICU.Interpolation name
-           in case typ of
-            ICU.Bool xs ys -> toStream . uncurry ICU.Bool   $ mapBoolStreams   (around prev next) (xs, ys)
-            ICU.Select x   -> toStream .         ICU.Select $ mapSelectStreams (around prev next) x
-            ICU.Plural x   -> toStream .         ICU.Plural $ mapPluralStreams (around prev next) x
-            _ -> go (prev <> pure curr) next
-        go prev (curr : next) = go (prev <> pure curr) next
+        go prev []                        = prev
+        go prev (ICU.Bool n xs ys : next) = pure . uncurry (ICU.Bool n) $ mapBoolStreams   (around prev next) (xs, ys)
+        go prev (ICU.Select n x : next)   = pure .         ICU.Select n $ mapSelectStreams (around prev next) x
+        go prev (ICU.Plural n x : next)   = pure .         ICU.Plural n $ mapPluralStreams (around prev next) x
+        go prev (curr : next)             = go (prev <> pure curr) next
         around ls rs = go [] . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
 
@@ -84,7 +75,7 @@ flatten = ICU.Message . go [] . ICU.unMessage
 -- rules is unspecified.
 expandPlurals :: ICU.Message -> ICU.Message
 expandPlurals (ICU.Message xs) = ICU.Message . flip mapTokens xs $ \case
-  ICU.Interpolation n (ICU.Plural p) -> ICU.Interpolation n . ICU.Plural $ case p of
+  ICU.Plural n p -> ICU.Plural n $ case p of
     ICU.CardinalExact {}               -> p
     ICU.CardinalInexact exacts rules w ->
       ICU.CardinalInexact exacts (toList $ expandRules rules w) w

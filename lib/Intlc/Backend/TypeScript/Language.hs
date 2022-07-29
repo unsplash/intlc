@@ -45,25 +45,22 @@ fromMsg :: Out -> ICU.Message -> TypeOf
 fromMsg x (ICU.Message ys) = Lambda (collateArgs (fromToken =<< toList ys)) x
 
 fromToken :: ICU.Token -> UncollatedArgs
-fromToken ICU.Plaintext {}        = mempty
-fromToken (ICU.Interpolation x y) = fromInterp x y
-
-fromInterp :: Text -> ICU.Type -> UncollatedArgs
-fromInterp n (ICU.Bool xs ys)  = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
-fromInterp n ICU.String        = pure (n, TStr)
-fromInterp n ICU.Number        = pure (n, TNum)
-fromInterp n ICU.Date {}       = pure (n, TDate)
-fromInterp n ICU.Time {}       = pure (n, TDate)
-fromInterp n (ICU.Plural x)    = fromPlural n x
+fromToken ICU.Plaintext {}    = mempty
+fromToken (ICU.Bool n xs ys)  = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
+fromToken (ICU.String n)      = pure (n, TStr)
+fromToken (ICU.Number n)      = pure (n, TNum)
+fromToken (ICU.Date n _)      = pure (n, TDate)
+fromToken (ICU.Time n _)      = pure (n, TDate)
+fromToken (ICU.Plural n x)    = fromPlural n x
 -- Plural references are treated as a no-op.
-fromInterp _ ICU.PluralRef     = mempty
-fromInterp n (ICU.Select x)    = case x of
+fromToken ICU.PluralRef {}    = mempty
+fromToken (ICU.Select n x)    = case x of
   (That w)     -> (n, TStr) : fromSelectWildcard w
   (These cs w) -> (n, TStr) : (fromSelectCase =<< toList cs) <> fromSelectWildcard w
   -- When there's no wildcard case we can compile to a union of string literals.
   (This cs)    -> (n, TStrLitUnion (lit <$> cs)) : (fromSelectCase =<< toList cs)
     where lit (ICU.SelectCase l _) = l
-fromInterp n (ICU.Callback xs) = (n, TEndo) : (fromToken =<< xs)
+fromToken (ICU.Callback n xs) = (n, TEndo) : (fromToken =<< xs)
 
 fromPlural :: Text -> ICU.Plural -> UncollatedArgs
 -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
