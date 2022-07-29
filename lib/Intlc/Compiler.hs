@@ -1,8 +1,7 @@
 module Intlc.Compiler (compileDataset, compileFlattened, flatten, expandPlurals, expandRules) where
 
-import           Control.Applicative.Combinators   (choice)
 import           Data.Foldable                     (elem)
-import           Data.List.Extra                   (firstJust, unionBy)
+import           Data.List.Extra                   (unionBy)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
 import           Data.These                        (These (..))
@@ -61,20 +60,21 @@ mapTokens f = fmap $ f >>> \case
     where g = ICU.Interpolation n
           h = fmap f
 
+
 flatten :: ICU.Message -> ICU.Message
-flatten (ICU.Message xs) = ICU.Message . flattenStream $ xs
-  where flattenStream :: ICU.Stream -> ICU.Stream
-        flattenStream ys = fromMaybe ys $ choice
-          [ mapBool   <$> extractFirstBool ys
-          , mapSelect <$> extractFirstSelect ys
-          , mapPlural <$> extractFirstPlural ys
-          ]
-        mapBool (n, ls, boo, rs) = streamFromArg n . uncurry ICU.Bool $ mapBoolStreams (around ls rs) boo
-        mapSelect (n, ls, sel, rs) = streamFromArg n . ICU.Select $ mapSelectStreams (around ls rs) sel
-        mapPlural (n, ls, plu, rs) = streamFromArg n . ICU.Plural $ mapPluralStreams (around ls rs) plu
-        around ls rs = flattenStream . ICU.mergePlaintext . surround ls rs
+flatten = ICU.Message . go [] . ICU.unMessage
+  where go :: ICU.Stream -> ICU.Stream -> ICU.Stream
+        go prev [] = prev
+        go prev (curr@(ICU.Interpolation name typ) : next) =
+          let toStream = pure . ICU.Interpolation name
+           in case typ of
+            ICU.Bool xs ys -> toStream . uncurry ICU.Bool   $ mapBoolStreams   (around prev next) (xs, ys)
+            ICU.Select x   -> toStream .         ICU.Select $ mapSelectStreams (around prev next) x
+            ICU.Plural x   -> toStream .         ICU.Plural $ mapPluralStreams (around prev next) x
+            _ -> go (prev <> pure curr) next
+        go prev (curr : next) = go (prev <> pure curr) next
+        around ls rs = go [] . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
-        streamFromArg n = pure . ICU.Interpolation n
 
 -- Expands any plural with a rule to contain every rule. This makes ICU plural
 -- syntax usable on platforms which don't support ICU; translators can reuse
@@ -104,28 +104,6 @@ expandRules ys w = fromList $ unionBy ((==) `on` caseRule) (toList ys) extraCase
         allRules = universe
         caseRule (ICU.PluralCase x _) = x
         wildContent (ICU.PluralWildcard x) = x
-
-extractFirstBool :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUBool, ICU.Stream)
-extractFirstBool = extractFirstArg $ \case
-  ICU.Bool x y -> Just (x, y)
-  _            -> Nothing
-
-extractFirstArg :: (ICU.Type -> Maybe a) -> ICU.Stream -> Maybe (Text, ICU.Stream, a, ICU.Stream)
-extractFirstArg f xs = firstJust arg (zip [0..] xs)
-  where arg (i, ICU.Interpolation n t) = (n, ls, , rs) <$> f t
-          where (ls, rs) = second safeTail (splitAt i xs)
-                safeTail = foldMap tail . nonEmpty
-        arg _ = Nothing
-
-extractFirstSelect :: ICU.Stream -> Maybe (Text, ICU.Stream, ICUSelect, ICU.Stream)
-extractFirstSelect = extractFirstArg $ \case
-  ICU.Select x -> Just x
-  _            -> Nothing
-
-extractFirstPlural :: ICU.Stream -> Maybe (Text, ICU.Stream, ICU.Plural, ICU.Stream)
-extractFirstPlural = extractFirstArg $ \case
-  ICU.Plural x -> Just x
-  _            -> Nothing
 
 mapBoolStreams :: (ICU.Stream -> ICU.Stream) -> ICUBool -> ICUBool
 mapBoolStreams f (xs, ys) = (f xs, f ys)
