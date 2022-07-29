@@ -20,19 +20,19 @@ stream = foldMap token
 
 token :: Token -> Text
 token (Plaintext x)   = x
-token x@(Bool {})     = "{" <> name x <> ", boolean, true {" <> stream (trueCase x)  <> "} false {" <> stream (falseCase x) <> "}}"
-token (String n)      = "{" <> n <> "}"
-token (Number n)      = "{" <> n <> ", number}"
-token (Date n fmt)    = "{" <> n <> ", date, "          <> dateTimeFmt fmt  <> "}"
-token (Time n fmt)    = "{" <> n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-token (Plural n p)    = "{" <> n <> ", " <> typ <> ", " <> plural p         <> "}"
+token x@(Bool {})     = "{" <> (unArg . name $ x) <> ", boolean, true {" <> stream (trueCase x)  <> "} false {" <> stream (falseCase x) <> "}}"
+token (String n)      = "{" <> unArg n <> "}"
+token (Number n)      = "{" <> unArg n <> ", number}"
+token (Date n fmt)    = "{" <> unArg n <> ", date, "          <> dateTimeFmt fmt  <> "}"
+token (Time n fmt)    = "{" <> unArg n <> ", time, "          <> dateTimeFmt fmt  <> "}"
+token (Plural n p)    = "{" <> unArg n <> ", " <> typ <> ", " <> plural p         <> "}"
   where typ = case p of
           CardinalExact {}   -> "plural"
           CardinalInexact {} -> "plural"
           Ordinal {}         -> "selectordinal"
 token PluralRef {}    = "#"
-token (Select n x)    = "{" <> n <> ", select, "        <> select x         <> "}"
-token (Callback n xs) = "<" <> n <> ">"                 <> stream xs        <> "</" <> n <> ">"
+token (Select n x)    = "{" <> unArg n <> ", select, "        <> select x         <> "}"
+token (Callback n xs) = "<" <> unArg n <> ">"                 <> stream xs        <> "</" <> unArg n <> ">"
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"

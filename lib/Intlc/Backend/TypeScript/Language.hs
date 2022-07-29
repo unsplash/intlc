@@ -12,8 +12,8 @@ import           Prelude
 data TypeOf = Lambda Args Out
   deriving (Show, Eq)
 
-type UncollatedArgs = [(Text, In)]
-type Args = Map Text (NonEmpty In)
+type UncollatedArgs = [(ICU.Arg, In)]
+type Args = Map ICU.Arg (NonEmpty In)
 
 data In
   = TStr
@@ -62,7 +62,7 @@ fromToken (ICU.Select n x)    = case x of
     where lit (ICU.SelectCase l _) = l
 fromToken (ICU.Callback n xs) = (n, TEndo) : (fromToken =<< xs)
 
-fromPlural :: Text -> ICU.Plural -> UncollatedArgs
+fromPlural :: ICU.Arg -> ICU.Plural -> UncollatedArgs
 -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
 -- union of number literals.
 fromPlural n (ICU.CardinalExact ls)        = (n, t) : (fromExactPluralCase =<< toList ls)

@@ -13,6 +13,7 @@ common common
     -- These are included in GHC2021.
     DeriveGeneric
     FlexibleContexts
+    GeneralizedNewtypeDeriving
     NamedFieldPuns
     TupleSections
   ghc-options:

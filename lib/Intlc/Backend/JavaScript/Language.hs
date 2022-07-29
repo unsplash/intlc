@@ -15,15 +15,15 @@ data Stmt = Stmt Text [Expr]
 
 data Expr
   = TPrint Text
-  | TStr Ref
-  | TNum Ref
-  | TDate Ref ICU.DateTimeFmt
-  | TTime Ref ICU.DateTimeFmt
-  | TApply Ref [Expr]
+  | TStr ICU.Arg
+  | TNum ICU.Arg
+  | TDate ICU.Arg ICU.DateTimeFmt
+  | TTime ICU.Arg ICU.DateTimeFmt
+  | TApply ICU.Arg [Expr]
   | TMatch Match
   deriving (Show, Eq)
 
-data Match = Match Ref MatchCond MatchRet
+data Match = Match ICU.Arg MatchCond MatchRet
   deriving (Show, Eq)
 
 data MatchCond
@@ -36,9 +36,6 @@ data MatchRet
   = LitMatchRet (NonEmpty Branch)
   | NonLitMatchRet [Branch] Wildcard
   | RecMatchRet (NonEmpty Branch) Match
-  deriving (Show, Eq)
-
-newtype Ref = Ref Text
   deriving (Show, Eq)
 
 data Branch = Branch Text [Expr]
@@ -55,23 +52,23 @@ fromToken (ICU.Plaintext x)   = pure $ TPrint x
 fromToken x@ICU.Bool {}       = do
       l <- fromBoolCase True (ICU.trueCase x)
       r <- fromBoolCase False (ICU.falseCase x)
-      pure . TMatch . Match (Ref $ ICU.name x) LitCond . LitMatchRet $ l :| [r]
-fromToken (ICU.String n)      = pure $ TStr (Ref n)
-fromToken (ICU.Number n)      = pure $ TNum (Ref n)
-fromToken (ICU.Date n x)      = pure $ TDate (Ref n) x
-fromToken (ICU.Time n x)      = pure $ TTime (Ref n) x
-fromToken (ICU.Plural n x)    = TMatch <$> fromPlural (Ref n) x
-fromToken (ICU.PluralRef n)   = pure $ TNum (Ref n)
+      pure . TMatch . Match (ICU.name x) LitCond . LitMatchRet $ l :| [r]
+fromToken (ICU.String n)      = pure $ TStr n
+fromToken (ICU.Number n)      = pure $ TNum n
+fromToken (ICU.Date n x)      = pure $ TDate n x
+fromToken (ICU.Time n x)      = pure $ TTime n x
+fromToken (ICU.Plural n x)    = TMatch <$> fromPlural n x
+fromToken (ICU.PluralRef n)   = pure $ TNum n
 fromToken (ICU.Select n x)    = case x of
-      (This cs)    -> TMatch . Match (Ref n) LitCond . LitMatchRet <$> ret
+      (This cs)    -> TMatch . Match n LitCond . LitMatchRet <$> ret
         where ret = fromSelectCase `mapM` cs
-      (That w)     -> TMatch . Match (Ref n) LitCond <$> ret
+      (That w)     -> TMatch . Match n LitCond <$> ret
         where ret = NonLitMatchRet mempty <$> fromSelectWildcard w
-      (These cs w) -> TMatch . Match (Ref n) LitCond <$> ret
+      (These cs w) -> TMatch . Match n LitCond <$> ret
         where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> fromSelectWildcard w
-fromToken (ICU.Callback n xs) = TApply (Ref n) <$> (fromToken `mapM` xs)
+fromToken (ICU.Callback n xs) = TApply n <$> (fromToken `mapM` xs)
 
-fromPlural :: Ref -> ICU.Plural -> ASTCompiler Match
+fromPlural :: ICU.Arg -> ICU.Plural -> ASTCompiler Match
 fromPlural r p = case p of
   ICU.CardinalExact lcs              -> Match r LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)
   ICU.CardinalInexact lcs [] w       -> Match r LitCond <$> ret

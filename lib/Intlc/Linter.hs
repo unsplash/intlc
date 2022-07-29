@@ -11,12 +11,12 @@ import           Intlc.ICU
 import           Prelude
 
 data ExternalLint
-  = RedundantSelect (NonEmpty Text)
-  | RedundantPlural (NonEmpty Text)
+  = RedundantSelect (NonEmpty Arg)
+  | RedundantPlural (NonEmpty Arg)
   deriving (Eq, Show)
 
 data InternalLint
-  = TooManyInterpolations (NonEmpty Text)
+  = TooManyInterpolations (NonEmpty Arg)
   | InvalidNonAsciiCharacter (NonEmpty Char)
   deriving (Eq,Show)
 
@@ -59,12 +59,12 @@ lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
 
 lintDatasetExternal :: Dataset Translation -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
-  RedundantSelect xs -> "Redundant select: " <> T.intercalate ", " (toList xs)
-  RedundantPlural xs -> "Redundant plural: " <> T.intercalate ", " (toList xs)
+  RedundantSelect xs -> "Redundant select: " <> T.intercalate ", " (fmap unArg . toList $ xs)
+  RedundantPlural xs -> "Redundant plural: " <> T.intercalate ", " (fmap unArg . toList $ xs)
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
-  TooManyInterpolations xs         -> "Multiple complex interpolations: " <> T.intercalate ", " (toList xs)
+  TooManyInterpolations xs         -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
   (InvalidNonAsciiCharacter chars) -> "Following characters are not allowed: " <> intercalateChars chars
     where intercalateChars:: NonEmpty Char -> Text
           intercalateChars = T.intercalate " " . toList . fmap T.singleton
@@ -79,7 +79,7 @@ formatFailureWith f k es = title <> msgs
 -- replaced with plain string interpolations.
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
-  idents :: Stream -> [Text]
+  idents :: Stream -> [Arg]
   idents []     = []
   idents (x:xs) = mconcat
     [ maybeToList (redundantIdent x)
@@ -93,7 +93,7 @@ redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
 -- replaced with plain number interpolations.
 redundantPluralRule :: Rule ExternalLint
 redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
-  idents :: Stream -> [Text]
+  idents :: Stream -> [Arg]
   idents []     = []
   idents (x:xs) = mconcat
     [ maybeToList (redundantIdent x)

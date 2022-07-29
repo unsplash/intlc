@@ -70,8 +70,8 @@ fromStrat JSX         = Interp
 argName :: Text
 argName = "x"
 
-prop :: Ref -> Text
-prop (Ref x) = argName <> "." <> x
+prop :: ICU.Arg -> Text
+prop (ICU.Arg x) = argName <> "." <> x
 
 wrap :: Text -> Compiler Text
 wrap x = do
@@ -106,7 +106,7 @@ expr (TTime x fmt) = interpc =<< time x fmt
 expr (TApply x ys) = interpc =<< apply x ys
 expr (TMatch x)    = interpc =<< match x
 
-apply :: Ref -> [Expr] -> Compiler Text
+apply :: ICU.Arg -> [Expr] -> Compiler Text
 apply x ys = pure (prop x <> "(") <>^ (wrap =<< exprs ys) <>^ pure ")"
 
 match :: Match -> Compiler Text
@@ -126,19 +126,19 @@ match = fmap iife . go where
   recBranches xs y = (<>) <$> branches xs <*> ((" " <>) . nest <$> y)
     where nest x = "default: { " <> x <> " }"
 
-matchCond :: Ref -> MatchCond -> Compiler Text
+matchCond :: ICU.Arg -> MatchCond -> Compiler Text
 matchCond n LitCond                = override matchLitCondOverride (prop n)
 matchCond n CardinalPluralRuleCond = f <$> asks locale
   where f (Locale l) = "new Intl.PluralRules('" <> l <> "').select(" <> prop n <> ")"
 matchCond n OrdinalPluralRuleCond  = f <$> asks locale
   where f (Locale l) = "new Intl.PluralRules('" <> l <> "', { type: 'ordinal' }).select(" <> prop n <> ")"
 
-date :: Ref -> ICU.DateTimeFmt -> Compiler Text
+date :: ICU.Arg -> ICU.DateTimeFmt -> Compiler Text
 date n d = do
   (Locale l) <- asks locale
   pure $ "new Intl.DateTimeFormat('" <> l <> "', { dateStyle: '" <> dateTimeFmt d <> "' }).format(" <> prop n <> ")"
 
-time :: Ref -> ICU.DateTimeFmt -> Compiler Text
+time :: ICU.Arg -> ICU.DateTimeFmt -> Compiler Text
 time n d = do
   (Locale l) <- asks locale
   pure $ "new Intl.DateTimeFormat('" <> l <> "', { timeStyle: '" <> dateTimeFmt d <> "' }).format(" <> prop n <> ")"

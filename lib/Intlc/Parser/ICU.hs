@@ -24,7 +24,7 @@ i `failingWith'` e = i `failingWith` FailedMsgParse e
 
 data ParserState = ParserState
   -- Expected to be supplied internally.
-  { pluralCtxName :: Maybe Text
+  { pluralCtxName :: Maybe Arg
   -- Expected to be potentially supplied externally.
   , endOfInput    :: Parser ()
   }
@@ -39,6 +39,9 @@ type Parser = ReaderT ParserState (Parsec ParseErr Text)
 
 ident :: Parser Text
 ident = label "alphabetic identifier" $ T.pack <$> some letterChar
+
+arg :: Parser Arg
+arg = Arg <$> ident
 
 -- Parse a message until the end of input parser matches.
 msg :: Parser Message
@@ -107,9 +110,9 @@ escaped = apos *> choice
 
 callback :: Parser Token
 callback = do
-  (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> ident <* string ">"
+  (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> arg <* string ">"
   when isClosing $ (openPos + 1) `failingWith'` NoOpeningCallbackTag oname
-  mrest <- observing ((,,) <$> children oname <* string "</" <*> getOffset <*> ident <* string ">")
+  mrest <- observing ((,,) <$> children oname <* string "</" <*> getOffset <*> arg <* string ">")
   case mrest of
     Left _  -> openPos `failingWith'` NoClosingCallbackTag oname
     Right (ch, closePos, cname) -> if oname == cname
@@ -123,7 +126,7 @@ callback = do
 
 interp :: Parser Token
 interp = between (char '{') (char '}') $ do
-  n <- ident
+  n <- arg
   option (String n) (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice

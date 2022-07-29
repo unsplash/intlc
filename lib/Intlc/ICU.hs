@@ -14,6 +14,12 @@ unMessage (Message xs) = xs
 
 type Stream = [Token]
 
+newtype Arg = Arg Text
+  deriving (Show, Eq, Ord, IsString)
+
+unArg :: Arg -> Text
+unArg (Arg x) = x
+
 -- | A token is either an interpolation - some sort of identifier for input -
 -- or mere plaintext. A collection of tokens make up any message. A non-empty
 -- message without any interpolation will be a single `Plaintext` token.
@@ -22,17 +28,17 @@ type Stream = [Token]
 -- not necessarily requiring wildcard cases.
 data Token
   = Plaintext Text
-  | Bool { name :: Text, trueCase :: Stream, falseCase :: Stream }
-  | String Text
-  | Number Text
-  | Date Text DateTimeFmt
-  | Time Text DateTimeFmt
-  | Plural Text Plural
+  | Bool { name :: Arg, trueCase :: Stream, falseCase :: Stream }
+  | String Arg
+  | Number Arg
+  | Date Arg DateTimeFmt
+  | Time Arg DateTimeFmt
+  | Plural Arg Plural
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
-  | PluralRef Text
-  | Select Text (These (NonEmpty SelectCase) SelectWildcard)
-  | Callback Text Stream
+  | PluralRef Arg
+  | Select Arg (These (NonEmpty SelectCase) SelectWildcard)
+  | Callback Arg Stream
   deriving (Show, Eq)
 
 data DateTimeFmt
@@ -92,7 +98,7 @@ mergePlaintext (x:ys)                           = x : mergePlaintext ys
 getStream :: Token -> Maybe Stream
 getStream = fmap snd . getNamedStream
 
-getNamedStream :: Token -> Maybe (Text, Stream)
+getNamedStream :: Token -> Maybe (Arg, Stream)
 getNamedStream Plaintext {}    = Nothing
 getNamedStream String {}       = Nothing
 getNamedStream Number {}       = Nothing
