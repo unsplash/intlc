@@ -43,7 +43,7 @@ spec = describe "ICU parser" $ do
         let n = pure $ PluralRef "n"
         parse msg "{n, plural, one {#} other {#}}" `shouldParse`
           (Message . pure $
-            CardinalInexact "n" [] (pure (One, n)) (PluralWildcard n))
+            CardinalInexact "n" [] (pure (One, n)) n)
 
       it "parses as nearest arg inside deep plural" $ do
         let n = pure $ PluralRef "n"
@@ -52,14 +52,14 @@ spec = describe "ICU parser" $ do
           (Message . pure $
             CardinalInexact "n" [] (pure (One,
               pure $
-                CardinalInexact "i" [] (pure (One, i)) (PluralWildcard i))) (PluralWildcard n))
+                CardinalInexact "i" [] (pure (One, i)) i)) n)
 
       it "parses as arg nested inside other interpolation" $ do
         let n = pure $ PluralRef "n"
         parse msg "{n, plural, one {<f>#</f>} other {#}}" `shouldParse`
           (Message . pure $
             CardinalInexact "n" [] (pure (One,
-              pure . Callback "f" $ n)) (PluralWildcard n))
+              pure . Callback "f" $ n)) n)
 
     describe "escaping" $ do
       it "escapes non-empty contents between single quotes" $ do
@@ -169,7 +169,7 @@ spec = describe "ICU parser" $ do
 
     it "parses literal and plural cases, wildcard, and interpolation node" $ do
       parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        CardinalInexact "arg" (pure (PluralExact "0", [Plaintext "foo"])) (pure (Few, [Plaintext "bar"])) (PluralWildcard [Plaintext "baz ", PluralRef "xyz"])
+        CardinalInexact "arg" (pure (PluralExact "0", [Plaintext "foo"])) (pure (Few, [Plaintext "bar"])) [Plaintext "baz ", PluralRef "xyz"]
 
   describe "selectordinal" $ do
     let ordinalCases' = ordinalCases "arg" <* eof
@@ -190,7 +190,7 @@ spec = describe "ICU parser" $ do
 
     it "parses literal and plural cases, wildcard, and interpolation node" $ do
       parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
-        Ordinal "arg" (pure (PluralExact "0", [Plaintext "foo"])) (pure (Few, [Plaintext "bar"])) (PluralWildcard [Plaintext "baz ", PluralRef "xyz"])
+        Ordinal "arg" (pure (PluralExact "0", [Plaintext "foo"])) (pure (Few, [Plaintext "bar"])) [Plaintext "baz ", PluralRef "xyz"]
 
   describe "select" $ do
     let selectCases' = selectCases <* eof

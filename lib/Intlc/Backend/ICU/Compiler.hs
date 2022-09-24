@@ -54,8 +54,8 @@ pluralRule Two  = "two"
 pluralRule Few  = "few"
 pluralRule Many = "many"
 
-pluralWildcard :: PluralWildcard -> Text
-pluralWildcard (PluralWildcard xs) = "other {" <> stream xs <> "}"
+pluralWildcard :: Stream -> Text
+pluralWildcard xs = "other {" <> stream xs <> "}"
 
 select :: These (NonEmpty SelectCase) SelectWildcard -> Text
 select = unwords . bifoldMap (toList . fmap case') (pure . wild)

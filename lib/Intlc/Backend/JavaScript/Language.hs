@@ -95,8 +95,8 @@ fromRulePluralCase (r, xs) = Branch (qts matcher) <$> (fromNode `mapM` xs)
          ICU.Many -> "many"
         qts x = "'" <> x <> "'"
 
-fromPluralWildcard :: ICU.PluralWildcard -> ASTCompiler Wildcard
-fromPluralWildcard (ICU.PluralWildcard xs) = Wildcard <$> (fromNode `mapM` xs)
+fromPluralWildcard :: ICU.Stream -> ASTCompiler Wildcard
+fromPluralWildcard xs = Wildcard <$> (fromNode `mapM` xs)
 
 fromSelectCase :: ICU.SelectCase -> ASTCompiler Branch
 fromSelectCase (ICU.SelectCase x ys) = Branch ("'" <> x <> "'") <$> (fromNode `mapM` ys)

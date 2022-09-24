@@ -201,5 +201,5 @@ pluralRule = choice
   , Many <$ string "many"
   ]
 
-pluralWildcard :: Parser PluralWildcard
-pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> caseBody)
+pluralWildcard :: Parser Stream
+pluralWildcard = string "other" *> hspace1 *> caseBody

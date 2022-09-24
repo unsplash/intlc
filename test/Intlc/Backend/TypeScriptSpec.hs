@@ -39,7 +39,7 @@ spec = describe "TypeScript compiler" $ do
               "age"
               (pure (ICU.PluralExact "42", pure (ICU.Plaintext "very cool")))
               (pure (ICU.Zero, pure (ICU.Plaintext "new around here")))
-              (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
+            (pure (ICU.Plaintext "not all that interesting"))
           , ICU.Plaintext ". Regardless, the magic number is most certainly "
           , ICU.Number "magicNumber"
           , ICU.Plaintext "! The date is "
@@ -125,7 +125,7 @@ spec = describe "TypeScript compiler" $ do
       let x = ICU.Ordinal "x"
                 [(ICU.PluralExact "42", [ICU.Date "foo" ICU.Short])]
                 (pure (ICU.Few, [ICU.String "bar"]))
-                (ICU.PluralWildcard [ICU.Number "baz"])
+                [ICU.Number "baz"]
       let ys =
               [ ("x", pure TS.TNum)
               , ("foo", pure TS.TDate)

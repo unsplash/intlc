@@ -42,8 +42,8 @@ data Node
   -- rules, however as with the cardinal plural type we'll allow a wider set of
   -- suboptimal usages that we can then lint against.
   | CardinalExact Arg (NonEmpty (PluralCase PluralExact))
-  | CardinalInexact Arg [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
-  | Ordinal Arg [PluralCase PluralExact] [PluralCase PluralRule] PluralWildcard
+  | CardinalInexact Arg [PluralCase PluralExact] [PluralCase PluralRule] Stream
+  | Ordinal Arg [PluralCase PluralExact] [PluralCase PluralRule] Stream
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
   | PluralRef Arg
@@ -75,9 +75,6 @@ data PluralRule
   | Many
   deriving (Show, Eq, Ord, Enum, Bounded)
 
-newtype PluralWildcard = PluralWildcard Stream
-  deriving (Show, Eq)
-
 data SelectCase = SelectCase Text Stream
   deriving (Show, Eq)
 
@@ -105,12 +102,12 @@ getNamedStream (CardinalExact n ls)        = Just (n, getPluralCaseStream `conca
 getNamedStream (CardinalInexact n ls rs w) = Just . (n,) $ mconcat
   [ getPluralCaseStream `concatMap` ls
   , getPluralCaseStream `concatMap` rs
-  , getPluralWildcardStream w
+  , w
   ]
 getNamedStream (Ordinal n xs ys w)         = Just . (n,) $ mconcat
   [ getPluralCaseStream `concatMap` xs
   , getPluralCaseStream `concatMap` ys
-  , getPluralWildcardStream w
+  , w
   ]
 getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap f) g $ x
     where f (SelectCase _ xs)  = xs
@@ -119,6 +116,3 @@ getNamedStream (Callback n xs) = Just (n, xs)
 
 getPluralCaseStream :: PluralCase a -> Stream
 getPluralCaseStream = snd
-
-getPluralWildcardStream :: PluralWildcard -> Stream
-getPluralWildcardStream (PluralWildcard xs) = xs

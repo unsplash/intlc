@@ -35,23 +35,23 @@ spec = describe "linter" $ do
           `shouldBe` Success
 
       it "succeeds on ordinal plural with any non-wildcard case" $ do
-        lint (Message [Ordinal "x" [(PluralExact "42", [])] [] (PluralWildcard [])])
+        lint (Message [Ordinal "x" [(PluralExact "42", [])] [] []])
           `shouldBe` Success
-        lint (Message [Ordinal "x" [] [(Two, [])] (PluralWildcard [])])
+        lint (Message [Ordinal "x" [] [(Two, [])] []])
           `shouldBe` Success
 
       it "succeeds on inexact cardinal plural with any non-wildcard case" $ do
-        lint (Message [CardinalInexact "x" [(PluralExact "42", [])] [] (PluralWildcard [])])
+        lint (Message [CardinalInexact "x" [(PluralExact "42", [])] [] []])
           `shouldBe` Success
-        lint (Message [CardinalInexact "x" [] [(Two, [])] (PluralWildcard [])])
+        lint (Message [CardinalInexact "x" [] [(Two, [])] []])
           `shouldBe` Success
 
       it "fails on ordinal plural with only a wildcard" $ do
-        lint (Message [Ordinal "x" [] [] (PluralWildcard [])])
+        lint (Message [Ordinal "x" [] [] []])
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
       it "fails on inexact cardinal plural with only a wildcard" $ do
-        lint (Message [CardinalInexact "x" [] [] (PluralWildcard [])])
+        lint (Message [CardinalInexact "x" [] [] []])
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
   describe "internal" $ do
@@ -93,7 +93,7 @@ spec = describe "linter" $ do
         let cb = flip Callback mempty
         lint (Message [cb "x", cb "y"]) `shouldBe` Success
 
-        let p n = Ordinal n [] (pure (Zero, [])) (PluralWildcard [])
+        let p n = Ordinal n [] (pure (Zero, [])) []
         lint (Message [p "x", p "y"]) `shouldBe` Success
 
       it "does not lint streams with 2 or more complex interpolations" $ do
