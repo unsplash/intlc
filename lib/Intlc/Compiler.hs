@@ -92,11 +92,11 @@ expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> I
 -- `unionBy` being non-empty, namely `extraCases` - though given the complexity
 -- this is unit tested for confidence.
 expandRules ys w = fromList $ unionBy ((==) `on` caseRule) (toList ys) extraCases
-  where extraCases = flip ICU.PluralCase (wildContent w) <$> missingRules
+  where extraCases = (, wildContent w) <$> missingRules
         missingRules = filter (not . flip elem presentRules) allRules
         presentRules = caseRule <$> ys
         allRules = universe
-        caseRule (ICU.PluralCase x _) = x
+        caseRule (x, _) = x
         wildContent (ICU.PluralWildcard x) = x
 
 mapBoolStreams :: (ICU.Stream -> ICU.Stream) -> ICUBool -> ICUBool
@@ -112,7 +112,7 @@ mapSelectWildcard :: (ICU.Stream -> ICU.Stream) -> ICU.SelectWildcard -> ICU.Sel
 mapSelectWildcard f (ICU.SelectWildcard xs) = ICU.SelectWildcard (f xs)
 
 mapPluralCase :: (ICU.Stream -> ICU.Stream) -> ICU.PluralCase a -> ICU.PluralCase a
-mapPluralCase f (ICU.PluralCase x ys) = ICU.PluralCase x (f ys)
+mapPluralCase f (x, ys) = (x, f ys)
 
 mapPluralWildcard :: (ICU.Stream -> ICU.Stream) -> ICU.PluralWildcard -> ICU.PluralWildcard
 mapPluralWildcard f (ICU.PluralWildcard xs) = ICU.PluralWildcard (f xs)

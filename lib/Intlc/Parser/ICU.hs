@@ -186,11 +186,11 @@ mixedPluralCases :: Parser ([PluralCase PluralExact], [PluralCase PluralRule])
 mixedPluralCases = partitionEithers <$> sepEndBy (eitherP pluralExactCase pluralRuleCase) hspace1
 
 pluralExactCase :: Parser (PluralCase PluralExact)
-pluralExactCase = PluralCase <$> pluralExact <* hspace1 <*> caseBody
+pluralExactCase = (,) <$> pluralExact <* hspace1 <*> caseBody
   where pluralExact = PluralExact . T.pack <$> (string "=" *> some numberChar)
 
 pluralRuleCase :: Parser (PluralCase PluralRule)
-pluralRuleCase = PluralCase <$> pluralRule <* hspace1 <*> caseBody
+pluralRuleCase = (,) <$> pluralRule <* hspace1 <*> caseBody
 
 pluralRule :: Parser PluralRule
 pluralRule = choice

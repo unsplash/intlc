@@ -83,10 +83,10 @@ fromNode (ICU.Select n x)    = case x of
 fromNode (ICU.Callback n xs) = TApply n <$> (fromNode `mapM` xs)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
-fromExactPluralCase (ICU.PluralCase (ICU.PluralExact n) xs) = Branch n <$> (fromNode `mapM` xs)
+fromExactPluralCase (ICU.PluralExact n, xs) = Branch n <$> (fromNode `mapM` xs)
 
 fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> ASTCompiler Branch
-fromRulePluralCase (ICU.PluralCase r xs) = Branch (qts matcher) <$> (fromNode `mapM` xs)
+fromRulePluralCase (r, xs) = Branch (qts matcher) <$> (fromNode `mapM` xs)
   where matcher = case r of
          ICU.Zero -> "zero"
          ICU.One  -> "one"

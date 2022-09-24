@@ -58,8 +58,7 @@ data DateTimeFmt
   | Full
   deriving (Show, Eq)
 
-data PluralCase a = PluralCase a Stream
-  deriving (Show, Eq)
+type PluralCase a = (a, Stream)
 
 -- `Text` here is our count. It's represented as a string so that we can dump
 -- it back out without thinking about converting numeric types across
@@ -119,7 +118,7 @@ getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap f) g $ x
 getNamedStream (Callback n xs) = Just (n, xs)
 
 getPluralCaseStream :: PluralCase a -> Stream
-getPluralCaseStream (PluralCase _ xs) = xs
+getPluralCaseStream = snd
 
 getPluralWildcardStream :: PluralWildcard -> Stream
 getPluralWildcardStream (PluralWildcard xs) = xs

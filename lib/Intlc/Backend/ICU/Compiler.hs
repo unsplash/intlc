@@ -42,10 +42,10 @@ dateTimeFmt Long   = "long"
 dateTimeFmt Full   = "full"
 
 exactPluralCase :: PluralCase PluralExact -> Text
-exactPluralCase (PluralCase (PluralExact n) xs) = "=" <> n <> " {" <> stream xs <> "}"
+exactPluralCase (PluralExact n, xs) = "=" <> n <> " {" <> stream xs <> "}"
 
 rulePluralCase :: PluralCase PluralRule -> Text
-rulePluralCase (PluralCase r xs) = pluralRule r <> " {" <> stream xs <> "}"
+rulePluralCase (r, xs) = pluralRule r <> " {" <> stream xs <> "}"
 
 pluralRule :: PluralRule -> Text
 pluralRule Zero = "zero"

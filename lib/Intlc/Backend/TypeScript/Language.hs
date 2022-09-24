@@ -55,7 +55,7 @@ fromNode (ICU.Time n _)      = pure (n, TDate)
 -- union of number literals.
 fromNode (ICU.CardinalExact n ls)        = (n, t) : (fromExactPluralCase =<< toList ls)
   where t = TNumLitUnion $ caseLit <$> ls
-        caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
+        caseLit (ICU.PluralExact x, _) = x
 fromNode (ICU.CardinalInexact n ls rs w) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
 fromNode (ICU.Ordinal n ls rs w)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
 -- Plural references are treated as a no-op.
@@ -69,10 +69,10 @@ fromNode (ICU.Select n x)    = case x of
 fromNode (ICU.Callback n xs) = (n, TEndo) : (fromNode =<< xs)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
-fromExactPluralCase (ICU.PluralCase (ICU.PluralExact _) xs) = fromNode =<< xs
+fromExactPluralCase (ICU.PluralExact _, xs) = fromNode =<< xs
 
 fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> UncollatedArgs
-fromRulePluralCase (ICU.PluralCase _ xs) = fromNode =<< xs
+fromRulePluralCase (_, xs) = fromNode =<< xs
 
 fromPluralWildcard :: ICU.PluralWildcard -> UncollatedArgs
 fromPluralWildcard (ICU.PluralWildcard xs) = fromNode =<< xs

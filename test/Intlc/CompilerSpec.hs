@@ -60,8 +60,8 @@ spec = describe "compiler" $ do
     it "flattens shallow plural" $ do
       let other = PluralWildcard [Plaintext "many dogs"]
       let otherf = PluralWildcard [Plaintext "I have many dogs"]
-      let one = PluralCase One [Plaintext "a dog"]
-      let onef = PluralCase One [Plaintext "I have a dog"]
+      let one = (One, [Plaintext "a dog"])
+      let onef = (One, [Plaintext "I have a dog"])
 
       flatten (Message [Plaintext "I have ", CardinalInexact "count" [] (pure one) other]) `shouldBe`
         Message (pure $ CardinalInexact "count" [] (pure onef) otherf)
@@ -71,7 +71,7 @@ spec = describe "compiler" $ do
             [ Plaintext "I have "
             , CardinalInexact "count"
               []
-              (pure $ PluralCase One [Plaintext "a dog"])
+              (pure (One, [Plaintext "a dog"]))
               (PluralWildcard
                 [ Number "count"
                 , Plaintext " dogs, the newest of which is "
@@ -85,7 +85,7 @@ spec = describe "compiler" $ do
       let y = Message . pure $
             CardinalInexact "count"
               []
-              (pure $ PluralCase One [Plaintext "I have a dog!"])
+              (pure (One, [Plaintext "I have a dog!"]))
               (PluralWildcard
                 [ Select "name" $ These
                   (pure $ SelectCase "hodor"
@@ -109,9 +109,9 @@ spec = describe "compiler" $ do
     let f = expandRules
 
     it "always contains every rule in the output" $ do
-      let c = PluralCase
+      let c = (,)
       let w = PluralWildcard mempty
-      let rule (PluralCase x _) = x
+      let rule (x, _) = x
       let g xs = sort (toList $ rule <$> f xs w)
 
       g [] `shouldBe` universe
@@ -120,7 +120,7 @@ spec = describe "compiler" $ do
 
     it "copies the wildcard stream to new rules" $ do
       let xs = [Plaintext "foo"]
-      let c = PluralCase
+      let c = (,)
       let w = PluralWildcard
       let g ys = toList (f ys (w xs))
 
@@ -130,7 +130,7 @@ spec = describe "compiler" $ do
         [c Many [Plaintext "bar"], c Zero mempty, c One xs, c Two xs, c Few xs]
 
     it "returns full list of rules unmodified (as non-empty)" $ do
-      let c x y = PluralCase x [Plaintext y]
+      let c x y = (x, [Plaintext y])
       let xs = [c Two "foo", c Many "", c Zero "bar", c One "baz", c Few ""]
 
       f xs (PluralWildcard [Plaintext "any"]) `shouldBe` fromList xs
