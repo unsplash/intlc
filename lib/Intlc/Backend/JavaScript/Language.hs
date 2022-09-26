@@ -99,7 +99,7 @@ fromPluralWildcard :: ICU.Stream -> ASTCompiler Wildcard
 fromPluralWildcard xs = Wildcard <$> (fromNode `mapM` xs)
 
 fromSelectCase :: ICU.SelectCase -> ASTCompiler Branch
-fromSelectCase (ICU.SelectCase x ys) = Branch ("'" <> x <> "'") <$> (fromNode `mapM` ys)
+fromSelectCase (x, ys) = Branch ("'" <> x <> "'") <$> (fromNode `mapM` ys)
 
 fromSelectWildcard :: ICU.SelectWildcard -> ASTCompiler Wildcard
 fromSelectWildcard (ICU.SelectWildcard xs) = Wildcard <$> (fromNode `mapM` xs)

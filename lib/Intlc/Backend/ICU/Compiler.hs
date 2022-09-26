@@ -59,5 +59,5 @@ pluralWildcard xs = "other {" <> stream xs <> "}"
 
 select :: These (NonEmpty SelectCase) SelectWildcard -> Text
 select = unwords . bifoldMap (toList . fmap case') (pure . wild)
-  where case' (SelectCase n ys) = n <> " {" <> stream ys <> "}"
+  where case' (n, ys) = n <> " {" <> stream ys <> "}"
         wild (SelectWildcard ys) = "other {" <> stream ys <> "}"

@@ -163,7 +163,7 @@ selectCases = choice
   [ reconcile <$> cases <*> optional wildcard
   , That <$> wildcard
   ]
-  where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> caseBody) hspace1
+  where cases = NE.sepEndBy1 ((,) <$> (name <* hspace1) <*> caseBody) hspace1
         wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> caseBody)
         reconcile cs (Just w) = These cs w
         reconcile cs Nothing  = This cs

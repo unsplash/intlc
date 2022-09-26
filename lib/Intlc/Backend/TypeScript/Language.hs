@@ -64,8 +64,7 @@ fromNode (ICU.Select n x)    = case x of
   (That w)     -> (n, TStr) : fromSelectWildcard w
   (These cs w) -> (n, TStr) : (fromSelectCase =<< toList cs) <> fromSelectWildcard w
   -- When there's no wildcard case we can compile to a union of string literals.
-  (This cs)    -> (n, TStrLitUnion (lit <$> cs)) : (fromSelectCase =<< toList cs)
-    where lit (ICU.SelectCase l _) = l
+  (This cs)    -> (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs)
 fromNode (ICU.Callback n xs) = (n, TEndo) : (fromNode =<< xs)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
@@ -75,7 +74,7 @@ fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> UncollatedArgs
 fromRulePluralCase (_, xs) = fromNode =<< xs
 
 fromSelectCase :: ICU.SelectCase -> UncollatedArgs
-fromSelectCase (ICU.SelectCase _ xs) = fromNode =<< xs
+fromSelectCase (_, xs) = fromNode =<< xs
 
 fromSelectWildcard :: ICU.SelectWildcard -> UncollatedArgs
 fromSelectWildcard (ICU.SelectWildcard xs) = fromNode =<< xs

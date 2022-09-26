@@ -75,8 +75,7 @@ data PluralRule
   | Many
   deriving (Show, Eq, Ord, Enum, Bounded)
 
-data SelectCase = SelectCase Text Stream
-  deriving (Show, Eq)
+type SelectCase = (Text, Stream)
 
 newtype SelectWildcard = SelectWildcard Stream
   deriving (Show, Eq)
@@ -109,9 +108,8 @@ getNamedStream (Ordinal n xs ys w)         = Just . (n,) $ mconcat
   , getPluralCaseStream `concatMap` ys
   , w
   ]
-getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap f) g $ x
-    where f (SelectCase _ xs)  = xs
-          g (SelectWildcard w) = w
+getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap snd) f $ x
+    where f (SelectWildcard w) = w
 getNamedStream (Callback n xs) = Just (n, xs)
 
 getPluralCaseStream :: PluralCase a -> Stream

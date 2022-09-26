@@ -16,9 +16,9 @@ spec = describe "linter" $ do
       let lint = lintWith' redundantSelectRule
 
       it "succeeds on select with any non-wildcard case" $ do
-        lint (Message [Select "x" $ This (pure $ SelectCase "y" [])])
+        lint (Message [Select "x" $ This (pure ("y", []))])
           `shouldBe` Success
-        lint (Message [Select "x" $ These (pure $ SelectCase "y" []) (SelectWildcard [])])
+        lint (Message [Select "x" $ These (pure ("y", [])) (SelectWildcard [])])
           `shouldBe` Success
 
       it "fails on selects with only a wildcard" $ do

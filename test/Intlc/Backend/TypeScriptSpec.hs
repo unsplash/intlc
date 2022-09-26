@@ -48,8 +48,8 @@ spec = describe "TypeScript compiler" $ do
           , ICU.Time "currTime" ICU.Full
           , ICU.Plaintext ". And just to recap, your name is "
           , ICU.Select "name" . This . fromList $
-              [ ICU.SelectCase "Sam" [ICU.Plaintext "undoubtedly excellent"]
-              , ICU.SelectCase "Ashley" [ICU.Plaintext "fairly good"]
+              [ ("Sam", [ICU.Plaintext "undoubtedly excellent"])
+              , ("Ashley", [ICU.Plaintext "fairly good"])
               ]
           , ICU.Plaintext ". Finally, you are "
           , ICU.Bool
@@ -92,12 +92,12 @@ spec = describe "TypeScript compiler" $ do
     it "typechecks nested selects" $ do
       golden TemplateLit (compileNamedExport TemplateLit (Locale "te-ST") "test") "nested-select" $
         ICU.Message [ICU.Select "x" . This $ fromList
-          [ ICU.SelectCase "a" []
-          , ICU.SelectCase "b" [ICU.Select "x" . This $ fromList
-            [ ICU.SelectCase "a" [] -- <-- without a workaround, TypeScript will have narrowed and reject this case
-            , ICU.SelectCase "b" []
+          [ ("a", [])
+          , ("b", [ICU.Select "x" . This $ fromList
+            [ ("a", []) -- <-- without a workaround, TypeScript will have narrowed and reject this case
+            , ("b", [])
             ]]
-          ]]
+          )]]
 
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
@@ -105,7 +105,7 @@ spec = describe "TypeScript compiler" $ do
     let fromArgs = fromList
 
     it "in select" $ do
-      let x = ICU.Select "x" . This . pure $ ICU.SelectCase "foo" [ICU.String "y"]
+      let x = ICU.Select "x" . This . pure $ ("foo", [ICU.String "y"])
       let ys =
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
               , ("y", pure TS.TStr)

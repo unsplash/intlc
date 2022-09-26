@@ -105,7 +105,7 @@ mapSelectStreams :: (ICU.Stream -> ICU.Stream) -> ICUSelect -> ICUSelect
 mapSelectStreams f = bimap (fmap (mapSelectCase f)) (mapSelectWildcard f)
 
 mapSelectCase :: (ICU.Stream -> ICU.Stream) -> ICU.SelectCase -> ICU.SelectCase
-mapSelectCase f (ICU.SelectCase x ys) = ICU.SelectCase x (f ys)
+mapSelectCase f (x, ys) = (x, f ys)
 
 mapSelectWildcard :: (ICU.Stream -> ICU.Stream) -> ICU.SelectWildcard -> ICU.SelectWildcard
 mapSelectWildcard f (ICU.SelectWildcard xs) = ICU.SelectWildcard (f xs)

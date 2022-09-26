@@ -43,8 +43,8 @@ spec = describe "compiler" $ do
       flatten (Message [Plaintext "xyz"]) `shouldBe` Message [Plaintext "xyz"]
 
     describe "flattens shallow select" $ do
-      let foo = SelectCase "foo" [Plaintext "a dog"]
-      let foof = SelectCase "foo" [Plaintext "I have a dog"]
+      let foo = ("foo", [Plaintext "a dog"])
+      let foof = ("foo", [Plaintext "I have a dog"])
 
       it "with a wildcard" $ do
         let other = SelectWildcard [Plaintext "many dogs"]
@@ -75,7 +75,7 @@ spec = describe "compiler" $ do
               [ Number "count"
               , Plaintext " dogs, the newest of which is "
               , Select "name" $ These
-                (pure $ SelectCase "hodor" [Plaintext "Hodor"])
+                (pure ("hodor", [Plaintext "Hodor"]))
                 (SelectWildcard [Plaintext "unknown"])
               ]
             , Plaintext "!"
@@ -85,12 +85,12 @@ spec = describe "compiler" $ do
               []
               (pure (One, [Plaintext "I have a dog!"]))
               [ Select "name" $ These
-                (pure $ SelectCase "hodor"
+                (pure ("hodor",
                   [ Plaintext "I have "
                   , Number "count"
                   , Plaintext " dogs, the newest of which is Hodor!"
                   ]
-                )
+                ))
                 (SelectWildcard
                   [ Plaintext "I have "
                   , Number "count"

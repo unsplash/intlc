@@ -37,7 +37,7 @@ spec = describe "ICU parser" $ do
         parse msg "#" `shouldParse` Message [Plaintext "#"]
         parse msg "{x, select, y {#}}" `shouldParse`
           (Message . pure $
-            Select "x" (This . pure $ SelectCase "y" (pure $ Plaintext "#")))
+            Select "x" (This . pure $ ("y", pure $ Plaintext "#")))
 
       it "parses as arg inside shallow plural" $ do
         let n = pure $ PluralRef "n"
@@ -196,13 +196,13 @@ spec = describe "ICU parser" $ do
     let selectCases' = selectCases <* eof
 
     it "disallows wildcard not at the end" $ do
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure $ SelectCase "foo" [Plaintext "bar"]) (SelectWildcard [Plaintext "baz"])
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) (SelectWildcard [Plaintext "baz"])
       parse selectCases' `shouldFailOn` "other {bar} foo {baz}"
 
     it "tolerates empty cases" $ do
-      parse selectCases' "x {} other {}" `shouldParse` These (pure $ SelectCase "x" []) (SelectWildcard [])
+      parse selectCases' "x {} other {}" `shouldParse` These (pure ("x", [])) (SelectWildcard [])
 
     it "allows no non-wildcard case" $ do
-      parse selectCases' "foo {bar}" `shouldParse` This (pure $ SelectCase "foo" [Plaintext "bar"])
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure $ SelectCase "foo" [Plaintext "bar"]) (SelectWildcard [Plaintext "baz"])
+      parse selectCases' "foo {bar}" `shouldParse` This (pure ("foo", [Plaintext "bar"]))
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) (SelectWildcard [Plaintext "baz"])
       parse selectCases' "other {foo}" `shouldParse` That (SelectWildcard [Plaintext "foo"])
