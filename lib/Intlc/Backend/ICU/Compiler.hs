@@ -57,7 +57,7 @@ pluralRule Many = "many"
 pluralWildcard :: Stream -> Text
 pluralWildcard xs = "other {" <> stream xs <> "}"
 
-select :: These (NonEmpty SelectCase) SelectWildcard -> Text
+select :: These (NonEmpty SelectCase) Stream -> Text
 select = unwords . bifoldMap (toList . fmap case') (pure . wild)
   where case' (n, ys) = n <> " {" <> stream ys <> "}"
-        wild (SelectWildcard ys) = "other {" <> stream ys <> "}"
+        wild ys = "other {" <> stream ys <> "}"

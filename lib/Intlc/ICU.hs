@@ -47,7 +47,7 @@ data Node
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
   | PluralRef Arg
-  | Select Arg (These (NonEmpty SelectCase) SelectWildcard)
+  | Select Arg (These (NonEmpty SelectCase) Stream)
   | Callback Arg Stream
   deriving (Show, Eq)
 
@@ -77,9 +77,6 @@ data PluralRule
 
 type SelectCase = (Text, Stream)
 
-newtype SelectWildcard = SelectWildcard Stream
-  deriving (Show, Eq)
-
 -- | Merges any sibling `Plaintext` nodes in a `Stream`.
 mergePlaintext :: Stream -> Stream
 mergePlaintext []                               = []
@@ -108,8 +105,7 @@ getNamedStream (Ordinal n xs ys w)         = Just . (n,) $ mconcat
   , getPluralCaseStream `concatMap` ys
   , w
   ]
-getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap snd) f $ x
-    where f (SelectWildcard w) = w
+getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap snd) id $ x
 getNamedStream (Callback n xs) = Just (n, xs)
 
 getPluralCaseStream :: PluralCase a -> Stream

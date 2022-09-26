@@ -101,8 +101,8 @@ fromPluralWildcard xs = Wildcard <$> (fromNode `mapM` xs)
 fromSelectCase :: ICU.SelectCase -> ASTCompiler Branch
 fromSelectCase (x, ys) = Branch ("'" <> x <> "'") <$> (fromNode `mapM` ys)
 
-fromSelectWildcard :: ICU.SelectWildcard -> ASTCompiler Wildcard
-fromSelectWildcard (ICU.SelectWildcard xs) = Wildcard <$> (fromNode `mapM` xs)
+fromSelectWildcard :: ICU.Stream -> ASTCompiler Wildcard
+fromSelectWildcard xs = Wildcard <$> (fromNode `mapM` xs)
 
 fromBoolCase :: Bool -> ICU.Stream -> ASTCompiler Branch
 fromBoolCase b xs = Branch b' <$> (fromNode `mapM` xs)

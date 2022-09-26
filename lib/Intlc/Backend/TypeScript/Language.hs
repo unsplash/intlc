@@ -61,8 +61,8 @@ fromNode (ICU.Ordinal n ls rs w)         = (n, TNum) : (fromExactPluralCase =<< 
 -- Plural references are treated as a no-op.
 fromNode ICU.PluralRef {}    = mempty
 fromNode (ICU.Select n x)    = case x of
-  (That w)     -> (n, TStr) : fromSelectWildcard w
-  (These cs w) -> (n, TStr) : (fromSelectCase =<< toList cs) <> fromSelectWildcard w
+  (That w)     -> (n, TStr) : (fromNode =<< w)
+  (These cs w) -> (n, TStr) : (fromSelectCase =<< toList cs) <> (fromNode =<< w)
   -- When there's no wildcard case we can compile to a union of string literals.
   (This cs)    -> (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs)
 fromNode (ICU.Callback n xs) = (n, TEndo) : (fromNode =<< xs)
@@ -75,6 +75,3 @@ fromRulePluralCase (_, xs) = fromNode =<< xs
 
 fromSelectCase :: ICU.SelectCase -> UncollatedArgs
 fromSelectCase (_, xs) = fromNode =<< xs
-
-fromSelectWildcard :: ICU.SelectWildcard -> UncollatedArgs
-fromSelectWildcard (ICU.SelectWildcard xs) = fromNode =<< xs

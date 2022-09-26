@@ -18,11 +18,11 @@ spec = describe "linter" $ do
       it "succeeds on select with any non-wildcard case" $ do
         lint (Message [Select "x" $ This (pure ("y", []))])
           `shouldBe` Success
-        lint (Message [Select "x" $ These (pure ("y", [])) (SelectWildcard [])])
+        lint (Message [Select "x" $ These (pure ("y", [])) []])
           `shouldBe` Success
 
       it "fails on selects with only a wildcard" $ do
-        let s n = Select n . That . SelectWildcard
+        let s n = Select n . That
 
         lint (Message [s "x" [s "y" []], s "z" []])
           `shouldBe` Failure (pure $ RedundantSelect ("x" :| ["y", "z"]))
@@ -72,7 +72,7 @@ spec = describe "linter" $ do
     describe "interpolations" $ do
       let lint = lintWith' interpolationsRule
       -- An example interpolation that's affected by this lint rule.
-      let f n = Select n . That . SelectWildcard
+      let f n = Select n . That
 
       it "lints streams with 1 plain text node" $ do
         lint (Message [Plaintext "yay"]) `shouldBe` Success

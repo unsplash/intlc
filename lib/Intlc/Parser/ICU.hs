@@ -158,13 +158,13 @@ boolCases = (,)
    <* hspace1
   <*> (string "false" *> hspace1 *> caseBody)
 
-selectCases :: Parser (These (NonEmpty SelectCase) SelectWildcard)
+selectCases :: Parser (These (NonEmpty SelectCase) Stream)
 selectCases = choice
   [ reconcile <$> cases <*> optional wildcard
   , That <$> wildcard
   ]
   where cases = NE.sepEndBy1 ((,) <$> (name <* hspace1) <*> caseBody) hspace1
-        wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> caseBody)
+        wildcard = string wildcardName *> hspace1 *> caseBody
         reconcile cs (Just w) = These cs w
         reconcile cs Nothing  = This cs
         name = try $ mfilter (/= wildcardName) ident

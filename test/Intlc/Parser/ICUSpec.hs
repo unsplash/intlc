@@ -196,13 +196,13 @@ spec = describe "ICU parser" $ do
     let selectCases' = selectCases <* eof
 
     it "disallows wildcard not at the end" $ do
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) (SelectWildcard [Plaintext "baz"])
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) [Plaintext "baz"]
       parse selectCases' `shouldFailOn` "other {bar} foo {baz}"
 
     it "tolerates empty cases" $ do
-      parse selectCases' "x {} other {}" `shouldParse` These (pure ("x", [])) (SelectWildcard [])
+      parse selectCases' "x {} other {}" `shouldParse` These (pure ("x", [])) []
 
     it "allows no non-wildcard case" $ do
       parse selectCases' "foo {bar}" `shouldParse` This (pure ("foo", [Plaintext "bar"]))
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) (SelectWildcard [Plaintext "baz"])
-      parse selectCases' "other {foo}" `shouldParse` That (SelectWildcard [Plaintext "foo"])
+      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) [Plaintext "baz"]
+      parse selectCases' "other {foo}" `shouldParse` That [Plaintext "foo"]

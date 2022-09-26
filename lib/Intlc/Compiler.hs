@@ -37,7 +37,7 @@ compileTranslation l k (Translation v be _) = case be of
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
 type ICUBool = (ICU.Stream, ICU.Stream)
-type ICUSelect = These (NonEmpty ICU.SelectCase) ICU.SelectWildcard
+type ICUSelect = These (NonEmpty ICU.SelectCase) ICU.Stream
 
 compileFlattened :: Dataset Translation -> Text
 compileFlattened = JSON.compileDataset . mapMsgs flatten
@@ -102,13 +102,10 @@ mapBoolStreams :: (ICU.Stream -> ICU.Stream) -> ICUBool -> ICUBool
 mapBoolStreams f (xs, ys) = (f xs, f ys)
 
 mapSelectStreams :: (ICU.Stream -> ICU.Stream) -> ICUSelect -> ICUSelect
-mapSelectStreams f = bimap (fmap (mapSelectCase f)) (mapSelectWildcard f)
+mapSelectStreams f = bimap (fmap (mapSelectCase f)) f
 
 mapSelectCase :: (ICU.Stream -> ICU.Stream) -> ICU.SelectCase -> ICU.SelectCase
 mapSelectCase f (x, ys) = (x, f ys)
-
-mapSelectWildcard :: (ICU.Stream -> ICU.Stream) -> ICU.SelectWildcard -> ICU.SelectWildcard
-mapSelectWildcard f (ICU.SelectWildcard xs) = ICU.SelectWildcard (f xs)
 
 mapPluralCase :: (ICU.Stream -> ICU.Stream) -> ICU.PluralCase a -> ICU.PluralCase a
 mapPluralCase f (x, ys) = (x, f ys)

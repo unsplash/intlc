@@ -47,8 +47,8 @@ spec = describe "compiler" $ do
       let foof = ("foo", [Plaintext "I have a dog"])
 
       it "with a wildcard" $ do
-        let other = SelectWildcard [Plaintext "many dogs"]
-        let otherf = SelectWildcard [Plaintext "I have many dogs"]
+        let other = [Plaintext "many dogs"]
+        let otherf = [Plaintext "I have many dogs"]
 
         flatten (Message [Plaintext "I have ", Select "thing" $ These (pure foo) other]) `shouldBe`
           Message (pure . Select "thing" $ These (pure foof) otherf)
@@ -76,7 +76,7 @@ spec = describe "compiler" $ do
               , Plaintext " dogs, the newest of which is "
               , Select "name" $ These
                 (pure ("hodor", [Plaintext "Hodor"]))
-                (SelectWildcard [Plaintext "unknown"])
+                [Plaintext "unknown"]
               ]
             , Plaintext "!"
             ]
@@ -91,12 +91,10 @@ spec = describe "compiler" $ do
                   , Plaintext " dogs, the newest of which is Hodor!"
                   ]
                 ))
-                (SelectWildcard
-                  [ Plaintext "I have "
-                  , Number "count"
-                  , Plaintext " dogs, the newest of which is unknown!"
-                  ]
-                )
+                [ Plaintext "I have "
+                , Number "count"
+                , Plaintext " dogs, the newest of which is unknown!"
+                ]
               ]
 
       flatten x `shouldBe` y
