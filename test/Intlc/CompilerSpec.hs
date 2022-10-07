@@ -1,6 +1,5 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Data.These        (These (..))
 import           Intlc.Compiler    (compileDataset, compileFlattened,
                                     expandRules, flatten)
 import           Intlc.Core        (Backend (..), Locale (Locale),
@@ -50,12 +49,12 @@ spec = describe "compiler" $ do
         let other = [Plaintext "many dogs"]
         let otherf = [Plaintext "I have many dogs"]
 
-        flatten (Message [Plaintext "I have ", Select "thing" $ These (pure foo) other]) `shouldBe`
-          Message (pure . Select "thing" $ These (pure foof) otherf)
+        flatten (Message [Plaintext "I have ", SelectNamedWild "thing" (pure foo) other]) `shouldBe`
+          Message (pure $ SelectNamedWild "thing" (pure foof) otherf)
 
       it "without a wildcard" $ do
-        flatten (Message [Plaintext "I have ", Select "thing" $ This (pure foo)]) `shouldBe`
-          Message (pure . Select "thing" $ This (pure foof))
+        flatten (Message [Plaintext "I have ", SelectNamed "thing" (pure foo)]) `shouldBe`
+          Message (pure $ SelectNamed "thing" (pure foof))
 
     it "flattens shallow plural" $ do
       let other = [Plaintext "many dogs"]
@@ -74,7 +73,7 @@ spec = describe "compiler" $ do
               (pure (One, [Plaintext "a dog"]))
               [ Number "count"
               , Plaintext " dogs, the newest of which is "
-              , Select "name" $ These
+              , SelectNamedWild "name"
                 (pure ("hodor", [Plaintext "Hodor"]))
                 [Plaintext "unknown"]
               ]
@@ -84,7 +83,7 @@ spec = describe "compiler" $ do
             CardinalInexact "count"
               []
               (pure (One, [Plaintext "I have a dog!"]))
-              [ Select "name" $ These
+              [ SelectNamedWild "name"
                 (pure ("hodor",
                   [ Plaintext "I have "
                   , Number "count"

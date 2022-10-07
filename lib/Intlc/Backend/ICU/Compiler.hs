@@ -8,7 +8,6 @@
 
 module Intlc.Backend.ICU.Compiler where
 
-import           Data.These (These (..))
 import           Intlc.ICU
 import           Prelude    hiding (Type)
 
@@ -28,11 +27,15 @@ node (Time n fmt)    = "{" <> unArg n <> ", time, "          <> dateTimeFmt fmt 
 node (CardinalExact n xs)        = "{" <> unArg n <> ", plural, " <> cases <> "}"
   where cases = unwords . toList . fmap exactPluralCase $ xs
 node (CardinalInexact n xs ys w) = "{" <> unArg n <> ", plural, " <> cases <> "}"
-  where cases = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ pluralWildcard w]
+  where cases = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ wildcard w]
 node (Ordinal n xs ys w)         = "{" <> unArg n <> ", selectordinal, " <> cases <> "}"
-  where cases = unwords $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (pluralWildcard w)
+  where cases = unwords $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (wildcard w)
 node PluralRef {}    = "#"
-node (Select n x)    = "{" <> unArg n <> ", select, "        <> select x         <> "}"
+node (SelectNamed n xs)       = "{" <> unArg n <> ", select, " <> cases <> "}"
+  where cases = unwords . fmap selectCase . toList $ xs
+node (SelectWild n w)         = "{" <> unArg n <> ", select, " <> wildcard w <> "}"
+node (SelectNamedWild n xs w) = "{" <> unArg n <> ", select, " <> cases <> "}"
+  where cases = unwords . (<> pure (wildcard w)) . fmap selectCase . toList $ xs
 node (Callback n xs) = "<" <> unArg n <> ">"                 <> stream xs        <> "</" <> unArg n <> ">"
 
 dateTimeFmt :: DateTimeFmt -> Text
@@ -54,10 +57,8 @@ pluralRule Two  = "two"
 pluralRule Few  = "few"
 pluralRule Many = "many"
 
-pluralWildcard :: Stream -> Text
-pluralWildcard xs = "other {" <> stream xs <> "}"
+selectCase :: SelectCase -> Text
+selectCase (n, xs) = n <> " {" <> stream xs <> "}"
 
-select :: These (NonEmpty SelectCase) Stream -> Text
-select = unwords . bifoldMap (toList . fmap case') (pure . wild)
-  where case' (n, ys) = n <> " {" <> stream ys <> "}"
-        wild ys = "other {" <> stream ys <> "}"
+wildcard :: Stream -> Text
+wildcard xs = "other {" <> stream xs <> "}"

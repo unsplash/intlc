@@ -4,7 +4,6 @@ import           Data.Foldable                     (elem)
 import           Data.List.Extra                   (unionBy)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
-import           Data.These                        (These (..))
 import           Intlc.Backend.JavaScript.Compiler as JS
 import qualified Intlc.Backend.JSON.Compiler       as JSON
 import qualified Intlc.Backend.TypeScript.Compiler as TS
@@ -37,7 +36,6 @@ compileTranslation l k (Translation v be _) = case be of
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
 type ICUBool = (ICU.Stream, ICU.Stream)
-type ICUSelect = These (NonEmpty ICU.SelectCase) ICU.Stream
 
 compileFlattened :: Dataset Translation -> Text
 compileFlattened = JSON.compileDataset . mapMsgs flatten
@@ -54,7 +52,9 @@ mapNodes f = fmap $ f >>> \case
   ICU.CardinalExact n xs        -> ICU.CardinalExact n (mapPluralCase (fmap f) <$> xs)
   ICU.CardinalInexact n xs ys w -> ICU.CardinalInexact n (mapPluralCase (fmap f) <$> xs) (mapPluralCase (fmap f) <$> ys) (fmap f w)
   ICU.Ordinal n xs ys w         -> ICU.Ordinal n (mapPluralCase (fmap f) <$> xs) (mapPluralCase (fmap f) <$> ys) (fmap f w)
-  ICU.Select n x    -> ICU.Select n $ mapSelectStreams (fmap f) x
+  ICU.SelectNamed n xs       -> ICU.SelectNamed n (mapSelectCase (fmap f) <$> xs)
+  ICU.SelectWild n w         -> ICU.SelectWild n (f <$> w)
+  ICU.SelectNamedWild n xs w -> ICU.SelectNamedWild n (mapSelectCase (fmap f) <$> xs) (f <$> w)
   ICU.Callback n xs -> ICU.Callback n (f <$> xs)
   x                 -> x
 
@@ -63,7 +63,9 @@ flatten = ICU.Message . go [] . ICU.unMessage
   where go :: ICU.Stream -> ICU.Stream -> ICU.Stream
         go prev []                        = prev
         go prev (ICU.Bool n xs ys : next) = pure . uncurry (ICU.Bool n) $ mapBoolStreams   (around prev next) (xs, ys)
-        go prev (ICU.Select n x : next)   = pure .         ICU.Select n $ mapSelectStreams (around prev next) x
+        go prev (ICU.SelectNamed n xs : next)         = pure $ ICU.SelectNamed n (mapSelectCase (around prev next) <$> xs)
+        go prev (ICU.SelectWild n w : next)           = pure $ ICU.SelectWild n (around prev next w)
+        go prev (ICU.SelectNamedWild n xs w : next)   = pure $ ICU.SelectNamedWild n (mapSelectCase (around prev next) <$> xs) (around prev next w)
         go prev (ICU.CardinalExact n xs : next)        = pure $ ICU.CardinalExact n (mapPluralCase (around prev next) <$> xs)
         go prev (ICU.CardinalInexact n xs ys w : next) = pure $ ICU.CardinalInexact n (mapPluralCase (around prev next) <$> xs) (mapPluralCase (around prev next) <$> ys) (around prev next w)
         go prev (ICU.Ordinal n xs ys w : next)         = pure $ ICU.Ordinal n (mapPluralCase (around prev next) <$> xs) (mapPluralCase (around prev next) <$> ys) (around prev next w)
@@ -100,9 +102,6 @@ expandRules ys w = fromList $ unionBy ((==) `on` caseRule) (toList ys) extraCase
 
 mapBoolStreams :: (ICU.Stream -> ICU.Stream) -> ICUBool -> ICUBool
 mapBoolStreams f (xs, ys) = (f xs, f ys)
-
-mapSelectStreams :: (ICU.Stream -> ICU.Stream) -> ICUSelect -> ICUSelect
-mapSelectStreams f = bimap (fmap (mapSelectCase f)) f
 
 mapSelectCase :: (ICU.Stream -> ICU.Stream) -> ICU.SelectCase -> ICU.SelectCase
 mapSelectCase f (x, ys) = (x, f ys)

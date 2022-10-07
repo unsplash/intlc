@@ -1,7 +1,6 @@
 module Intlc.Backend.TypeScriptSpec (spec) where
 
 import qualified Data.Text                         as T
-import           Data.These                        (These (..))
 import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
 import           Intlc.Backend.TypeScript.Compiler (compileNamedExport,
                                                     compileTypeof)
@@ -47,7 +46,7 @@ spec = describe "TypeScript compiler" $ do
           , ICU.Plaintext ", and the time is "
           , ICU.Time "currTime" ICU.Full
           , ICU.Plaintext ". And just to recap, your name is "
-          , ICU.Select "name" . This . fromList $
+          , ICU.SelectNamed "name" . fromList $
               [ ("Sam", [ICU.Plaintext "undoubtedly excellent"])
               , ("Ashley", [ICU.Plaintext "fairly good"])
               ]
@@ -91,9 +90,9 @@ spec = describe "TypeScript compiler" $ do
     -- Typechecking happens externally.
     it "typechecks nested selects" $ do
       golden TemplateLit (compileNamedExport TemplateLit (Locale "te-ST") "test") "nested-select" $
-        ICU.Message [ICU.Select "x" . This $ fromList
+        ICU.Message [ICU.SelectNamed "x" $ fromList
           [ ("a", [])
-          , ("b", [ICU.Select "x" . This $ fromList
+          , ("b", [ICU.SelectNamed "x" $ fromList
             [ ("a", []) -- <-- without a workaround, TypeScript will have narrowed and reject this case
             , ("b", [])
             ]]
@@ -105,7 +104,7 @@ spec = describe "TypeScript compiler" $ do
     let fromArgs = fromList
 
     it "in select" $ do
-      let x = ICU.Select "x" . This . pure $ ("foo", [ICU.String "y"])
+      let x = ICU.SelectNamed "x" . pure $ ("foo", [ICU.String "y"])
       let ys =
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
               , ("y", pure TS.TStr)

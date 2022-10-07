@@ -1,6 +1,5 @@
 module Intlc.Parser.ICUSpec (spec) where
 
-import           Data.These            (These (..))
 import           Intlc.ICU
 import           Intlc.Parser.Error    (MessageParseErr (..),
                                         ParseErr (FailedMsgParse), ParseFailure)
@@ -37,7 +36,7 @@ spec = describe "ICU parser" $ do
         parse msg "#" `shouldParse` Message [Plaintext "#"]
         parse msg "{x, select, y {#}}" `shouldParse`
           (Message . pure $
-            Select "x" (This . pure $ ("y", pure $ Plaintext "#")))
+            SelectNamed "x" (pure ("y", pure $ Plaintext "#")))
 
       it "parses as arg inside shallow plural" $ do
         let n = pure $ PluralRef "n"
@@ -193,16 +192,18 @@ spec = describe "ICU parser" $ do
         Ordinal "arg" (pure (PluralExact "0", [Plaintext "foo"])) (pure (Few, [Plaintext "bar"])) [Plaintext "baz ", PluralRef "xyz"]
 
   describe "select" $ do
-    let selectCases' = selectCases <* eof
+    let selectCases' = selectCases "arg" <* eof
 
     it "disallows wildcard not at the end" $ do
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) [Plaintext "baz"]
+      parse selectCases' "foo {bar} other {baz}" `shouldParse`
+        SelectNamedWild "arg" (pure ("foo", [Plaintext "bar"])) [Plaintext "baz"]
       parse selectCases' `shouldFailOn` "other {bar} foo {baz}"
 
     it "tolerates empty cases" $ do
-      parse selectCases' "x {} other {}" `shouldParse` These (pure ("x", [])) []
+      parse selectCases' "x {} other {}" `shouldParse` SelectNamedWild "arg" (pure ("x", [])) []
 
     it "allows no non-wildcard case" $ do
-      parse selectCases' "foo {bar}" `shouldParse` This (pure ("foo", [Plaintext "bar"]))
-      parse selectCases' "foo {bar} other {baz}" `shouldParse` These (pure ("foo", [Plaintext "bar"])) [Plaintext "baz"]
-      parse selectCases' "other {foo}" `shouldParse` That [Plaintext "foo"]
+      parse selectCases' "foo {bar}" `shouldParse` SelectNamed "arg" (pure ("foo", [Plaintext "bar"]))
+      parse selectCases' "foo {bar} other {baz}" `shouldParse`
+        SelectNamedWild "arg" (pure ("foo", [Plaintext "bar"])) [Plaintext "baz"]
+      parse selectCases' "other {foo}" `shouldParse` SelectWild "arg" [Plaintext "foo"]

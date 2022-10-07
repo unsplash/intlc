@@ -1,6 +1,5 @@
 module Intlc.Backend.JavaScript.Language where
 
-import           Data.These (These (..))
 import           Intlc.Core (Locale)
 import qualified Intlc.ICU  as ICU
 import           Prelude
@@ -73,13 +72,12 @@ fromNode (ICU.Ordinal n (lc:lcs) rcs w)         = TMatch . Match n LitCond <$> m
           im = Match n OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
 
 fromNode (ICU.PluralRef n)   = pure $ TNum n
-fromNode (ICU.Select n x)    = case x of
-      (This cs)    -> TMatch . Match n LitCond . LitMatchRet <$> ret
-        where ret = fromSelectCase `mapM` cs
-      (That w)     -> TMatch . Match n LitCond <$> ret
-        where ret = NonLitMatchRet mempty <$> fromSelectWildcard w
-      (These cs w) -> TMatch . Match n LitCond <$> ret
-        where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> fromSelectWildcard w
+fromNode (ICU.SelectNamed n cs)       = TMatch . Match n LitCond . LitMatchRet <$> ret
+  where ret = fromSelectCase `mapM` cs
+fromNode (ICU.SelectWild n w)         = TMatch . Match n LitCond <$> ret
+  where ret = NonLitMatchRet mempty <$> fromSelectWildcard w
+fromNode (ICU.SelectNamedWild n cs w) = TMatch . Match n LitCond <$> ret
+  where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> fromSelectWildcard w
 fromNode (ICU.Callback n xs) = TApply n <$> (fromNode `mapM` xs)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch

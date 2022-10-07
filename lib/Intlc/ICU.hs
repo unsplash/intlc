@@ -3,7 +3,6 @@
 
 module Intlc.ICU where
 
-import           Data.These (These (..))
 import           Prelude    hiding (Type)
 
 newtype Message = Message Stream
@@ -47,7 +46,9 @@ data Node
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
   | PluralRef Arg
-  | Select Arg (These (NonEmpty SelectCase) Stream)
+  | SelectNamed Arg (NonEmpty SelectCase)
+  | SelectWild Arg Stream
+  | SelectNamedWild Arg (NonEmpty SelectCase) Stream
   | Callback Arg Stream
   deriving (Show, Eq)
 
@@ -105,7 +106,9 @@ getNamedStream (Ordinal n xs ys w)         = Just . (n,) $ mconcat
   , getPluralCaseStream `concatMap` ys
   , w
   ]
-getNamedStream (Select n x)    = Just . (n,) . bifoldMap (concatMap snd) id $ x
+getNamedStream (SelectNamed n xs)        = Just (n, snd `concatMap` xs)
+getNamedStream (SelectWild n xs)         = Just (n, xs)
+getNamedStream (SelectNamedWild n xs ys) = Just (n, snd `concatMap` xs <> ys)
 getNamedStream (Callback n xs) = Just (n, xs)
 
 getPluralCaseStream :: PluralCase a -> Stream

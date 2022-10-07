@@ -1,6 +1,5 @@
 module Intlc.LinterSpec where
 
-import           Data.These   (These (..))
 import           Intlc.ICU
 import           Intlc.Linter
 import           Prelude
@@ -16,13 +15,13 @@ spec = describe "linter" $ do
       let lint = lintWith' redundantSelectRule
 
       it "succeeds on select with any non-wildcard case" $ do
-        lint (Message [Select "x" $ This (pure ("y", []))])
+        lint (Message [SelectNamed "x" (pure ("y", []))])
           `shouldBe` Success
-        lint (Message [Select "x" $ These (pure ("y", [])) []])
+        lint (Message [SelectNamedWild "x" (pure ("y", [])) []])
           `shouldBe` Success
 
       it "fails on selects with only a wildcard" $ do
-        let s n = Select n . That
+        let s = SelectWild
 
         lint (Message [s "x" [s "y" []], s "z" []])
           `shouldBe` Failure (pure $ RedundantSelect ("x" :| ["y", "z"]))
@@ -72,7 +71,7 @@ spec = describe "linter" $ do
     describe "interpolations" $ do
       let lint = lintWith' interpolationsRule
       -- An example interpolation that's affected by this lint rule.
-      let f n = Select n . That
+      let f = SelectWild
 
       it "lints streams with 1 plain text node" $ do
         lint (Message [Plaintext "yay"]) `shouldBe` Success

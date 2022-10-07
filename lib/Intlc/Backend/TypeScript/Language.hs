@@ -2,7 +2,6 @@ module Intlc.Backend.TypeScript.Language where
 
 import           Data.List.NonEmpty (nub)
 import qualified Data.Map           as M
-import           Data.These         (These (..))
 import qualified Intlc.ICU          as ICU
 import           Prelude
 
@@ -60,11 +59,10 @@ fromNode (ICU.CardinalInexact n ls rs w) = (n, TNum) : (fromExactPluralCase =<< 
 fromNode (ICU.Ordinal n ls rs w)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> (fromNode =<< w)
 -- Plural references are treated as a no-op.
 fromNode ICU.PluralRef {}    = mempty
-fromNode (ICU.Select n x)    = case x of
-  (That w)     -> (n, TStr) : (fromNode =<< w)
-  (These cs w) -> (n, TStr) : (fromSelectCase =<< toList cs) <> (fromNode =<< w)
-  -- When there's no wildcard case we can compile to a union of string literals.
-  (This cs)    -> (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs)
+fromNode (ICU.SelectWild n w)         = (n, TStr) : (fromNode =<< w)
+fromNode (ICU.SelectNamedWild n cs w) = (n, TStr) : (fromSelectCase =<< toList cs) <> (fromNode =<< w)
+-- When there's no wildcard case we can compile to a union of string literals.
+fromNode (ICU.SelectNamed n cs)       = (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs)
 fromNode (ICU.Callback n xs) = (n, TEndo) : (fromNode =<< xs)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs

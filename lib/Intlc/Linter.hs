@@ -5,7 +5,6 @@ import qualified Data.Text           as T
 import           Control.Monad.Extra (pureIf)
 import           Data.Char           (isAscii)
 import qualified Data.Map            as M
-import           Data.These          (These (..))
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
@@ -86,8 +85,8 @@ redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
     , maybeToMonoid (idents <$> getStream x)
     , idents xs
     ]
-  redundantIdent (Select n (That _w)) = Just n
-  redundantIdent _                    = Nothing
+  redundantIdent (SelectWild n _w) = Just n
+  redundantIdent _                 = Nothing
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
