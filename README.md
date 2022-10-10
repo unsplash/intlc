@@ -1,10 +1,17 @@
 # intlc
 
-**Disclaimer**: Currently for internal use but feedback/external usage welcome.
+Compile ICU messages into code. Supports TypeScript and JSX. No runtime.
+
+- **Compatible** - supports most common ICU syntax with some optional extras.
+- **Typesafe** - embraces TypeScript output, taking advantage of unions to forgo the need for wildcards.
+- **Lightweight** - no runtime, so no bundle or performance bloat. Just plain functions.
+- **Fast** - compiles via a native binary. Most projects can expect everything to compile in under a second.
+- **Unopinionated** - JSON/ICU in, code out. Structure your application around this in whichever way suits you.
+- **Maintained** - in production at [unsplash.com](https://unsplash.com).
+
+https://user-images.githubusercontent.com/6402443/194868749-23c86dd1-4996-4c60-a0b6-88685078fb38.mov
 
 ## Usage
-
-Compile ICU messages into code.
 
 ```
 Usage: intlc COMMAND
@@ -21,7 +28,7 @@ Available commands:
 
 For example:
 
-```
+```console
 $ intlc compile ./translations.json -l en-US
 ```
 
@@ -46,20 +53,8 @@ Translation files should be encoded as JSON and might look something like this:
 }
 ```
 
-## ICU
-
-intlc intentially breaks with the ICU spec where there's high value in doing so and output type safety can be guaranteed. For example, `select` and `plural` interpolation types don't require an `other` fallback case.
+The description is optional and ignored by intlc. It can be used documentatively for developers and/or translators.
 
 ## Contributing
 
 Check out `ARCHITECTURE.md`. Currently building against GHC 8.10.7.
-
-## Publishing new release
-
-Pushing a git tag will trigger a build on github actions. It will build binaries for different OS and create a new release with them attached.
-By convention tags will have the following format `v{major}.{minor}.{patch}`
-
-We don't fully have everything automated so here's what you should do whenever you need to publish a new intlc version:
-
-- Bump `intlc.cabal`
-- `git tag v{version} && git push {remote} v{version}`
