@@ -2,7 +2,7 @@
 
 Compile ICU messages into code. Supports TypeScript and JSX. No runtime.
 
-- **Compatible** - supports most common ICU syntax with some optional extras.
+- **Compatible** - supports most common ICU syntax [with some optional extras](https://github.com/unsplash/intlc/wiki/ICU-syntax).
 - **Typesafe** - embraces TypeScript output, taking advantage of unions to forgo the need for wildcards.
 - **Lightweight** - no runtime, so no bundle or performance bloat. Just plain functions.
 - **Fast** - compiles via a native binary. Most projects can expect everything to compile in under a second.
@@ -39,6 +39,8 @@ $ intlc compile translations.json -l en-US > translations.ts
 $ cat translations.ts
 export const welcome: (x: { name: string }) => string = x => `Hello ${x.name}`
 ```
+
+Check out an example project integration in our wiki: https://github.com/unsplash/intlc/wiki/Example-project-integration
 
 ### Flattening
 
