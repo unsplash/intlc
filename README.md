@@ -13,6 +13,8 @@ https://user-images.githubusercontent.com/6402443/194868749-23c86dd1-4996-4c60-a
 
 ## CLI
 
+Grab a binary from the releases page: https://github.com/unsplash/intlc/releases
+
 ```
 Usage: intlc COMMAND
   Compile ICU messages into code.
