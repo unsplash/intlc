@@ -11,7 +11,7 @@ Compile ICU messages into code. Supports TypeScript and JSX. No runtime.
 
 https://user-images.githubusercontent.com/6402443/194868749-23c86dd1-4996-4c60-a0b6-88685078fb38.mov
 
-## Usage
+## CLI
 
 ```
 Usage: intlc COMMAND
@@ -26,20 +26,42 @@ Available commands:
   lint
 ```
 
-For example:
+### Compiling
+
+Take a JSON object of ICU messages, and a locale, and output TypeScript to stdout.
 
 ```console
-$ intlc compile ./translations.json -l en-US
+$ cat translations.json
+{"welcome": {"message": "Hello {name}"}}
+$ intlc compile translations.json -l en-US > translations.ts
+$ cat translations.ts
+export const welcome: (x: { name: string }) => string = x => `Hello ${x.name}`
 ```
 
-### Backends
+### Flattening
 
-At present, the following backends (compilation targets) are supported:
+Hoist selectors up as much as possible. This is often preferred by translators.
 
-- TypeScript (`ts`, default)
-- TypeScript/React (`tsx`)
+```console
+$ cat translations.json
+{"openSource":{"message": "Open source at {company} is {company, select, Unsplash {encouraged!} other {unknown}}"}}
+$ intlc flatten translations.json
+{"openSource":{"message":"{company, select, Unsplash {Open source at {company} is encouraged!} other {Open source at {company} is unknown}}"}}
+```
 
-### Schema
+### Linting
+
+Lint against suboptimal use of ICU syntax.
+
+```console
+$ cat translations.json
+{"welcome": {"message": "Hello {name, select, other {{name}}}"}}
+$ intlc lint translation.json
+welcome:
+  Redundant select: name
+```
+
+## Schema
 
 Translation files should be encoded as JSON and might look something like this:
 
@@ -52,6 +74,11 @@ Translation files should be encoded as JSON and might look something like this:
   }
 }
 ```
+
+At present, the following backends (compilation targets) are supported:
+
+- TypeScript (`ts`, default)
+- TypeScript/React (`tsx`)
 
 The description is optional and ignored by intlc. It can be used documentatively for developers and/or translators.
 
