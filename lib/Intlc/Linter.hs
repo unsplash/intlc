@@ -101,7 +101,7 @@ redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
     ]
   redundantIdent (CardinalInexact n [] [] _) = Just n
   redundantIdent (Ordinal n [] [] _)         = Just n
-  redundantIdent _                                 = Nothing
+  redundantIdent _                           = Nothing
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of these
@@ -118,12 +118,12 @@ interpolationsRule = count . complexIdents where
   -- however we exclude callbacks and plurals from this. The former because
   -- the vendor's tool has no issues parsing its syntax and the latter
   -- because it's a special case that we can't rewrite.
-  getComplexStream Callback {}              = Nothing
+  getComplexStream Callback {}        = Nothing
   getComplexStream CardinalExact {}   = Nothing
   getComplexStream CardinalInexact {} = Nothing
   getComplexStream Ordinal {}         = Nothing
-  getComplexStream Plaintext {}             = Nothing
-  getComplexStream x                        = getNamedStream x
+  getComplexStream Plaintext {}       = Nothing
+  getComplexStream x                  = getNamedStream x
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.

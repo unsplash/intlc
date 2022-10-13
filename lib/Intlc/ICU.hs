@@ -3,7 +3,7 @@
 
 module Intlc.ICU where
 
-import           Prelude    hiding (Type)
+import           Prelude hiding (Type)
 
 newtype Message = Message Stream
   deriving (Show, Eq)

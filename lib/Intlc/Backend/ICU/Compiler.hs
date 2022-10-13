@@ -9,7 +9,7 @@
 module Intlc.Backend.ICU.Compiler where
 
 import           Intlc.ICU
-import           Prelude    hiding (Type)
+import           Prelude   hiding (Type)
 
 compileMsg :: Message -> Text
 compileMsg (Message xs) = stream xs
