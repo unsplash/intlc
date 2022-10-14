@@ -7,6 +7,14 @@
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system};
+          # HLS in nixpkgs is marked as broken on aarch64-darwin via LLVM 7,
+          # see:
+          #   https://github.com/NixOS/nixpkgs/blob/a410420844fe1ad6415cf9586308fe7538cc7584/pkgs/development/compilers/llvm/7/compiler-rt/default.nix#L108
+          #
+          # See also in unsplash/intlc: #162, #167
+          hls = if system == flake-utils.lib.system.aarch64-darwin
+            then [ ]
+            else [ pkgs.haskell-language-server ];
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
@@ -21,7 +29,7 @@
             # For typechecking golden output
             nodejs
             yarn
-          ];
+          ] ++ hls;
         };
       });
 }
