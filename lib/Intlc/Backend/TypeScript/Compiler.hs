@@ -23,8 +23,8 @@ compileNamedExport s l k v = JS.compileStmt o s l k v
         matchLitCond x = x <> " as typeof " <> x
         arg = if hasInterpolations then "x" else "()"
         hasInterpolations = flip any (ICU.unMessage v) $ \case
-          ICU.Interpolation {} -> True
-          ICU.Plaintext {}     -> False
+          ICU.Plaintext {} -> False
+          _                -> True
 
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
@@ -54,8 +54,8 @@ args xs
   | otherwise = do
     y <- fmap (T.intercalate "; " . M.elems) . M.traverseWithKey arg $ xs
     pure $ "(" <> argName <> ": { " <> y <> " })"
-      where arg k (v :| []) = ((k <> ": ") <>) <$> in' v
-            arg k vs        = ((k <> ": ") <>) . intersect . toList <$> ins `mapM` vs
+      where arg (ICU.Arg k) (v :| []) = ((k <> ": ") <>) <$> in' v
+            arg (ICU.Arg k) vs        = ((k <> ": ") <>) . intersect . toList <$> ins `mapM` vs
             -- Unions with at least two members need wrapping in disambiguating
             -- parentheses, other types do not.
             ins x

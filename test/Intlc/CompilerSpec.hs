@@ -1,6 +1,5 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Data.These        (These (..))
 import           Intlc.Compiler    (compileDataset, compileFlattened,
                                     expandRules, flatten)
 import           Intlc.Core        (Backend (..), Locale (Locale),
@@ -30,7 +29,7 @@ spec = describe "compiler" $ do
       compileFlattened (fromList
         [ ("x", Translation (Message [Plaintext "xfoo"]) TypeScript Nothing)
         , ("z", Translation (Message [Plaintext "zfoo"]) TypeScriptReact (Just "zbar"))
-        , ("y", Translation (Message [Plaintext "yfoo ", Interpolation "ybar" String]) TypeScript Nothing)
+        , ("y", Translation (Message [Plaintext "yfoo ", String "ybar"]) TypeScript Nothing)
         ])
           `shouldBe` [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
 
@@ -43,65 +42,59 @@ spec = describe "compiler" $ do
       flatten (Message [Plaintext "xyz"]) `shouldBe` Message [Plaintext "xyz"]
 
     describe "flattens shallow select" $ do
-      let foo = SelectCase "foo" [Plaintext "a dog"]
-      let foof = SelectCase "foo" [Plaintext "I have a dog"]
+      let foo = ("foo", [Plaintext "a dog"])
+      let foof = ("foo", [Plaintext "I have a dog"])
 
       it "with a wildcard" $ do
-        let other = SelectWildcard [Plaintext "many dogs"]
-        let otherf = SelectWildcard [Plaintext "I have many dogs"]
+        let other = [Plaintext "many dogs"]
+        let otherf = [Plaintext "I have many dogs"]
 
-        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select $ These (pure foo) other)]) `shouldBe`
-          Message (pure $ Interpolation "thing" (Select $ These (pure foof) otherf))
+        flatten (Message [Plaintext "I have ", SelectNamedWild "thing" (pure foo) other]) `shouldBe`
+          Message (pure $ SelectNamedWild "thing" (pure foof) otherf)
 
       it "without a wildcard" $ do
-        flatten (Message [Plaintext "I have ", Interpolation "thing" (Select $ This (pure foo))]) `shouldBe`
-          Message (pure $ Interpolation "thing" (Select $ This (pure foof)))
+        flatten (Message [Plaintext "I have ", SelectNamed "thing" (pure foo)]) `shouldBe`
+          Message (pure $ SelectNamed "thing" (pure foof))
 
     it "flattens shallow plural" $ do
-      let other = PluralWildcard [Plaintext "many dogs"]
-      let otherf = PluralWildcard [Plaintext "I have many dogs"]
-      let one = PluralCase One [Plaintext "a dog"]
-      let onef = PluralCase One [Plaintext "I have a dog"]
+      let other = [Plaintext "many dogs"]
+      let otherf = [Plaintext "I have many dogs"]
+      let one = (One, [Plaintext "a dog"])
+      let onef = (One, [Plaintext "I have a dog"])
 
-      flatten (Message [Plaintext "I have ", Interpolation "count" (Plural (CardinalInexact [] (pure one) other))]) `shouldBe`
-        Message (pure $ Interpolation "count" (Plural (CardinalInexact [] (pure onef) otherf)))
+      flatten (Message [Plaintext "I have ", CardinalInexact "count" [] (pure one) other]) `shouldBe`
+        Message (pure $ CardinalInexact "count" [] (pure onef) otherf)
 
     it "flattens deep interpolations" $ do
       let x = Message
             [ Plaintext "I have "
-            , Interpolation "count" . Plural $ CardinalInexact
+            , CardinalInexact "count"
               []
-              (pure $ PluralCase One [Plaintext "a dog"])
-              (PluralWildcard
-                [ Interpolation "count" Number
-                , Plaintext " dogs, the newest of which is "
-                , Interpolation "name" . Select $ These
-                  (pure $ SelectCase "hodor" [Plaintext "Hodor"])
-                  (SelectWildcard [Plaintext "unknown"])
-                ]
-              )
+              (pure (One, [Plaintext "a dog"]))
+              [ Number "count"
+              , Plaintext " dogs, the newest of which is "
+              , SelectNamedWild "name"
+                (pure ("hodor", [Plaintext "Hodor"]))
+                [Plaintext "unknown"]
+              ]
             , Plaintext "!"
             ]
       let y = Message . pure $
-            Interpolation "count" . Plural $ CardinalInexact
+            CardinalInexact "count"
               []
-              (pure $ PluralCase One [Plaintext "I have a dog!"])
-              (PluralWildcard
-                [ Interpolation "name" . Select $ These
-                  (pure $ SelectCase "hodor"
-                    [ Plaintext "I have "
-                    , Interpolation "count" Number
-                    , Plaintext " dogs, the newest of which is Hodor!"
-                    ]
-                  )
-                  (SelectWildcard
-                    [ Plaintext "I have "
-                    , Interpolation "count" Number
-                    , Plaintext " dogs, the newest of which is unknown!"
-                    ]
-                  )
+              (pure (One, [Plaintext "I have a dog!"]))
+              [ SelectNamedWild "name"
+                (pure ("hodor",
+                  [ Plaintext "I have "
+                  , Number "count"
+                  , Plaintext " dogs, the newest of which is Hodor!"
+                  ]
+                ))
+                [ Plaintext "I have "
+                , Number "count"
+                , Plaintext " dogs, the newest of which is unknown!"
                 ]
-              )
+              ]
 
       flatten x `shouldBe` y
 
@@ -109,9 +102,9 @@ spec = describe "compiler" $ do
     let f = expandRules
 
     it "always contains every rule in the output" $ do
-      let c = PluralCase
-      let w = PluralWildcard mempty
-      let rule (PluralCase x _) = x
+      let c = (,)
+      let w = mempty
+      let rule (x, _) = x
       let g xs = sort (toList $ rule <$> f xs w)
 
       g [] `shouldBe` universe
@@ -120,8 +113,8 @@ spec = describe "compiler" $ do
 
     it "copies the wildcard stream to new rules" $ do
       let xs = [Plaintext "foo"]
-      let c = PluralCase
-      let w = PluralWildcard
+      let c = (,)
+      let w = id
       let g ys = toList (f ys (w xs))
 
       g [] `shouldBe` (flip c xs <$> (universe :: [PluralRule]))
@@ -130,7 +123,7 @@ spec = describe "compiler" $ do
         [c Many [Plaintext "bar"], c Zero mempty, c One xs, c Two xs, c Few xs]
 
     it "returns full list of rules unmodified (as non-empty)" $ do
-      let c x y = PluralCase x [Plaintext y]
+      let c x y = (x, [Plaintext y])
       let xs = [c Two "foo", c Many "", c Zero "bar", c One "baz", c Few ""]
 
-      f xs (PluralWildcard [Plaintext "any"]) `shouldBe` fromList xs
+      f xs [Plaintext "any"] `shouldBe` fromList xs

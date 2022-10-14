@@ -1,12 +1,11 @@
 -- This module follows the following whitespace rules:
---   * Consume all whitespace after tokens where possible.
---   * Therefore, assume no whitespace before tokens.
+--   * Consume all whitespace after nodes where possible.
+--   * Therefore, assume no whitespace before nodes.
 
 module Intlc.Parser.ICU where
 
 import qualified Control.Applicative.Combinators.NonEmpty as NE
 import qualified Data.Text                                as T
-import           Data.These                               (These (..))
 import           Data.Void                                ()
 import           Intlc.ICU
 import           Intlc.Parser.Error                       (MessageParseErr (..),
@@ -14,8 +13,7 @@ import           Intlc.Parser.Error                       (MessageParseErr (..),
                                                            failingWith)
 import           Prelude                                  hiding (Type)
 import           Text.Megaparsec                          hiding (State, Stream,
-                                                           Token, many, some,
-                                                           token)
+                                                           many, some)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer               as L
 
@@ -24,7 +22,7 @@ i `failingWith'` e = i `failingWith` FailedMsgParse e
 
 data ParserState = ParserState
   -- Expected to be supplied internally.
-  { pluralCtxName :: Maybe Text
+  { pluralCtxName :: Maybe Arg
   -- Expected to be potentially supplied externally.
   , endOfInput    :: Parser ()
   }
@@ -40,6 +38,9 @@ type Parser = ReaderT ParserState (Parsec ParseErr Text)
 ident :: Parser Text
 ident = label "alphabetic identifier" $ T.pack <$> some letterChar
 
+arg :: Parser Arg
+arg = Arg <$> ident
+
 -- Parse a message until the end of input parser matches.
 msg :: Parser Message
 msg = msgTill =<< asks endOfInput
@@ -50,19 +51,20 @@ msgTill = fmap (Message . mergePlaintext) . streamTill
 
 -- Parse a stream until the provided parser matches.
 streamTill :: Parser a -> Parser Stream
-streamTill = manyTill token
+streamTill = manyTill node
 
 -- The core parser of this module. Parse as many of these as you'd like until
 -- reaching an anticipated delimiter, such as a double quote in the surrounding
 -- JSON string or end of input in a REPL.
-token :: Parser Token
-token = choice
-  [ uncurry Interpolation <$> (interp <|> callback)
+node :: Parser Node
+node = choice
+  [ interp
+  , callback
   -- Plural cases support interpolating the number/argument in context with
   -- `#`. When there's no such context, fail the parse in effect treating it
   -- as plaintext.
   , asks pluralCtxName >>= \case
-      Just n  -> Interpolation n PluralRef <$ string "#"
+      Just n  -> PluralRef n <$ string "#"
       Nothing -> empty
   , Plaintext <$> plaintext
   ]
@@ -104,37 +106,37 @@ escaped = apos *> choice
         synOpen = char '{' <|> char '<'
         synClose = char '}' <|> char '>'
 
-callback :: Parser (Text, Type)
+callback :: Parser Node
 callback = do
-  (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> ident <* string ">"
+  (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> arg <* string ">"
   when isClosing $ (openPos + 1) `failingWith'` NoOpeningCallbackTag oname
-  mrest <- observing ((,,) <$> children <* string "</" <*> getOffset <*> ident <* string ">")
+  mrest <- observing ((,,) <$> children oname <* string "</" <*> getOffset <*> arg <* string ">")
   case mrest of
     Left _  -> openPos `failingWith'` NoClosingCallbackTag oname
     Right (ch, closePos, cname) -> if oname == cname
-       then pure (oname, ch)
+       then pure ch
        else closePos `failingWith'` BadClosingCallbackTag oname cname
-    where children = do
+    where children n = do
             eom <- asks endOfInput
             stream <- streamTill (lookAhead $ void (string "</") <|> eom)
-            pure . Callback . mergePlaintext $ stream
+            pure . Callback n . mergePlaintext $ stream
           closing = fmap isJust . hidden . optional . char $ '/'
 
-interp :: Parser (Text, Type)
+interp :: Parser Node
 interp = between (char '{') (char '}') $ do
-  n <- ident
-  (n,) <$> option String (sep *> body n)
+  n <- arg
+  option (String n) (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice
-          [ uncurry Bool <$> (string "boolean" *> sep *> boolCases)
-          , Number <$ string "number"
-          , Date <$> (string "date" *> sep *> dateTimeFmt)
-          , Time <$> (string "time" *> sep *> dateTimeFmt)
-          , Plural <$> withPluralCtx n (
-                  string "plural" *> sep *> cardinalCases
-              <|> string "selectordinal" *> sep *> ordinalCases
-            )
-          , Select <$> (string "select" *> sep *> selectCases)
+          [ uncurry (Bool n) <$> (string "boolean" *> sep *> boolCases)
+          , Number n <$ string "number"
+          , Date n <$> (string "date" *> sep *> dateTimeFmt)
+          , Time n <$> (string "time" *> sep *> dateTimeFmt)
+          , withPluralCtx n $ choice
+              [ string "plural"        *> sep *> cardinalCases n
+              , string "selectordinal" *> sep *> ordinalCases n
+              ]
+          , string "select" *> sep *> selectCases n
           ]
         withPluralCtx n = withReaderT (\x -> x { pluralCtxName = Just n })
 
@@ -155,39 +157,39 @@ boolCases = (,)
    <* hspace1
   <*> (string "false" *> hspace1 *> caseBody)
 
-selectCases :: Parser (These (NonEmpty SelectCase) SelectWildcard)
-selectCases = choice
+selectCases :: Arg -> Parser Node
+selectCases n = choice
   [ reconcile <$> cases <*> optional wildcard
-  , That <$> wildcard
+  , SelectWild n <$> wildcard
   ]
-  where cases = NE.sepEndBy1 (SelectCase <$> (name <* hspace1) <*> caseBody) hspace1
-        wildcard = SelectWildcard <$> (string wildcardName *> hspace1 *> caseBody)
-        reconcile cs (Just w) = These cs w
-        reconcile cs Nothing  = This cs
+  where cases = NE.sepEndBy1 ((,) <$> (name <* hspace1) <*> caseBody) hspace1
+        wildcard = string wildcardName *> hspace1 *> caseBody
+        reconcile cs (Just w) = SelectNamedWild n cs w
+        reconcile cs Nothing  = SelectNamed n cs
         name = try $ mfilter (/= wildcardName) ident
         wildcardName = "other"
 
-cardinalCases :: Parser Plural
-cardinalCases = try cardinalInexactCases <|> cardinalExactCases
+cardinalCases :: Arg -> Parser Node
+cardinalCases n = try (cardinalInexactCases n) <|> cardinalExactCases n
 
-cardinalExactCases :: Parser Plural
-cardinalExactCases = CardinalExact <$> NE.sepEndBy1 pluralExactCase hspace1
+cardinalExactCases :: Arg -> Parser Node
+cardinalExactCases n = CardinalExact n <$> NE.sepEndBy1 pluralExactCase hspace1
 
-cardinalInexactCases :: Parser Plural
-cardinalInexactCases = uncurry CardinalInexact <$> mixedPluralCases <*> pluralWildcard
+cardinalInexactCases :: Arg -> Parser Node
+cardinalInexactCases n = uncurry (CardinalInexact n) <$> mixedPluralCases <*> pluralWildcard
 
-ordinalCases :: Parser Plural
-ordinalCases = uncurry Ordinal <$> mixedPluralCases <*> pluralWildcard
+ordinalCases :: Arg -> Parser Node
+ordinalCases n = uncurry (Ordinal n) <$> mixedPluralCases <*> pluralWildcard
 
 mixedPluralCases :: Parser ([PluralCase PluralExact], [PluralCase PluralRule])
 mixedPluralCases = partitionEithers <$> sepEndBy (eitherP pluralExactCase pluralRuleCase) hspace1
 
 pluralExactCase :: Parser (PluralCase PluralExact)
-pluralExactCase = PluralCase <$> pluralExact <* hspace1 <*> caseBody
+pluralExactCase = (,) <$> pluralExact <* hspace1 <*> caseBody
   where pluralExact = PluralExact . T.pack <$> (string "=" *> some numberChar)
 
 pluralRuleCase :: Parser (PluralCase PluralRule)
-pluralRuleCase = PluralCase <$> pluralRule <* hspace1 <*> caseBody
+pluralRuleCase = (,) <$> pluralRule <* hspace1 <*> caseBody
 
 pluralRule :: Parser PluralRule
 pluralRule = choice
@@ -198,5 +200,5 @@ pluralRule = choice
   , Many <$ string "many"
   ]
 
-pluralWildcard :: Parser PluralWildcard
-pluralWildcard = PluralWildcard <$> (string "other" *> hspace1 *> caseBody)
+pluralWildcard :: Parser Stream
+pluralWildcard = string "other" *> hspace1 *> caseBody

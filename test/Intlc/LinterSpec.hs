@@ -1,6 +1,5 @@
 module Intlc.LinterSpec where
 
-import           Data.These   (These (..))
 import           Intlc.ICU
 import           Intlc.Linter
 import           Prelude
@@ -16,42 +15,42 @@ spec = describe "linter" $ do
       let lint = lintWith' redundantSelectRule
 
       it "succeeds on select with any non-wildcard case" $ do
-        lint (Message [Interpolation "x" (Select $ This (pure $ SelectCase "y" []))])
+        lint (Message [SelectNamed "x" (pure ("y", []))])
           `shouldBe` Success
-        lint (Message [Interpolation "x" (Select $ These (pure $ SelectCase "y" []) (SelectWildcard []))])
+        lint (Message [SelectNamedWild "x" (pure ("y", [])) []])
           `shouldBe` Success
 
       it "fails on selects with only a wildcard" $ do
-        let s = Select . That . SelectWildcard
+        let s = SelectWild
 
-        lint (Message [Interpolation "x" (s [Interpolation "y" (s [])]), Interpolation "z" (s [])])
+        lint (Message [s "x" [s "y" []], s "z" []])
           `shouldBe` Failure (pure $ RedundantSelect ("x" :| ["y", "z"]))
 
     describe "redundant plural" $ do
       let lint = lintWith' redundantPluralRule
 
       it "succeeds on exact cardinal plural" $ do
-        lint (Message [Interpolation "x" (Plural $ CardinalExact (pure $ PluralCase (PluralExact "42") []))])
+        lint (Message [CardinalExact "x" (pure (PluralExact "42", []))])
           `shouldBe` Success
 
       it "succeeds on ordinal plural with any non-wildcard case" $ do
-        lint (Message [Interpolation "x" (Plural $ Ordinal [PluralCase (PluralExact "42") []] [] (PluralWildcard []))])
+        lint (Message [Ordinal "x" [(PluralExact "42", [])] [] []])
           `shouldBe` Success
-        lint (Message [Interpolation "x" (Plural $ Ordinal [] [PluralCase  Two []] (PluralWildcard []))])
+        lint (Message [Ordinal "x" [] [(Two, [])] []])
           `shouldBe` Success
 
       it "succeeds on inexact cardinal plural with any non-wildcard case" $ do
-        lint (Message [Interpolation "x" (Plural $ CardinalInexact [PluralCase (PluralExact "42") []] [] (PluralWildcard []))])
+        lint (Message [CardinalInexact "x" [(PluralExact "42", [])] [] []])
           `shouldBe` Success
-        lint (Message [Interpolation "x" (Plural $ CardinalInexact [] [PluralCase  Two []] (PluralWildcard []))])
+        lint (Message [CardinalInexact "x" [] [(Two, [])] []])
           `shouldBe` Success
 
       it "fails on ordinal plural with only a wildcard" $ do
-        lint (Message [Interpolation "x" (Plural $ Ordinal [] [] (PluralWildcard []))])
+        lint (Message [Ordinal "x" [] [] []])
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
       it "fails on inexact cardinal plural with only a wildcard" $ do
-        lint (Message [Interpolation "x" (Plural $ CardinalInexact [] [] (PluralWildcard []))])
+        lint (Message [CardinalInexact "x" [] [] []])
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
   describe "internal" $ do
@@ -63,7 +62,7 @@ spec = describe "linter" $ do
           `shouldBe` Failure (pure $ InvalidNonAsciiCharacter (fromList "❤️🥺"))
 
       it "does not lint text that is deeply nested with emoji" $ do
-        lint (Message [Interpolation "Hello" (Callback []), Interpolation "Hello" (Bool [Plaintext "Message with an emoji 🥺"] [])])
+        lint (Message [Callback "Hello" [], Bool "Hello" [Plaintext "Message with an emoji 🥺"] []])
           `shouldBe` Failure (fromList [InvalidNonAsciiCharacter (fromList ['🥺'])])
 
       it "lints streams without emoji" $ do
@@ -72,36 +71,36 @@ spec = describe "linter" $ do
     describe "interpolations" $ do
       let lint = lintWith' interpolationsRule
       -- An example interpolation that's affected by this lint rule.
-      let f = Select . That . SelectWildcard
+      let f = SelectWild
 
-      it "lints streams with 1 plain text token" $ do
+      it "lints streams with 1 plain text node" $ do
         lint (Message [Plaintext "yay"]) `shouldBe` Success
 
-      it "lints streams with 2 or more plain text token" $ do
+      it "lints streams with 2 or more plain text node" $ do
         lint (Message [Plaintext "yay", Plaintext "Hello"]) `shouldBe` Success
 
       it "lints streams with 1 simple interpolation" $ do
-        lint (Message [Interpolation "Hello" String]) `shouldBe` Success
+        lint (Message [String "Hello"]) `shouldBe` Success
 
       it "lints streams with 1 complex interpolation" $ do
-        lint (Message [Interpolation "Hello" (f [])]) `shouldBe` Success
+        lint (Message [f "Hello" []]) `shouldBe` Success
 
       it "lints streams with 1 complex interpolation and 1 simple interpolation" $ do
-        lint (Message [Interpolation "Hello" (f []), Plaintext "hello"]) `shouldBe` Success
+        lint (Message [f "Hello" [], Plaintext "hello"]) `shouldBe` Success
 
       it "lints plurals and callbacks" $ do
-        let cb = Callback []
-        lint (Message [Interpolation "x" cb, Interpolation "y" cb]) `shouldBe` Success
+        let cb = flip Callback mempty
+        lint (Message [cb "x", cb "y"]) `shouldBe` Success
 
-        let p = Plural $ Ordinal [] (pure $ PluralCase Zero []) (PluralWildcard [])
-        lint (Message [Interpolation "x" p, Interpolation "y" p]) `shouldBe` Success
+        let p n = Ordinal n [] (pure (Zero, [])) []
+        lint (Message [p "x", p "y"]) `shouldBe` Success
 
       it "does not lint streams with 2 or more complex interpolations" $ do
-        lint (Message [Interpolation "x" (f []), Interpolation "y" (f [])])
+        lint (Message [f "x" [], f "y" []])
           `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y"]))
-        lint (Message [Interpolation "x" (f []), Interpolation "y" (f []), Interpolation "z" (f [])])
+        lint (Message [f "x" [], f "y" [], f "z" []])
           `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y", "z"]))
 
       it "does not lint nested streams" $ do
-        lint (Message [Interpolation "outer" (f [Interpolation "inner" (f [])])])
+        lint (Message [f "outer" [f "inner" []]])
           `shouldBe` Failure (pure $ TooManyInterpolations ("outer" :| ["inner"]))

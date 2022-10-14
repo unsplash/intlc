@@ -1,7 +1,6 @@
 module Intlc.Backend.TypeScriptSpec (spec) where
 
 import qualified Data.Text                         as T
-import           Data.These                        (These (..))
 import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
 import           Intlc.Backend.TypeScript.Compiler (compileNamedExport,
                                                     compileTypeof)
@@ -31,34 +30,32 @@ spec = describe "TypeScript compiler" $ do
   describe "golden" $ do
     let msg = ICU.Message
           [ ICU.Plaintext "Hello "
-          , ICU.Interpolation "bold" (ICU.Callback (pure $
-              ICU.Interpolation "name" ICU.String
-            ))
+          , ICU.Callback "bold" (pure $
+              ICU.String "name"
+            )
           , ICU.Plaintext "! You are "
-          , ICU.Interpolation "age" (ICU.Plural
-              (ICU.CardinalInexact
-                (pure (ICU.PluralCase (ICU.PluralExact "42") (pure (ICU.Plaintext "very cool"))))
-                (pure (ICU.PluralCase ICU.Zero (pure (ICU.Plaintext "new around here"))))
-                (ICU.PluralWildcard (pure (ICU.Plaintext "not all that interesting")))
-              )
-            )
+          , ICU.CardinalInexact
+              "age"
+              (pure (ICU.PluralExact "42", pure (ICU.Plaintext "very cool")))
+              (pure (ICU.Zero, pure (ICU.Plaintext "new around here")))
+            (pure (ICU.Plaintext "not all that interesting"))
           , ICU.Plaintext ". Regardless, the magic number is most certainly "
-          , ICU.Interpolation "magicNumber" ICU.Number
+          , ICU.Number "magicNumber"
           , ICU.Plaintext "! The date is "
-          , ICU.Interpolation "todayDate" (ICU.Date ICU.Short)
+          , ICU.Date "todayDate" ICU.Short
           , ICU.Plaintext ", and the time is "
-          , ICU.Interpolation "currTime" (ICU.Time ICU.Full)
+          , ICU.Time "currTime" ICU.Full
           , ICU.Plaintext ". And just to recap, your name is "
-          , ICU.Interpolation "name" (ICU.Select . This . fromList $
-              [ ICU.SelectCase "Sam" [ICU.Plaintext "undoubtedly excellent"]
-              , ICU.SelectCase "Ashley" [ICU.Plaintext "fairly good"]
+          , ICU.SelectNamed "name" . fromList $
+              [ ("Sam", [ICU.Plaintext "undoubtedly excellent"])
+              , ("Ashley", [ICU.Plaintext "fairly good"])
               ]
-            )
           , ICU.Plaintext ". Finally, you are "
-          , ICU.Interpolation "isDev" (ICU.Bool
-            { ICU.trueCase = [ICU.Plaintext "a software engineer"]
+          , ICU.Bool
+            { ICU.name = "isDev"
+            , ICU.trueCase = [ICU.Plaintext "a software engineer"]
             , ICU.falseCase = [ICU.Plaintext "something less fun"]
-            })
+            }
           , ICU.Plaintext ". Bonus: Some characters that might need escaping! ` ``"
           ]
 
@@ -93,56 +90,56 @@ spec = describe "TypeScript compiler" $ do
     -- Typechecking happens externally.
     it "typechecks nested selects" $ do
       golden TemplateLit (compileNamedExport TemplateLit (Locale "te-ST") "test") "nested-select" $
-        ICU.Message [ICU.Interpolation "x" . ICU.Select . This $ fromList
-          [ ICU.SelectCase "a" []
-          , ICU.SelectCase "b" [ICU.Interpolation "x" . ICU.Select . This $ fromList
-            [ ICU.SelectCase "a" [] -- <-- without a workaround, TypeScript will have narrowed and reject this case
-            , ICU.SelectCase "b" []
+        ICU.Message [ICU.SelectNamed "x" $ fromList
+          [ ("a", [])
+          , ("b", [ICU.SelectNamed "x" $ fromList
+            [ ("a", []) -- <-- without a workaround, TypeScript will have narrowed and reject this case
+            , ("b", [])
             ]]
-          ]]
+          )]]
 
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
-    let fromToken = args . TS.fromMsg TS.TFragment . ICU.Message . pure . ICU.Interpolation "x"
+    let fromNode = args . TS.fromMsg TS.TFragment . ICU.Message . pure
     let fromArgs = fromList
 
     it "in select" $ do
-      let x = ICU.Select . This . pure $ ICU.SelectCase "foo" [ICU.Interpolation "y" ICU.String]
+      let x = ICU.SelectNamed "x" . pure $ ("foo", [ICU.String "y"])
       let ys =
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
               , ("y", pure TS.TStr)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys
 
     it "in cardinal plural" $ do
-      let x = ICU.Plural . ICU.CardinalExact . pure $
-                ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation "y" ICU.String]
+      let x = ICU.CardinalExact "x" . pure $
+                (ICU.PluralExact "42", [ICU.String "y"])
       let ys =
               [ ("x", pure (TS.TNumLitUnion (pure "42")))
               , ("y", pure TS.TStr)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys
 
     it "in ordinal plural" $ do
-      let x = ICU.Plural $ ICU.Ordinal
-                [ICU.PluralCase (ICU.PluralExact "42") [ICU.Interpolation "foo" (ICU.Date ICU.Short)]]
-                (pure $ ICU.PluralCase ICU.Few [ICU.Interpolation "bar" ICU.String])
-                (ICU.PluralWildcard [ICU.Interpolation "baz" ICU.Number])
+      let x = ICU.Ordinal "x"
+                [(ICU.PluralExact "42", [ICU.Date "foo" ICU.Short])]
+                (pure (ICU.Few, [ICU.String "bar"]))
+                [ICU.Number "baz"]
       let ys =
               [ ("x", pure TS.TNum)
               , ("foo", pure TS.TDate)
               , ("bar", pure TS.TStr)
               , ("baz", pure TS.TNum)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys
 
     it "in boolean" $ do
-      let x = ICU.Bool
-                [ICU.Interpolation "y" ICU.String]
-                [ICU.Interpolation "z" ICU.Number]
+      let x = ICU.Bool "x"
+                [ICU.String "y"]
+                [ICU.Number "z"]
       let ys =
               [ ("x", pure TS.TBool)
               , ("y", pure TS.TStr)
               , ("z", pure TS.TNum)
               ]
-      fromToken x `shouldBe` fromArgs ys
+      fromNode x `shouldBe` fromArgs ys

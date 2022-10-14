@@ -5,18 +5,17 @@ import qualified Data.Text           as T
 import           Control.Monad.Extra (pureIf)
 import           Data.Char           (isAscii)
 import qualified Data.Map            as M
-import           Data.These          (These (..))
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
 
 data ExternalLint
-  = RedundantSelect (NonEmpty Text)
-  | RedundantPlural (NonEmpty Text)
+  = RedundantSelect (NonEmpty Arg)
+  | RedundantPlural (NonEmpty Arg)
   deriving (Eq, Show)
 
 data InternalLint
-  = TooManyInterpolations (NonEmpty Text)
+  = TooManyInterpolations (NonEmpty Arg)
   | InvalidNonAsciiCharacter (NonEmpty Char)
   deriving (Eq,Show)
 
@@ -59,12 +58,12 @@ lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
 
 lintDatasetExternal :: Dataset Translation -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
-  RedundantSelect xs -> "Redundant select: " <> T.intercalate ", " (toList xs)
-  RedundantPlural xs -> "Redundant plural: " <> T.intercalate ", " (toList xs)
+  RedundantSelect xs -> "Redundant select: " <> T.intercalate ", " (fmap unArg . toList $ xs)
+  RedundantPlural xs -> "Redundant plural: " <> T.intercalate ", " (fmap unArg . toList $ xs)
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
-  TooManyInterpolations xs         -> "Multiple complex interpolations: " <> T.intercalate ", " (toList xs)
+  TooManyInterpolations xs         -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
   (InvalidNonAsciiCharacter chars) -> "Following characters are not allowed: " <> intercalateChars chars
     where intercalateChars:: NonEmpty Char -> Text
           intercalateChars = T.intercalate " " . toList . fmap T.singleton
@@ -79,32 +78,30 @@ formatFailureWith f k es = title <> msgs
 -- replaced with plain string interpolations.
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
-  idents :: Stream -> [Text]
+  idents :: Stream -> [Arg]
   idents []     = []
   idents (x:xs) = mconcat
     [ maybeToList (redundantIdent x)
     , maybeToMonoid (idents <$> getStream x)
     , idents xs
     ]
-  redundantIdent (Interpolation n (Select (That _w))) = Just n
-  redundantIdent _                                    = Nothing
+  redundantIdent (SelectWild n _w) = Just n
+  redundantIdent _                 = Nothing
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
 redundantPluralRule :: Rule ExternalLint
 redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
-  idents :: Stream -> [Text]
+  idents :: Stream -> [Arg]
   idents []     = []
   idents (x:xs) = mconcat
     [ maybeToList (redundantIdent x)
     , maybeToMonoid (idents <$> getStream x)
     , idents xs
     ]
-  redundantIdent (Interpolation n (Plural p)) = case p of
-    CardinalInexact [] [] _ -> Just n
-    Ordinal [] [] _         -> Just n
-    _                       -> Nothing
-  redundantIdent _                            = Nothing
+  redundantIdent (CardinalInexact n [] [] _) = Just n
+  redundantIdent (Ordinal n [] [] _)         = Just n
+  redundantIdent _                           = Nothing
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of these
@@ -121,10 +118,12 @@ interpolationsRule = count . complexIdents where
   -- however we exclude callbacks and plurals from this. The former because
   -- the vendor's tool has no issues parsing its syntax and the latter
   -- because it's a special case that we can't rewrite.
-  getComplexStream (Interpolation _ (Callback {})) = Nothing
-  getComplexStream (Interpolation _ (Plural {}))   = Nothing
-  getComplexStream token@(Interpolation n _)       = (n,) <$> getStream token
-  getComplexStream Plaintext {}                    = Nothing
+  getComplexStream Callback {}        = Nothing
+  getComplexStream CardinalExact {}   = Nothing
+  getComplexStream CardinalInexact {} = Nothing
+  getComplexStream Ordinal {}         = Nothing
+  getComplexStream Plaintext {}       = Nothing
+  getComplexStream x                  = getNamedStream x
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
@@ -136,6 +135,6 @@ unsupportedUnicodeRule :: Rule InternalLint
 unsupportedUnicodeRule = output . nonAscii where
   output = fmap InvalidNonAsciiCharacter . nonEmpty . T.unpack
   nonAscii :: Stream -> Text
-  nonAscii []                      = mempty
-  nonAscii (Plaintext x:ys)        = T.filter (not . isAcceptedChar) x <> nonAscii ys
-  nonAscii (x@Interpolation {}:ys) = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
+  nonAscii []               = mempty
+  nonAscii (Plaintext x:ys) = T.filter (not . isAcceptedChar) x <> nonAscii ys
+  nonAscii (x:ys)           = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys

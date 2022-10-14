@@ -4,7 +4,6 @@ import           Data.Foldable                     (elem)
 import           Data.List.Extra                   (unionBy)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
-import           Data.These                        (These (..))
 import           Intlc.Backend.JavaScript.Compiler as JS
 import qualified Intlc.Backend.JSON.Compiler       as JSON
 import qualified Intlc.Backend.TypeScript.Compiler as TS
@@ -37,7 +36,6 @@ compileTranslation l k (Translation v be _) = case be of
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
 type ICUBool = (ICU.Stream, ICU.Stream)
-type ICUSelect = These (NonEmpty ICU.SelectCase) ICU.SelectWildcard
 
 compileFlattened :: Dataset Translation -> Text
 compileFlattened = JSON.compileDataset . mapMsgs flatten
@@ -45,34 +43,33 @@ compileFlattened = JSON.compileDataset . mapMsgs flatten
 mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
 mapMsgs f = fmap $ \x -> x { message = f (message x) }
 
--- Map every token, included those nested, in a `Stream`. Order is unspecified.
--- The children of a token, if any, will be traversed after the provided
--- function is applied.
-mapTokens :: (ICU.Token -> ICU.Token) -> ICU.Stream -> ICU.Stream
-mapTokens f = fmap $ f >>> \case
-  x@(ICU.Plaintext {})      -> x
-  x@(ICU.Interpolation n t) -> case t of
-    ICU.Bool xs ys  -> g $ ICU.Bool (h xs) (h ys)
-    ICU.Plural y    -> g . ICU.Plural $ mapPluralStreams h y
-    ICU.Select y    -> g . ICU.Select $ mapSelectStreams h y
-    ICU.Callback ys -> g . ICU.Callback . h $ ys
-    _               -> x
-    where g = ICU.Interpolation n
-          h = fmap f
-
+-- Map every `Node`, included those nested, in a `Stream`. Order is
+-- unspecified. The children of a node, if any, will be traversed after the
+-- provided function is applied.
+mapNodes :: (ICU.Node -> ICU.Node) -> ICU.Stream -> ICU.Stream
+mapNodes f = fmap $ f >>> \case
+  ICU.Bool n xs ys  -> ICU.Bool n (f <$> xs) (f <$> ys)
+  ICU.CardinalExact n xs        -> ICU.CardinalExact n (mapPluralCase (fmap f) <$> xs)
+  ICU.CardinalInexact n xs ys w -> ICU.CardinalInexact n (mapPluralCase (fmap f) <$> xs) (mapPluralCase (fmap f) <$> ys) (fmap f w)
+  ICU.Ordinal n xs ys w         -> ICU.Ordinal n (mapPluralCase (fmap f) <$> xs) (mapPluralCase (fmap f) <$> ys) (fmap f w)
+  ICU.SelectNamed n xs       -> ICU.SelectNamed n (mapSelectCase (fmap f) <$> xs)
+  ICU.SelectWild n w         -> ICU.SelectWild n (f <$> w)
+  ICU.SelectNamedWild n xs w -> ICU.SelectNamedWild n (mapSelectCase (fmap f) <$> xs) (f <$> w)
+  ICU.Callback n xs -> ICU.Callback n (f <$> xs)
+  x                 -> x
 
 flatten :: ICU.Message -> ICU.Message
 flatten = ICU.Message . go [] . ICU.unMessage
   where go :: ICU.Stream -> ICU.Stream -> ICU.Stream
-        go prev [] = prev
-        go prev (curr@(ICU.Interpolation name typ) : next) =
-          let toStream = pure . ICU.Interpolation name
-           in case typ of
-            ICU.Bool xs ys -> toStream . uncurry ICU.Bool   $ mapBoolStreams   (around prev next) (xs, ys)
-            ICU.Select x   -> toStream .         ICU.Select $ mapSelectStreams (around prev next) x
-            ICU.Plural x   -> toStream .         ICU.Plural $ mapPluralStreams (around prev next) x
-            _ -> go (prev <> pure curr) next
-        go prev (curr : next) = go (prev <> pure curr) next
+        go prev []                        = prev
+        go prev (ICU.Bool n xs ys : next) = pure . uncurry (ICU.Bool n) $ mapBoolStreams   (around prev next) (xs, ys)
+        go prev (ICU.SelectNamed n xs : next)         = pure $ ICU.SelectNamed n (mapSelectCase (around prev next) <$> xs)
+        go prev (ICU.SelectWild n w : next)           = pure $ ICU.SelectWild n (around prev next w)
+        go prev (ICU.SelectNamedWild n xs w : next)   = pure $ ICU.SelectNamedWild n (mapSelectCase (around prev next) <$> xs) (around prev next w)
+        go prev (ICU.CardinalExact n xs : next)        = pure $ ICU.CardinalExact n (mapPluralCase (around prev next) <$> xs)
+        go prev (ICU.CardinalInexact n xs ys w : next) = pure $ ICU.CardinalInexact n (mapPluralCase (around prev next) <$> xs) (mapPluralCase (around prev next) <$> ys) (around prev next w)
+        go prev (ICU.Ordinal n xs ys w : next)         = pure $ ICU.Ordinal n (mapPluralCase (around prev next) <$> xs) (mapPluralCase (around prev next) <$> ys) (around prev next w)
+        go prev (curr : next)             = go (prev <> pure curr) next
         around ls rs = go [] . ICU.mergePlaintext . surround ls rs
         surround ls rs cs = ls <> cs <> rs
 
@@ -83,50 +80,31 @@ flatten = ICU.Message . go [] . ICU.unMessage
 -- Added plural rules inherit the content of the wildcard. Output order of
 -- rules is unspecified.
 expandPlurals :: ICU.Message -> ICU.Message
-expandPlurals (ICU.Message xs) = ICU.Message . flip mapTokens xs $ \case
-  ICU.Interpolation n (ICU.Plural p) -> ICU.Interpolation n . ICU.Plural $ case p of
-    ICU.CardinalExact {}               -> p
-    ICU.CardinalInexact exacts rules w ->
-      ICU.CardinalInexact exacts (toList $ expandRules rules w) w
-    ICU.Ordinal exacts rules w         ->
-      ICU.Ordinal exacts (toList $ expandRules rules w) w
+expandPlurals (ICU.Message xs) = ICU.Message . flip mapNodes xs $ \case
+  p@(ICU.CardinalExact _ _    )        -> p
+  ICU.CardinalInexact n exacts rules w ->
+    ICU.CardinalInexact n exacts (toList $ expandRules rules w) w
+  ICU.Ordinal n exacts rules w         ->
+    ICU.Ordinal n exacts (toList $ expandRules rules w) w
   x -> x
 
-expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.PluralWildcard -> NonEmpty (ICU.PluralCase ICU.PluralRule)
+expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.Stream -> NonEmpty (ICU.PluralCase ICU.PluralRule)
 -- `fromList` is a cheap way to promise the compiler that we'll return a
 -- non-empty list. This is logically guaranteed by one of the inputs to
 -- `unionBy` being non-empty, namely `extraCases` - though given the complexity
 -- this is unit tested for confidence.
 expandRules ys w = fromList $ unionBy ((==) `on` caseRule) (toList ys) extraCases
-  where extraCases = flip ICU.PluralCase (wildContent w) <$> missingRules
+  where extraCases = (, w) <$> missingRules
         missingRules = filter (not . flip elem presentRules) allRules
         presentRules = caseRule <$> ys
         allRules = universe
-        caseRule (ICU.PluralCase x _) = x
-        wildContent (ICU.PluralWildcard x) = x
+        caseRule (x, _) = x
 
 mapBoolStreams :: (ICU.Stream -> ICU.Stream) -> ICUBool -> ICUBool
 mapBoolStreams f (xs, ys) = (f xs, f ys)
 
-mapSelectStreams :: (ICU.Stream -> ICU.Stream) -> ICUSelect -> ICUSelect
-mapSelectStreams f = bimap (fmap (mapSelectCase f)) (mapSelectWildcard f)
-
 mapSelectCase :: (ICU.Stream -> ICU.Stream) -> ICU.SelectCase -> ICU.SelectCase
-mapSelectCase f (ICU.SelectCase x ys) = ICU.SelectCase x (f ys)
-
-mapSelectWildcard :: (ICU.Stream -> ICU.Stream) -> ICU.SelectWildcard -> ICU.SelectWildcard
-mapSelectWildcard f (ICU.SelectWildcard xs) = ICU.SelectWildcard (f xs)
-
-mapPluralStreams :: (ICU.Stream -> ICU.Stream) -> ICU.Plural -> ICU.Plural
-mapPluralStreams f (ICU.CardinalExact xs)        =
-  ICU.CardinalExact (mapPluralCase f <$> xs)
-mapPluralStreams f (ICU.CardinalInexact xs ys w) =
-  ICU.CardinalInexact (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (mapPluralWildcard f w)
-mapPluralStreams f (ICU.Ordinal xs ys w)         =
-  ICU.Ordinal (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (mapPluralWildcard f w)
+mapSelectCase f (x, ys) = (x, f ys)
 
 mapPluralCase :: (ICU.Stream -> ICU.Stream) -> ICU.PluralCase a -> ICU.PluralCase a
-mapPluralCase f (ICU.PluralCase x ys) = ICU.PluralCase x (f ys)
-
-mapPluralWildcard :: (ICU.Stream -> ICU.Stream) -> ICU.PluralWildcard -> ICU.PluralWildcard
-mapPluralWildcard f (ICU.PluralWildcard xs) = ICU.PluralWildcard (f xs)
+mapPluralCase f (x, ys) = (x, f ys)

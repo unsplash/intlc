@@ -3,8 +3,8 @@
 -- Aeson limitations.
 --
 -- This module follows the following whitespace rules:
---   * Consume all whitespace after tokens where possible.
---   * Therefore, assume no whitespace before tokens.
+--   * Consume all whitespace after nodes where possible.
+--   * Therefore, assume no whitespace before nodes.
 
 module Intlc.Parser.JSON where
 
@@ -20,8 +20,8 @@ import           Intlc.Parser.Error               (JSONParseErr (..),
                                                    failingWith)
 import qualified Intlc.Parser.ICU                 as ICUP
 import           Prelude                          hiding (null)
-import           Text.Megaparsec                  hiding (State, Stream, Token,
-                                                   many, some, token)
+import           Text.Megaparsec                  hiding (State, Stream, many,
+                                                   some)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer       as L
 import           Text.Megaparsec.Error.Builder    (errFancy, fancy)

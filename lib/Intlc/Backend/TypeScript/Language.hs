@@ -2,7 +2,6 @@ module Intlc.Backend.TypeScript.Language where
 
 import           Data.List.NonEmpty (nub)
 import qualified Data.Map           as M
-import           Data.These         (These (..))
 import qualified Intlc.ICU          as ICU
 import           Prelude
 
@@ -12,8 +11,8 @@ import           Prelude
 data TypeOf = Lambda Args Out
   deriving (Show, Eq)
 
-type UncollatedArgs = [(Text, In)]
-type Args = Map Text (NonEmpty In)
+type UncollatedArgs = [(ICU.Arg, In)]
+type Args = Map ICU.Arg (NonEmpty In)
 
 data In
   = TStr
@@ -42,49 +41,35 @@ collateArgs :: UncollatedArgs -> Args
 collateArgs = fmap nub . M.fromListWith (<>) . fmap (second pure)
 
 fromMsg :: Out -> ICU.Message -> TypeOf
-fromMsg x (ICU.Message ys) = Lambda (collateArgs (fromToken =<< toList ys)) x
+fromMsg x (ICU.Message ys) = Lambda (collateArgs (fromNode =<< toList ys)) x
 
-fromToken :: ICU.Token -> UncollatedArgs
-fromToken ICU.Plaintext {}        = mempty
-fromToken (ICU.Interpolation x y) = fromInterp x y
-
-fromInterp :: Text -> ICU.Type -> UncollatedArgs
-fromInterp n (ICU.Bool xs ys)  = (n, TBool) : (fromToken =<< xs) <> (fromToken =<< ys)
-fromInterp n ICU.String        = pure (n, TStr)
-fromInterp n ICU.Number        = pure (n, TNum)
-fromInterp n ICU.Date {}       = pure (n, TDate)
-fromInterp n ICU.Time {}       = pure (n, TDate)
-fromInterp n (ICU.Plural x)    = fromPlural n x
--- Plural references are treated as a no-op.
-fromInterp _ ICU.PluralRef     = mempty
-fromInterp n (ICU.Select x)    = case x of
-  (That w)     -> (n, TStr) : fromSelectWildcard w
-  (These cs w) -> (n, TStr) : (fromSelectCase =<< toList cs) <> fromSelectWildcard w
-  -- When there's no wildcard case we can compile to a union of string literals.
-  (This cs)    -> (n, TStrLitUnion (lit <$> cs)) : (fromSelectCase =<< toList cs)
-    where lit (ICU.SelectCase l _) = l
-fromInterp n (ICU.Callback xs) = (n, TEndo) : (fromToken =<< xs)
-
-fromPlural :: Text -> ICU.Plural -> UncollatedArgs
+fromNode :: ICU.Node -> UncollatedArgs
+fromNode ICU.Plaintext {}    = mempty
+fromNode (ICU.Bool n xs ys)  = (n, TBool) : (fromNode =<< xs) <> (fromNode =<< ys)
+fromNode (ICU.String n)      = pure (n, TStr)
+fromNode (ICU.Number n)      = pure (n, TNum)
+fromNode (ICU.Date n _)      = pure (n, TDate)
+fromNode (ICU.Time n _)      = pure (n, TDate)
 -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
 -- union of number literals.
-fromPlural n (ICU.CardinalExact ls)        = (n, t) : (fromExactPluralCase =<< toList ls)
+fromNode (ICU.CardinalExact n ls)        = (n, t) : (fromExactPluralCase =<< toList ls)
   where t = TNumLitUnion $ caseLit <$> ls
-        caseLit (ICU.PluralCase (ICU.PluralExact x) _) = x
-fromPlural n (ICU.CardinalInexact ls rs w) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
-fromPlural n (ICU.Ordinal ls rs w)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> fromPluralWildcard w
+        caseLit (ICU.PluralExact x, _) = x
+fromNode (ICU.CardinalInexact n ls rs w) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> (fromNode =<< w)
+fromNode (ICU.Ordinal n ls rs w)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> (fromNode =<< w)
+-- Plural references are treated as a no-op.
+fromNode ICU.PluralRef {}    = mempty
+fromNode (ICU.SelectWild n w)         = (n, TStr) : (fromNode =<< w)
+fromNode (ICU.SelectNamedWild n cs w) = (n, TStr) : (fromSelectCase =<< toList cs) <> (fromNode =<< w)
+-- When there's no wildcard case we can compile to a union of string literals.
+fromNode (ICU.SelectNamed n cs)       = (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs)
+fromNode (ICU.Callback n xs) = (n, TEndo) : (fromNode =<< xs)
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
-fromExactPluralCase (ICU.PluralCase (ICU.PluralExact _) xs) = fromToken =<< xs
+fromExactPluralCase (ICU.PluralExact _, xs) = fromNode =<< xs
 
 fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> UncollatedArgs
-fromRulePluralCase (ICU.PluralCase _ xs) = fromToken =<< xs
-
-fromPluralWildcard :: ICU.PluralWildcard -> UncollatedArgs
-fromPluralWildcard (ICU.PluralWildcard xs) = fromToken =<< xs
+fromRulePluralCase (_, xs) = fromNode =<< xs
 
 fromSelectCase :: ICU.SelectCase -> UncollatedArgs
-fromSelectCase (ICU.SelectCase _ xs) = fromToken =<< xs
-
-fromSelectWildcard :: ICU.SelectWildcard -> UncollatedArgs
-fromSelectWildcard (ICU.SelectWildcard xs) = fromToken =<< xs
+fromSelectCase (_, xs) = fromNode =<< xs
