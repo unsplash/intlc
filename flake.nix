@@ -7,19 +7,29 @@
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system};
+          # HLS in nixpkgs is marked as broken on aarch64-darwin via LLVM 7,
+          # see:
+          #   https://github.com/NixOS/nixpkgs/blob/a410420844fe1ad6415cf9586308fe7538cc7584/pkgs/development/compilers/llvm/7/compiler-rt/default.nix#L108
+          #
+          # See also in unsplash/intlc: #162, #167
+          hls = if system == flake-utils.lib.system.aarch64-darwin
+            then [ ]
+            else [ pkgs.haskell-language-server ];
       in {
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             git
 
-            haskell.compiler.ghc8107
-            haskell.packages.ghc8107.cabal-install
-            haskell.packages.ghc8107.hspec-golden
+            # We use mainline Haskell packages rather than specifying a custom
+            # GHC version to ensure everything we want is cached in Hydra.
+            ghc
+            cabal-install
+            haskellPackages.hspec-golden
 
             # For typechecking golden output
             nodejs
             yarn
-          ];
+          ] ++ hls;
         };
       });
 }

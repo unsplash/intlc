@@ -88,4 +88,4 @@ The description is optional and ignored by intlc. It can be used documentatively
 
 ## Contributing
 
-Check out `ARCHITECTURE.md`. Currently building against GHC 8.10.7.
+Check out `ARCHITECTURE.md`. Currently building against GHC 9.0.2.
