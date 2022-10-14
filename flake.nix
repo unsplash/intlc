@@ -12,9 +12,11 @@
           buildInputs = with pkgs; [
             git
 
-            haskell.compiler.ghc8107
-            haskell.packages.ghc8107.cabal-install
-            haskell.packages.ghc8107.hspec-golden
+            # We use mainline Haskell packages rather than specifying a custom
+            # GHC version to ensure everything we want is cached in Hydra.
+            ghc
+            cabal-install
+            haskellPackages.hspec-golden
 
             # For typechecking golden output
             nodejs
