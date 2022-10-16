@@ -11,7 +11,7 @@ import qualified Intlc.Backend.JavaScript.Compiler as JS
 import           Intlc.Backend.TypeScript.Language
 import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
-import           Prelude                           hiding (Type)
+import           Prelude
 import           Utils                             ((<>^))
 
 compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text

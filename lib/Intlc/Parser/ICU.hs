@@ -11,7 +11,7 @@ import           Intlc.ICU
 import           Intlc.Parser.Error                       (MessageParseErr (..),
                                                            ParseErr (FailedMsgParse),
                                                            failingWith)
-import           Prelude                                  hiding (Type)
+import           Prelude
 import           Text.Megaparsec                          hiding (State, Stream,
                                                            many, some)
 import           Text.Megaparsec.Char

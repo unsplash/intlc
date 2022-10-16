@@ -8,7 +8,7 @@ import           Intlc.Core                        (Backend (..), Dataset,
                                                     Locale (Locale),
                                                     Translation (backend))
 import qualified Intlc.ICU                         as ICU
-import           Prelude                           hiding (Type, fromList)
+import           Prelude
 import           Utils                             (apply2, (<>^))
 
 type Compiler = Reader Cfg
