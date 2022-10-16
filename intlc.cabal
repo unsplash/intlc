@@ -25,6 +25,7 @@ common common
     , extra                ^>=1.7
     , mtl                  ^>=2.2
     , optics               ^>=0.4
+    , recursion-schemes    ^>=5.2
     , relude               ^>=1.1
     , text                 ^>=1.2
     , validation           ^>=1.1

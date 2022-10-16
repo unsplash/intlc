@@ -1,10 +1,15 @@
 -- This module defines an AST for ICU messages. We do not necessarily behave
 -- identically to other implementations.
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveTraversable  #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 module Intlc.ICU where
 
-import qualified Data.Text as T
+import           Data.Functor.Foldable (Base, Corecursive, Recursive)
+import qualified Data.Text             as T
 import           Prelude
 
 newtype Message = Message Node
@@ -14,7 +19,7 @@ unMessage :: Message -> Node
 unMessage (Message xs) = xs
 
 newtype Arg = Arg Text
-  deriving (Show, Eq, Ord, IsString)
+  deriving newtype (Show, Eq, Ord, IsString)
 
 unArg :: Arg -> Text
 unArg (Arg x) = x
@@ -53,7 +58,40 @@ data Node
   | SelectWild Arg Node Node
   | SelectNamedWild Arg (NonEmpty SelectCase) Node Node
   | Callback Arg Node Node
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, Recursive, Corecursive)
+
+-- | A "pattern functor" representation of `Node`. Useful for recursion schemes
+-- and pairing additional data to nodes. The two coexist distinctly so that the
+-- most common use case, plain `Node`, can define a semigroup instance.
+data NodeF a
+  = FinF
+  | CharF Char a
+  | BoolF { nameF :: Arg, trueCaseF :: a, falseCaseF :: a, nextF :: a }
+  | StringF Arg a
+  | NumberF Arg a
+  | DateF Arg DateTimeFmt a
+  | TimeF Arg DateTimeFmt a
+  -- The only cardinal plurals which do not require a wildcard are those
+  -- consisting solely of literal/exact cases. This is because within the AST we
+  -- only care about correctness and prospective type safety, not optimal use of
+  -- ICU syntax.
+  --
+  -- Ordinal plurals always require a wildcard as per their intended usage with
+  -- rules, however as with the cardinal plural type we'll allow a wider set of
+  -- suboptimal usages that we can then lint against.
+  | CardinalExactF Arg (NonEmpty (PluralCaseF PluralExact a)) a
+  | CardinalInexactF Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
+  | OrdinalF Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
+  -- Plural hash references have their own distinct type rather than merely
+  -- taking on `Number` to allow compilers to infer appropriately.
+  | PluralRefF Arg a
+  | SelectNamedF Arg (NonEmpty (SelectCaseF a)) a
+  | SelectWildF Arg a a
+  | SelectNamedWildF Arg (NonEmpty (SelectCaseF a)) a a
+  | CallbackF Arg a a
+  deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
+
+type instance Base Node = NodeF
 
 -- Concatenating two `Nodes` places the second at the tail of the first:
 --   Char 'a' Fin <> Char 'b' (Char 'c' Fin) = Char 'a' (Char 'b' (Char 'c' Fin))
@@ -96,7 +134,8 @@ data DateTimeFmt
   | Full
   deriving (Show, Eq)
 
-type PluralCase a = (a, Node)
+type PluralCase a = PluralCaseF a Node
+type PluralCaseF a b = (a, b)
 
 -- `Text` here is our count. It's represented as a string so that we can dump
 -- it back out without thinking about converting numeric types across
@@ -113,7 +152,8 @@ data PluralRule
   | Many
   deriving (Show, Eq, Ord, Enum, Bounded)
 
-type SelectCase = (Text, Node)
+type SelectCase = SelectCaseF Node
+type SelectCaseF a = (Text, a)
 
 getInterpolationChildren :: Node -> Maybe Node
 getInterpolationChildren = fmap snd . getInterpolation
