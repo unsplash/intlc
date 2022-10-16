@@ -87,8 +87,8 @@ expandRules ys w = fromList $ unionBy ((==) `on` caseRule) (toList ys) extraCase
         allRules = universe
         caseRule (x, _) = x
 
-mapSelectCase :: (ICU.Node -> ICU.Node) -> ICU.SelectCase -> ICU.SelectCase
+mapSelectCase :: (a -> a) -> ICU.SelectCaseF a -> ICU.SelectCaseF a
 mapSelectCase = second
 
-mapPluralCase :: (ICU.Node -> ICU.Node) -> ICU.PluralCase a -> ICU.PluralCase a
+mapPluralCase :: (b -> b) -> ICU.PluralCaseF a b -> ICU.PluralCaseF a b
 mapPluralCase = second

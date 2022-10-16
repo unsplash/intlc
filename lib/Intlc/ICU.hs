@@ -202,7 +202,7 @@ getNext (SelectWild _ _ x)          = Just x
 getNext (SelectNamedWild _ _ _ x)   = Just x
 getNext (Callback _ _ x)            = Just x
 
-getPluralCaseNode :: PluralCase a -> Node
+getPluralCaseNode :: PluralCaseF a b -> b
 getPluralCaseNode = snd
 
 -- Pulls out the next node and replaces it, if any, with `Fin`.
