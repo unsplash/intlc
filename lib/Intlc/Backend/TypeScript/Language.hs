@@ -41,35 +41,36 @@ collateArgs :: UncollatedArgs -> Args
 collateArgs = fmap nub . M.fromListWith (<>) . fmap (second pure)
 
 fromMsg :: Out -> ICU.Message -> TypeOf
-fromMsg x (ICU.Message ys) = Lambda (collateArgs (fromNode =<< toList ys)) x
+fromMsg x (ICU.Message y) = Lambda (collateArgs . fromNode $ y) x
 
 fromNode :: ICU.Node -> UncollatedArgs
-fromNode ICU.Plaintext {}    = mempty
-fromNode (ICU.Bool n xs ys)  = (n, TBool) : (fromNode =<< xs) <> (fromNode =<< ys)
-fromNode (ICU.String n)      = pure (n, TStr)
-fromNode (ICU.Number n)      = pure (n, TNum)
-fromNode (ICU.Date n _)      = pure (n, TDate)
-fromNode (ICU.Time n _)      = pure (n, TDate)
+fromNode ICU.Fin               = mempty
+fromNode (ICU.Char _ x)        = fromNode x
+fromNode (ICU.Bool n x y z)    = (n, TBool) : foldMap fromNode [x, y, z]
+fromNode (ICU.String n x)      = pure (n, TStr) <> fromNode x
+fromNode (ICU.Number n x)      = pure (n, TNum) <> fromNode x
+fromNode (ICU.Date n _ x)      = pure (n, TDate) <> fromNode x
+fromNode (ICU.Time n _ x)      = pure (n, TDate) <> fromNode x
 -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
 -- union of number literals.
-fromNode (ICU.CardinalExact n ls)        = (n, t) : (fromExactPluralCase =<< toList ls)
+fromNode (ICU.CardinalExact n ls x)        = (n, t) : (fromExactPluralCase =<< toList ls) <> fromNode x
   where t = TNumLitUnion $ caseLit <$> ls
-        caseLit (ICU.PluralExact x, _) = x
-fromNode (ICU.CardinalInexact n ls rs w) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> (fromNode =<< w)
-fromNode (ICU.Ordinal n ls rs w)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> (fromNode =<< w)
+        caseLit (ICU.PluralExact y, _) = y
+fromNode (ICU.CardinalInexact n ls rs w x) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> foldMap fromNode [w, x]
+fromNode (ICU.Ordinal n ls rs w x)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> foldMap fromNode [w, x]
 -- Plural references are treated as a no-op.
-fromNode ICU.PluralRef {}    = mempty
-fromNode (ICU.SelectWild n w)         = (n, TStr) : (fromNode =<< w)
-fromNode (ICU.SelectNamedWild n cs w) = (n, TStr) : (fromSelectCase =<< toList cs) <> (fromNode =<< w)
+fromNode (ICU.PluralRef _ x)               = fromNode x
+fromNode (ICU.SelectWild n w x)            = (n, TStr) : foldMap fromNode [w, x]
+fromNode (ICU.SelectNamedWild n cs w x)    = (n, TStr) : (fromSelectCase =<< toList cs) <> foldMap fromNode [w, x]
 -- When there's no wildcard case we can compile to a union of string literals.
-fromNode (ICU.SelectNamed n cs)       = (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs)
-fromNode (ICU.Callback n xs) = (n, TEndo) : (fromNode =<< xs)
+fromNode (ICU.SelectNamed n cs x)          = (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs) <> fromNode x
+fromNode (ICU.Callback n x y)              = (n, TEndo) : foldMap fromNode [x, y]
 
 fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
-fromExactPluralCase (ICU.PluralExact _, xs) = fromNode =<< xs
+fromExactPluralCase = fromNode . snd
 
 fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> UncollatedArgs
-fromRulePluralCase (_, xs) = fromNode =<< xs
+fromRulePluralCase = fromNode . snd
 
 fromSelectCase :: ICU.SelectCase -> UncollatedArgs
-fromSelectCase (_, xs) = fromNode =<< xs
+fromSelectCase = fromNode . snd

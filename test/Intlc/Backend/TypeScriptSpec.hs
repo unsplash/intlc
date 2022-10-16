@@ -28,35 +28,36 @@ golden strat compiler name msg = baseCfg
 spec :: Spec
 spec = describe "TypeScript compiler" $ do
   describe "golden" $ do
-    let msg = ICU.Message
-          [ ICU.Plaintext "Hello "
-          , ICU.Callback "bold" (pure $
-              ICU.String "name"
+    let msg = ICU.Message . mconcat $
+          [ "Hello "
+          , ICU.Callback' "bold" (
+              ICU.String' "name"
             )
-          , ICU.Plaintext "! You are "
-          , ICU.CardinalInexact
+          , "! You are "
+          , ICU.CardinalInexact'
               "age"
-              (pure (ICU.PluralExact "42", pure (ICU.Plaintext "very cool")))
-              (pure (ICU.Zero, pure (ICU.Plaintext "new around here")))
-            (pure (ICU.Plaintext "not all that interesting"))
-          , ICU.Plaintext ". Regardless, the magic number is most certainly "
-          , ICU.Number "magicNumber"
-          , ICU.Plaintext "! The date is "
-          , ICU.Date "todayDate" ICU.Short
-          , ICU.Plaintext ", and the time is "
-          , ICU.Time "currTime" ICU.Full
-          , ICU.Plaintext ". And just to recap, your name is "
-          , ICU.SelectNamed "name" . fromList $
-              [ ("Sam", [ICU.Plaintext "undoubtedly excellent"])
-              , ("Ashley", [ICU.Plaintext "fairly good"])
+              (pure (ICU.PluralExact "42", "very cool"))
+              (pure (ICU.Zero, "new around here"))
+            "not all that interesting"
+          , ". Regardless, the magic number is most certainly "
+          , ICU.Number' "magicNumber"
+          , "! The date is "
+          , ICU.Date' "todayDate" ICU.Short
+          , ", and the time is "
+          , ICU.Time' "currTime" ICU.Full
+          , ". And just to recap, your name is "
+          , ICU.SelectNamed' "name" . fromList $
+              [ ("Sam", "undoubtedly excellent")
+              , ("Ashley", "fairly good")
               ]
-          , ICU.Plaintext ". Finally, you are "
+          , ". Finally, you are "
           , ICU.Bool
             { ICU.name = "isDev"
-            , ICU.trueCase = [ICU.Plaintext "a software engineer"]
-            , ICU.falseCase = [ICU.Plaintext "something less fun"]
+            , ICU.trueCase = "a software engineer"
+            , ICU.falseCase = "something less fun"
+            , ICU.next = mempty
             }
-          , ICU.Plaintext ". Bonus: Some characters that might need escaping! ` ``"
+          , ". Bonus: Some characters that might need escaping! ` ``"
           ]
 
     describe "with template literal strategy" $ do
@@ -88,23 +89,22 @@ spec = describe "TypeScript compiler" $ do
         golden' "named-export" msg
 
     -- Typechecking happens externally.
-    it "typechecks nested selects" $ do
-      golden TemplateLit (compileNamedExport TemplateLit (Locale "te-ST") "test") "nested-select" $
-        ICU.Message [ICU.SelectNamed "x" $ fromList
-          [ ("a", [])
-          , ("b", [ICU.SelectNamed "x" $ fromList
-            [ ("a", []) -- <-- without a workaround, TypeScript will have narrowed and reject this case
-            , ("b", [])
-            ]]
-          )]]
+    it "typechecks nested selects" $ golden TemplateLit (compileNamedExport TemplateLit (Locale "te-ST") "test") "nested-select" $
+      ICU.Message (ICU.SelectNamed' "x" $ fromList
+        [ ("a", mempty)
+        , ("b", ICU.SelectNamed' "x" $ fromList
+          [ ("a", mempty) -- <-- without a workaround, TypeScript will have narrowed and reject this case
+          , ("b", mempty)
+          ]
+        )])
 
   describe "collects nested arguments" $ do
     let args (TS.Lambda xs _) = xs
-    let fromNode = args . TS.fromMsg TS.TFragment . ICU.Message . pure
+    let fromNode = args . TS.fromMsg TS.TFragment . ICU.Message
     let fromArgs = fromList
 
     it "in select" $ do
-      let x = ICU.SelectNamed "x" . pure $ ("foo", [ICU.String "y"])
+      let x = ICU.SelectNamed' "x" . pure $ ("foo", ICU.String' "y")
       let ys =
               [ ("x", pure (TS.TStrLitUnion (pure "foo")))
               , ("y", pure TS.TStr)
@@ -112,8 +112,8 @@ spec = describe "TypeScript compiler" $ do
       fromNode x `shouldBe` fromArgs ys
 
     it "in cardinal plural" $ do
-      let x = ICU.CardinalExact "x" . pure $
-                (ICU.PluralExact "42", [ICU.String "y"])
+      let x = ICU.CardinalExact' "x" . pure $
+                (ICU.PluralExact "42", ICU.String' "y")
       let ys =
               [ ("x", pure (TS.TNumLitUnion (pure "42")))
               , ("y", pure TS.TStr)
@@ -121,10 +121,10 @@ spec = describe "TypeScript compiler" $ do
       fromNode x `shouldBe` fromArgs ys
 
     it "in ordinal plural" $ do
-      let x = ICU.Ordinal "x"
-                [(ICU.PluralExact "42", [ICU.Date "foo" ICU.Short])]
-                (pure (ICU.Few, [ICU.String "bar"]))
-                [ICU.Number "baz"]
+      let x = ICU.Ordinal' "x"
+                [(ICU.PluralExact "42", ICU.Date' "foo" ICU.Short)]
+                (pure (ICU.Few, ICU.String' "bar"))
+                (ICU.Number' "baz")
       let ys =
               [ ("x", pure TS.TNum)
               , ("foo", pure TS.TDate)
@@ -134,9 +134,9 @@ spec = describe "TypeScript compiler" $ do
       fromNode x `shouldBe` fromArgs ys
 
     it "in boolean" $ do
-      let x = ICU.Bool "x"
-                [ICU.String "y"]
-                [ICU.Number "z"]
+      let x = ICU.Bool' "x"
+                (ICU.String' "y")
+                (ICU.Number' "z")
       let ys =
               [ ("x", pure TS.TBool)
               , ("y", pure TS.TStr)

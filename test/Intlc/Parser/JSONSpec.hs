@@ -90,14 +90,14 @@ spec = describe "JSON parser" $ do
       "x": { "message": "a'" },
       "y": { "message": "'b" }
     }|] `shouldParse` fromList
-      [ ("x", msg [ICU.Plaintext "a'"])
-      , ("y", msg [ICU.Plaintext "'b"])
+      [ ("x", msg "a'")
+      , ("y", msg "'b")
       ]
 
     parse [r|{
       "x": { "message": "a'{b" },
       "y": { "message": "c}'d" }
     }|] `shouldParse` fromList
-      [ ("x", msg [ICU.Plaintext "a{b"])
-      , ("y", msg [ICU.Plaintext "c}'d"])
+      [ ("x", msg "a{b")
+      , ("y", msg "c}'d")
       ]

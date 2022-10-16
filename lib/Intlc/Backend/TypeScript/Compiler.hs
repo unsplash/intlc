@@ -21,10 +21,10 @@ compileNamedExport s l k v = JS.compileStmt o s l k v
         -- Prevents TypeScript from narrowing, which absent this causes some
         -- nested switch output to fail typechecking.
         matchLitCond x = x <> " as typeof " <> x
-        arg = if hasInterpolations then "x" else "()"
-        hasInterpolations = flip any (ICU.unMessage v) $ \case
-          ICU.Plaintext {} -> False
-          _                -> True
+        arg = if hasInterpolations (ICU.unMessage v) then "x" else "()"
+        hasInterpolations ICU.Fin        = False
+        hasInterpolations (ICU.Char _ n) = hasInterpolations n
+        hasInterpolations _              = True
 
 compileTypeof :: InterpStrat -> ICU.Message -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
