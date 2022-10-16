@@ -1,6 +1,7 @@
 module Intlc.Compiler (compileDataset, compileFlattened, flatten, expandPlurals, expandRules) where
 
 import           Data.Foldable                     (elem)
+import           Data.Functor.Foldable             (cata, embed)
 import           Data.List.Extra                   (unionBy)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
@@ -41,27 +42,6 @@ compileFlattened = JSON.compileDataset . mapMsgs flatten
 mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
 mapMsgs f = fmap $ \x -> x { message = f (message x) }
 
--- Map every `Node`, included those nested. Order is unspecified. The children
--- of a node, if any, will be traversed after the provided function is applied.
-mapNodes :: (ICU.Node -> ICU.Node) -> ICU.Node -> ICU.Node
-mapNodes f = f >>> \case
-  ICU.Fin -> ICU.Fin
-  ICU.Char c x -> ICU.Char c (rec x)
-  ICU.String n x -> ICU.String n (rec x)
-  ICU.Number n x -> ICU.Number n (rec x)
-  ICU.Date n x y -> ICU.Date n x (rec y)
-  ICU.Time n x y -> ICU.Time n x (rec y)
-  ICU.Bool n x y z -> ICU.Bool n (f x) (f y) (rec z)
-  ICU.CardinalExact n xs y        -> ICU.CardinalExact n (mapPluralCase f <$> xs) (rec y)
-  ICU.CardinalInexact n xs ys w z -> ICU.CardinalInexact n (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (f w) (rec z)
-  ICU.Ordinal n xs ys w z         -> ICU.Ordinal n (mapPluralCase f <$> xs) (mapPluralCase f <$> ys) (f w) (rec z)
-  ICU.PluralRef n x -> ICU.PluralRef n (rec x)
-  ICU.SelectNamed n xs y       -> ICU.SelectNamed n (mapSelectCase f <$> xs) (rec y)
-  ICU.SelectWild n w x         -> ICU.SelectWild n (f w) (rec x)
-  ICU.SelectNamedWild n xs w y -> ICU.SelectNamedWild n (mapSelectCase f <$> xs) (f w) (rec y)
-  ICU.Callback n x y -> ICU.Callback n (f x) (rec y)
-  where rec = mapNodes f
-
 flatten :: ICU.Message -> ICU.Message
 flatten = ICU.Message . go mempty . ICU.unMessage
   where go :: ICU.Node -> ICU.Node -> ICU.Node
@@ -88,13 +68,12 @@ flatten = ICU.Message . go mempty . ICU.unMessage
 -- Added plural rules inherit the content of the wildcard. Output order of
 -- rules is unspecified.
 expandPlurals :: ICU.Message -> ICU.Message
-expandPlurals (ICU.Message x) = ICU.Message . flip mapNodes x $ \case
-  p@(ICU.CardinalExact {})               -> p
-  ICU.CardinalInexact n exacts rules w y ->
-    ICU.CardinalInexact n exacts (toList $ expandRules rules w) w y
-  ICU.Ordinal n exacts rules w y         ->
-    ICU.Ordinal n exacts (toList $ expandRules rules w) w y
-  y -> y
+expandPlurals = ICU.Message . cata f . ICU.unMessage
+  where f (ICU.CardinalInexactF n exacts rules w y) =
+            ICU.CardinalInexact n exacts (toList $ expandRules rules w) w y
+        f (ICU.OrdinalF n exacts rules w y) =
+            ICU.Ordinal n exacts (toList $ expandRules rules w) w y
+        f y = embed y
 
 expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.Node -> NonEmpty (ICU.PluralCase ICU.PluralRule)
 -- `fromList` is a cheap way to promise the compiler that we'll return a
