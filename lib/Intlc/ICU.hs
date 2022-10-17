@@ -155,36 +155,6 @@ data PluralRule
 type SelectCase = SelectCaseF Node
 type SelectCaseF a = (Text, a)
 
-getInterpolationChildren :: Node -> Maybe Node
-getInterpolationChildren = fmap snd . getInterpolation
-
--- Returns a tuple of an interpolation's argument name and its concatenated
--- children.
-getInterpolation :: Node -> Maybe (Arg, Node)
-getInterpolation Fin {}          = Nothing
-getInterpolation Char {}         = Nothing
-getInterpolation String {}       = Nothing
-getInterpolation Number {}       = Nothing
-getInterpolation Date {}         = Nothing
-getInterpolation Time {}         = Nothing
-getInterpolation PluralRef {}    = Nothing
-getInterpolation x@(Bool {})     = Just (name x, trueCase x <> falseCase x)
-getInterpolation (CardinalExact n ls _)        = Just (n, getPluralCaseNode `foldMap` ls)
-getInterpolation (CardinalInexact n ls rs w _) = Just . (n,) $ mconcat
-  [ getPluralCaseNode `foldMap` ls
-  , getPluralCaseNode `foldMap` rs
-  , w
-  ]
-getInterpolation (Ordinal n xs ys w _)         = Just . (n,) $ mconcat
-  [ getPluralCaseNode `foldMap` xs
-  , getPluralCaseNode `foldMap` ys
-  , w
-  ]
-getInterpolation (SelectNamed n xs _)        = Just (n, snd `foldMap` xs)
-getInterpolation (SelectWild n xs _)         = Just (n, xs)
-getInterpolation (SelectNamedWild n xs ys _) = Just (n, snd `foldMap` xs <> ys)
-getInterpolation (Callback n xs _) = Just (n, xs)
-
 getNext :: Node -> Maybe Node
 getNext Fin                         = Nothing
 getNext (Char _ x)                  = Just x
@@ -201,9 +171,6 @@ getNext (SelectNamed _ _ x)         = Just x
 getNext (SelectWild _ _ x)          = Just x
 getNext (SelectNamedWild _ _ _ x)   = Just x
 getNext (Callback _ _ x)            = Just x
-
-getPluralCaseNode :: PluralCaseF a b -> b
-getPluralCaseNode = snd
 
 -- Pulls out the next node and replaces it, if any, with `Fin`.
 sever :: Node -> (Node, Maybe Node)
