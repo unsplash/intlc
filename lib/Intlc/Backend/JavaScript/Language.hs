@@ -1,10 +1,11 @@
 module Intlc.Backend.JavaScript.Language where
 
-import qualified Data.Text  as T
-import           Intlc.Core (Locale)
-import qualified Intlc.ICU  as ICU
+import           Data.Functor.Foldable (cataA)
+import qualified Data.Text             as T
+import           Intlc.Core            (Locale)
+import qualified Intlc.ICU             as ICU
 import           Prelude
-import           Utils      ((<>^))
+import           Utils                 ((<>^))
 
 type ASTCompiler = Reader Locale
 
@@ -49,46 +50,46 @@ fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
 fromKeyedMsg n (ICU.Message x) = Stmt n <$> fromNode x
 
 fromNode :: ICU.Node -> ASTCompiler [Expr]
-fromNode ICU.Fin        = pure mempty
-fromNode (ICU.Char c x) = pure (pure (TPrint (T.singleton c))) <>^ fromNode x
-fromNode x@ICU.Bool {}  = do
-      l <- fromBoolCase True (ICU.trueCase x)
-      r <- fromBoolCase False (ICU.falseCase x)
-      let start = TMatch . Match (ICU.name x) LitCond . LitMatchRet $ l :| [r]
-      pure (pure start) <>^ fromNode (ICU.next x)
-fromNode (ICU.String n x)      = pure (pure (TStr n)) <>^ fromNode x
-fromNode (ICU.Number n x)      = pure (pure (TNum n)) <>^ fromNode x
-fromNode (ICU.Date n x y)      = pure (pure (TDate n x)) <>^ fromNode y
-fromNode (ICU.Time n x y)      = pure (pure (TTime n x)) <>^ fromNode y
-fromNode (ICU.CardinalExact n lcs x)              = (pure . TMatch . Match n LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)) <>^ fromNode x
-fromNode (ICU.CardinalInexact n lcs [] w x)       = (pure . TMatch . Match n LitCond <$> ret) <>^ fromNode x
-    where ret = NonLitMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> fromPluralWildcard w
-fromNode (ICU.CardinalInexact n [] rcs w x)       = (pure . TMatch . Match n CardinalPluralRuleCond <$> ret) <>^ fromNode x
-    where ret = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-fromNode (ICU.CardinalInexact n (lc:lcs) rcs w x) = (pure . TMatch . Match n LitCond <$> litRet) <>^ fromNode x
-    where litRet = RecMatchRet <$> (fromExactPluralCase `mapM` lcs') <*> (Match n CardinalPluralRuleCond <$> ruleRet)
-          ruleRet = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-          lcs' = lc :| lcs
-fromNode (ICU.Ordinal n [] rcs w x)               = (pure . TMatch . Match n OrdinalPluralRuleCond <$> m) <>^ fromNode x
-    where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w
-fromNode (ICU.Ordinal n (lc:lcs) rcs w x)         = (pure . TMatch . Match n LitCond <$> m) <>^ fromNode x
-    where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
-          im = Match n OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> fromPluralWildcard w)
+fromNode = cataA $ \case
+  ICU.FinF        -> pure mempty
+  (ICU.CharF c x) -> pure (pure (TPrint (T.singleton c))) <>^ x
+  x@ICU.BoolF {}  -> do
+        l <- fromBoolCase True (ICU.trueCaseF x)
+        r <- fromBoolCase False (ICU.falseCaseF x)
+        let start = TMatch . Match (ICU.nameF x) LitCond . LitMatchRet $ l :| [r]
+        pure (pure start) <>^ ICU.nextF x
+  (ICU.StringF n x)      -> pure (pure (TStr n)) <>^ x
+  (ICU.NumberF n x)      -> pure (pure (TNum n)) <>^ x
+  (ICU.DateF n x y)      -> pure (pure (TDate n x)) <>^ y
+  (ICU.TimeF n x y)      -> pure (pure (TTime n x)) <>^ y
+  (ICU.CardinalExactF n lcs x)              -> (pure . TMatch . Match n LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)) <>^ x
+  (ICU.CardinalInexactF n lcs [] w x)       -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
+      where ret = NonLitMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> (Wildcard <$> w)
+  (ICU.CardinalInexactF n [] rcs w x)       -> (pure . TMatch . Match n CardinalPluralRuleCond <$> ret) <>^ x
+      where ret = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w)
+  (ICU.CardinalInexactF n (lc:lcs) rcs w x) -> (pure . TMatch . Match n LitCond <$> litRet) <>^ x
+      where litRet = RecMatchRet <$> (fromExactPluralCase `mapM` lcs') <*> (Match n CardinalPluralRuleCond <$> ruleRet)
+            ruleRet = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w)
+            lcs' = lc :| lcs
+  (ICU.OrdinalF n [] rcs w x)               -> (pure . TMatch . Match n OrdinalPluralRuleCond <$> m) <>^ x
+      where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w)
+  (ICU.OrdinalF n (lc:lcs) rcs w x)         -> (pure . TMatch . Match n LitCond <$> m) <>^ x
+      where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
+            im = Match n OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w))
+  (ICU.PluralRefF n x)   -> pure (pure (TNum n)) <>^ x
+  (ICU.SelectNamedF n cs x)       -> (pure . TMatch . Match n LitCond . LitMatchRet <$> ret) <>^ x
+    where ret = fromSelectCase `mapM` cs
+  (ICU.SelectWildF n w x)         -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
+    where ret = NonLitMatchRet mempty <$> (Wildcard <$> w)
+  (ICU.SelectNamedWildF n cs w x) -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
+    where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> (Wildcard <$> w)
+  (ICU.CallbackF n x y) -> (pure . TApply n <$> x) <>^ y
 
-fromNode (ICU.PluralRef n x)   = pure (pure (TNum n)) <>^ fromNode x
-fromNode (ICU.SelectNamed n cs x)       = (pure . TMatch . Match n LitCond . LitMatchRet <$> ret) <>^ fromNode x
-  where ret = fromSelectCase `mapM` cs
-fromNode (ICU.SelectWild n w x)         = (pure . TMatch . Match n LitCond <$> ret) <>^ fromNode x
-  where ret = NonLitMatchRet mempty <$> fromSelectWildcard w
-fromNode (ICU.SelectNamedWild n cs w x) = (pure . TMatch . Match n LitCond <$> ret) <>^ fromNode x
-  where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> fromSelectWildcard w
-fromNode (ICU.Callback n x y) = (pure . TApply n <$> fromNode x) <>^ fromNode y
+fromExactPluralCase :: ICU.PluralCaseF ICU.PluralExact (ASTCompiler [Expr]) -> ASTCompiler Branch
+fromExactPluralCase (ICU.PluralExact n, x) = Branch n <$> x
 
-fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> ASTCompiler Branch
-fromExactPluralCase (ICU.PluralExact n, x) = Branch n <$> fromNode x
-
-fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> ASTCompiler Branch
-fromRulePluralCase (r, x) = Branch (qts matcher) <$> fromNode x
+fromRulePluralCase :: ICU.PluralCaseF ICU.PluralRule (ASTCompiler [Expr]) -> ASTCompiler Branch
+fromRulePluralCase (r, x) = Branch (qts matcher) <$> x
   where matcher = case r of
          ICU.Zero -> "zero"
          ICU.One  -> "one"
@@ -97,15 +98,9 @@ fromRulePluralCase (r, x) = Branch (qts matcher) <$> fromNode x
          ICU.Many -> "many"
         qts y = "'" <> y <> "'"
 
-fromPluralWildcard :: ICU.Node -> ASTCompiler Wildcard
-fromPluralWildcard x = Wildcard <$> fromNode x
+fromSelectCase :: ICU.SelectCaseF (ASTCompiler [Expr]) -> ASTCompiler Branch
+fromSelectCase (x, y) = Branch ("'" <> x <> "'") <$> y
 
-fromSelectCase :: ICU.SelectCase -> ASTCompiler Branch
-fromSelectCase (x, y) = Branch ("'" <> x <> "'") <$> fromNode y
-
-fromSelectWildcard :: ICU.Node -> ASTCompiler Wildcard
-fromSelectWildcard x = Wildcard <$> fromNode x
-
-fromBoolCase :: Bool -> ICU.Node -> ASTCompiler Branch
-fromBoolCase b x = Branch b' <$> fromNode x
+fromBoolCase :: Bool -> ASTCompiler [Expr] -> ASTCompiler Branch
+fromBoolCase b x = Branch b' <$> x
   where b' = if b then "true" else "false"
