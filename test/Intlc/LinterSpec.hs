@@ -46,11 +46,11 @@ spec = describe "linter" $ do
           `shouldBe` Success
 
       it "fails on ordinal plural with only a wildcard" $ do
-        lint (Message $ Ordinal' "x" [] [] mempty)
+        lint (Message $ Callback' "y" (Ordinal' "x" [] [] mempty))
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
       it "fails on inexact cardinal plural with only a wildcard" $ do
-        lint (Message $ CardinalInexact' "x" [] [] mempty)
+        lint (Message $ Callback' "y" (CardinalInexact' "x" [] [] mempty))
           `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
 
   describe "internal" $ do
