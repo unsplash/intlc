@@ -1,10 +1,11 @@
 module Intlc.Linter where
 
-import qualified Data.Text           as T
+import qualified Data.Text             as T
 
-import           Control.Monad.Extra (pureIf)
-import           Data.Char           (isAscii)
-import qualified Data.Map            as M
+import           Control.Monad.Extra   (pureIf)
+import           Data.Char             (isAscii)
+import           Data.Functor.Foldable (cata)
+import qualified Data.Map              as M
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
@@ -78,52 +79,37 @@ formatFailureWith f k es = title <> msgs
 -- replaced with plain string interpolations.
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
-  idents :: Node -> [Arg]
-  idents Fin = mempty
-  idents x   = mconcat
-    [ maybeToList (redundantIdent x)
-    , maybeToMonoid (idents <$> getInterpolationChildren x)
-    , foldMap idents (getNext x)
-    ]
-  redundantIdent (SelectWild n _w _) = Just n
-  redundantIdent _                   = Nothing
+  idents = cata $ \case
+    SelectWildF n xs ys -> n : xs <> ys
+    x                   -> fold x
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
 redundantPluralRule :: Rule ExternalLint
 redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
-  idents :: Node -> [Arg]
-  idents Fin = mempty
-  idents x   = mconcat
-    [ maybeToList (redundantIdent x)
-    , maybeToMonoid (idents <$> getInterpolationChildren x)
-    , foldMap idents (getNext x)
-    ]
-  redundantIdent (CardinalInexact n [] [] _ _) = Just n
-  redundantIdent (Ordinal n [] [] _ _)         = Just n
-  redundantIdent _                             = Nothing
+  idents = cata $ \case
+    CardinalInexactF n [] [] xs ys -> n : xs <> ys
+    OrdinalF         n [] [] xs ys -> n : xs <> ys
+    x                              -> fold x
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
--- particularly struggles with interpolations. This rule limits the use of these
--- interpolations to one per message, with caveats (see below "complex").
+-- particularly struggles with interpolations. This rule limits the use of a
+-- subset of interpolations to one per message.
+--
+-- Callbacks and plurals are allowed an unlimited number of times. The former
+-- because the vendor's tool has no issues parsing its syntax and the latter
+-- because it's a special case that we can't rewrite.
 interpolationsRule :: Rule InternalLint
-interpolationsRule = count . complexIdents where
+interpolationsRule = count . idents where
   count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
-  complexIdents Fin = mempty
-  complexIdents x   = case getComplexStream x of
-    Nothing      -> foldMap complexIdents (getNext x)
-    Just (n, ys) -> n : complexIdents ys <> foldMap complexIdents (getNext x)
-  -- We can count streams to understand how often interpolations occur,
-  -- however we exclude callbacks and plurals from this. The former because
-  -- the vendor's tool has no issues parsing its syntax and the latter
-  -- because it's a special case that we can't rewrite.
-  getComplexStream Callback {}        = Nothing
-  getComplexStream CardinalExact {}   = Nothing
-  getComplexStream CardinalInexact {} = Nothing
-  getComplexStream Ordinal {}         = Nothing
-  getComplexStream Char {}            = Nothing
-  getComplexStream x                  = getInterpolation x
+  idents = cata $ \case
+    BoolF n xs ys zs            -> n : xs <> ys <> zs
+    SelectNamedF n xs ys        -> n : selCases xs <> ys
+    SelectWildF n xs ys         -> n : xs <> ys
+    SelectNamedWildF n xs ys zs -> n : selCases xs <> ys <> zs
+    x                           -> fold x
+  selCases = foldMap snd
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
@@ -134,7 +120,6 @@ isAcceptedChar c = isAscii c || c `elem` acceptedChars
 unsupportedUnicodeRule :: Rule InternalLint
 unsupportedUnicodeRule = output . nonAscii where
   output = fmap InvalidNonAsciiCharacter . nonEmpty
-  nonAscii :: Node -> [Char]
-  nonAscii Fin        = mempty
-  nonAscii (Char c x) = guarded (not . isAcceptedChar) c <> nonAscii x
-  nonAscii x          = foldMap nonAscii (getInterpolationChildren x) <> foldMap nonAscii (getNext x)
+  nonAscii = cata $ \case
+    CharF c xs -> guarded (not . isAcceptedChar) c <> xs
+    x          -> fold x
