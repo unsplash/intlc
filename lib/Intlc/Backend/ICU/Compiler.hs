@@ -8,7 +8,8 @@
 
 module Intlc.Backend.ICU.Compiler where
 
-import qualified Data.Text as T
+import           Data.Functor.Foldable (cata)
+import qualified Data.Text             as T
 import           Intlc.ICU
 import           Prelude
 
@@ -16,26 +17,27 @@ compileMsg :: Message -> Text
 compileMsg = node . unMessage
 
 node :: Node -> Text
-node Fin = mempty
-node (Char c x)     = T.singleton c <> node x
-node x@(Bool {})    = "{" <> (unArg . name $ x) <> ", boolean, true {" <> node (trueCase x)  <> "} false {" <> node (falseCase x) <> "}}" <> node (next x)
-node (String n x)   = "{" <> unArg n <> "}" <> node x
-node (Number n x)   = "{" <> unArg n <> ", number}" <> node x
-node (Date n fmt x) = "{" <> unArg n <> ", date, " <> dateTimeFmt fmt  <> "}" <> node x
-node (Time n fmt x) = "{" <> unArg n <> ", time, " <> dateTimeFmt fmt  <> "}" <> node x
-node (CardinalExact n xs y)        = "{" <> unArg n <> ", plural, " <> cases <> "}" <> node y
-  where cases = unwords . toList . fmap exactPluralCase $ xs
-node (CardinalInexact n xs ys w z) = "{" <> unArg n <> ", plural, " <> cases <> "}" <> node z
-  where cases = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ wildcard w]
-node (Ordinal n xs ys w z)         = "{" <> unArg n <> ", selectordinal, " <> cases <> "}" <> node z
-  where cases = unwords $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (wildcard w)
-node (PluralRef _ x)    = "#" <> node x
-node (SelectNamed n xs y)       = "{" <> unArg n <> ", select, " <> cases <> "}" <> node y
-  where cases = unwords . fmap selectCase . toList $ xs
-node (SelectWild n w x)         = "{" <> unArg n <> ", select, " <> wildcard w <> "}" <> node x
-node (SelectNamedWild n xs w y) = "{" <> unArg n <> ", select, " <> cases <> "}" <> node y
-  where cases = unwords . (<> pure (wildcard w)) . fmap selectCase . toList $ xs
-node (Callback n xs y) = "<" <> unArg n <> ">" <> node xs <> "</" <> unArg n <> ">" <> node y
+node = cata $ \case
+  FinF -> mempty
+  (CharF c x)     -> T.singleton c <> x
+  x@(BoolF {})    -> "{" <> (unArg . nameF $ x) <> ", boolean, true {" <> trueCaseF x <> "} false {" <> falseCaseF x <> "}}" <> nextF x
+  (StringF n x)   -> "{" <> unArg n <> "}" <> x
+  (NumberF n x)   -> "{" <> unArg n <> ", number}" <> x
+  (DateF n fmt x) -> "{" <> unArg n <> ", date, " <> dateTimeFmt fmt  <> "}" <> x
+  (TimeF n fmt x) -> "{" <> unArg n <> ", time, " <> dateTimeFmt fmt  <> "}" <> x
+  (CardinalExactF n xs y)        -> "{" <> unArg n <> ", plural, " <> cases <> "}" <> y
+    where cases = unwords . toList . fmap exactPluralCase $ xs
+  (CardinalInexactF n xs ys w z) -> "{" <> unArg n <> ", plural, " <> cases <> "}" <> z
+    where cases = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ wildcard w]
+  (OrdinalF n xs ys w z)         -> "{" <> unArg n <> ", selectordinal, " <> cases <> "}" <> z
+    where cases = unwords $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (wildcard w)
+  (PluralRefF _ x)    -> "#" <> x
+  (SelectNamedF n xs y)       -> "{" <> unArg n <> ", select, " <> cases <> "}" <> y
+    where cases = unwords . fmap selectCase . toList $ xs
+  (SelectWildF n w x)         -> "{" <> unArg n <> ", select, " <> wildcard w <> "}" <> x
+  (SelectNamedWildF n xs w y) -> "{" <> unArg n <> ", select, " <> cases <> "}" <> y
+    where cases = unwords . (<> pure (wildcard w)) . fmap selectCase . toList $ xs
+  (CallbackF n xs y) -> "<" <> unArg n <> ">" <> xs <> "</" <> unArg n <> ">" <> y
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"
@@ -43,11 +45,11 @@ dateTimeFmt Medium = "medium"
 dateTimeFmt Long   = "long"
 dateTimeFmt Full   = "full"
 
-exactPluralCase :: PluralCase PluralExact -> Text
-exactPluralCase (PluralExact n, x) = "=" <> n <> " {" <> node x <> "}"
+exactPluralCase :: PluralCaseF PluralExact Text -> Text
+exactPluralCase (PluralExact n, x) = "=" <> n <> " {" <> x <> "}"
 
-rulePluralCase :: PluralCase PluralRule -> Text
-rulePluralCase (r, x) = pluralRule r <> " {" <> node x <> "}"
+rulePluralCase :: PluralCaseF PluralRule Text -> Text
+rulePluralCase (r, x) = pluralRule r <> " {" <> x <> "}"
 
 pluralRule :: PluralRule -> Text
 pluralRule Zero = "zero"
@@ -56,8 +58,8 @@ pluralRule Two  = "two"
 pluralRule Few  = "few"
 pluralRule Many = "many"
 
-selectCase :: SelectCase -> Text
-selectCase (n, x) = n <> " {" <> node x <> "}"
+selectCase :: SelectCaseF Text -> Text
+selectCase (n, x) = n <> " {" <> x <> "}"
 
-wildcard :: Node -> Text
-wildcard x = "other {" <> node x <> "}"
+wildcard :: Text -> Text
+wildcard x = "other {" <> x <> "}"
