@@ -20,9 +20,9 @@
           buildInputs = with pkgs; [
             git
 
-            # We use mainline Haskell packages rather than specifying a custom
-            # GHC version to ensure everything we want is cached in Hydra.
-            ghc
+            # Ensure that everything here has a binary cached in Hydra on all
+            # supported architectures; avoid `haskell.packages.ghcXXX.package`.
+            haskell.compiler.ghc924
             cabal-install
             haskellPackages.hspec-golden
 

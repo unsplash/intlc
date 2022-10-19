@@ -19,7 +19,7 @@ common common
   ghc-options:
     -Wall
   build-depends:
-      base                 ^>=4.15
+      base                 ^>=4.16
     , bytestring           ^>=0.11
     , containers           ^>=0.6
     , extra                ^>=1.7
