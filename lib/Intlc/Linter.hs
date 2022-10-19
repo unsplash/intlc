@@ -32,7 +32,7 @@ maybeToStatus :: Maybe (NonEmpty a) -> Status a
 maybeToStatus Nothing   = Success
 maybeToStatus (Just xs) = Failure xs
 
-type Rule a = Stream -> Maybe a
+type Rule a = Node -> Maybe a
 
 lintWith :: [Rule a] -> Message -> Status a
 lintWith rules (Message stream) = toStatus $ rules `flap` stream
@@ -78,30 +78,30 @@ formatFailureWith f k es = title <> msgs
 -- replaced with plain string interpolations.
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
-  idents :: Stream -> [Arg]
-  idents []     = []
-  idents (x:xs) = mconcat
+  idents :: Node -> [Arg]
+  idents Fin = mempty
+  idents x   = mconcat
     [ maybeToList (redundantIdent x)
-    , maybeToMonoid (idents <$> getStream x)
-    , idents xs
+    , maybeToMonoid (idents <$> getInterpolationChildren x)
+    , foldMap idents (getNext x)
     ]
-  redundantIdent (SelectWild n _w) = Just n
-  redundantIdent _                 = Nothing
+  redundantIdent (SelectWild n _w _) = Just n
+  redundantIdent _                   = Nothing
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
 redundantPluralRule :: Rule ExternalLint
 redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
-  idents :: Stream -> [Arg]
-  idents []     = []
-  idents (x:xs) = mconcat
+  idents :: Node -> [Arg]
+  idents Fin = mempty
+  idents x   = mconcat
     [ maybeToList (redundantIdent x)
-    , maybeToMonoid (idents <$> getStream x)
-    , idents xs
+    , maybeToMonoid (idents <$> getInterpolationChildren x)
+    , foldMap idents (getNext x)
     ]
-  redundantIdent (CardinalInexact n [] [] _) = Just n
-  redundantIdent (Ordinal n [] [] _)         = Just n
-  redundantIdent _                           = Nothing
+  redundantIdent (CardinalInexact n [] [] _ _) = Just n
+  redundantIdent (Ordinal n [] [] _ _)         = Just n
+  redundantIdent _                             = Nothing
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of these
@@ -110,10 +110,10 @@ interpolationsRule :: Rule InternalLint
 interpolationsRule = count . complexIdents where
   count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
-  complexIdents []     = []
-  complexIdents (x:xs) = case getComplexStream x of
-    Nothing      -> complexIdents xs
-    Just (n, ys) -> n : complexIdents ys <> complexIdents xs
+  complexIdents Fin = mempty
+  complexIdents x   = case getComplexStream x of
+    Nothing      -> foldMap complexIdents (getNext x)
+    Just (n, ys) -> n : complexIdents ys <> foldMap complexIdents (getNext x)
   -- We can count streams to understand how often interpolations occur,
   -- however we exclude callbacks and plurals from this. The former because
   -- the vendor's tool has no issues parsing its syntax and the latter
@@ -122,8 +122,8 @@ interpolationsRule = count . complexIdents where
   getComplexStream CardinalExact {}   = Nothing
   getComplexStream CardinalInexact {} = Nothing
   getComplexStream Ordinal {}         = Nothing
-  getComplexStream Plaintext {}       = Nothing
-  getComplexStream x                  = getNamedStream x
+  getComplexStream Char {}            = Nothing
+  getComplexStream x                  = getInterpolation x
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
@@ -133,8 +133,8 @@ isAcceptedChar c = isAscii c || c `elem` acceptedChars
 
 unsupportedUnicodeRule :: Rule InternalLint
 unsupportedUnicodeRule = output . nonAscii where
-  output = fmap InvalidNonAsciiCharacter . nonEmpty . T.unpack
-  nonAscii :: Stream -> Text
-  nonAscii []               = mempty
-  nonAscii (Plaintext x:ys) = T.filter (not . isAcceptedChar) x <> nonAscii ys
-  nonAscii (x:ys)           = nonAscii (maybeToMonoid . getStream $ x) <> nonAscii ys
+  output = fmap InvalidNonAsciiCharacter . nonEmpty
+  nonAscii :: Node -> [Char]
+  nonAscii Fin        = mempty
+  nonAscii (Char c x) = guarded (not . isAcceptedChar) c <> nonAscii x
+  nonAscii x          = foldMap nonAscii (getInterpolationChildren x) <> foldMap nonAscii (getNext x)

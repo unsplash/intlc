@@ -8,35 +8,34 @@
 
 module Intlc.Backend.ICU.Compiler where
 
+import qualified Data.Text as T
 import           Intlc.ICU
-import           Prelude   hiding (Type)
+import           Prelude
 
 compileMsg :: Message -> Text
-compileMsg (Message xs) = stream xs
-
-stream :: Foldable f => f Node -> Text
-stream = foldMap node
+compileMsg = node . unMessage
 
 node :: Node -> Text
-node (Plaintext x)   = x
-node x@(Bool {})     = "{" <> (unArg . name $ x) <> ", boolean, true {" <> stream (trueCase x)  <> "} false {" <> stream (falseCase x) <> "}}"
-node (String n)      = "{" <> unArg n <> "}"
-node (Number n)      = "{" <> unArg n <> ", number}"
-node (Date n fmt)    = "{" <> unArg n <> ", date, "          <> dateTimeFmt fmt  <> "}"
-node (Time n fmt)    = "{" <> unArg n <> ", time, "          <> dateTimeFmt fmt  <> "}"
-node (CardinalExact n xs)        = "{" <> unArg n <> ", plural, " <> cases <> "}"
+node Fin = mempty
+node (Char c x)     = T.singleton c <> node x
+node x@(Bool {})    = "{" <> (unArg . name $ x) <> ", boolean, true {" <> node (trueCase x)  <> "} false {" <> node (falseCase x) <> "}}" <> node (next x)
+node (String n x)   = "{" <> unArg n <> "}" <> node x
+node (Number n x)   = "{" <> unArg n <> ", number}" <> node x
+node (Date n fmt x) = "{" <> unArg n <> ", date, " <> dateTimeFmt fmt  <> "}" <> node x
+node (Time n fmt x) = "{" <> unArg n <> ", time, " <> dateTimeFmt fmt  <> "}" <> node x
+node (CardinalExact n xs y)        = "{" <> unArg n <> ", plural, " <> cases <> "}" <> node y
   where cases = unwords . toList . fmap exactPluralCase $ xs
-node (CardinalInexact n xs ys w) = "{" <> unArg n <> ", plural, " <> cases <> "}"
+node (CardinalInexact n xs ys w z) = "{" <> unArg n <> ", plural, " <> cases <> "}" <> node z
   where cases = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ wildcard w]
-node (Ordinal n xs ys w)         = "{" <> unArg n <> ", selectordinal, " <> cases <> "}"
+node (Ordinal n xs ys w z)         = "{" <> unArg n <> ", selectordinal, " <> cases <> "}" <> node z
   where cases = unwords $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (wildcard w)
-node PluralRef {}    = "#"
-node (SelectNamed n xs)       = "{" <> unArg n <> ", select, " <> cases <> "}"
+node (PluralRef _ x)    = "#" <> node x
+node (SelectNamed n xs y)       = "{" <> unArg n <> ", select, " <> cases <> "}" <> node y
   where cases = unwords . fmap selectCase . toList $ xs
-node (SelectWild n w)         = "{" <> unArg n <> ", select, " <> wildcard w <> "}"
-node (SelectNamedWild n xs w) = "{" <> unArg n <> ", select, " <> cases <> "}"
+node (SelectWild n w x)         = "{" <> unArg n <> ", select, " <> wildcard w <> "}" <> node x
+node (SelectNamedWild n xs w y) = "{" <> unArg n <> ", select, " <> cases <> "}" <> node y
   where cases = unwords . (<> pure (wildcard w)) . fmap selectCase . toList $ xs
-node (Callback n xs) = "<" <> unArg n <> ">"                 <> stream xs        <> "</" <> unArg n <> ">"
+node (Callback n xs y) = "<" <> unArg n <> ">" <> node xs <> "</" <> unArg n <> ">" <> node y
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"
@@ -45,10 +44,10 @@ dateTimeFmt Long   = "long"
 dateTimeFmt Full   = "full"
 
 exactPluralCase :: PluralCase PluralExact -> Text
-exactPluralCase (PluralExact n, xs) = "=" <> n <> " {" <> stream xs <> "}"
+exactPluralCase (PluralExact n, x) = "=" <> n <> " {" <> node x <> "}"
 
 rulePluralCase :: PluralCase PluralRule -> Text
-rulePluralCase (r, xs) = pluralRule r <> " {" <> stream xs <> "}"
+rulePluralCase (r, x) = pluralRule r <> " {" <> node x <> "}"
 
 pluralRule :: PluralRule -> Text
 pluralRule Zero = "zero"
@@ -58,7 +57,7 @@ pluralRule Few  = "few"
 pluralRule Many = "many"
 
 selectCase :: SelectCase -> Text
-selectCase (n, xs) = n <> " {" <> stream xs <> "}"
+selectCase (n, x) = n <> " {" <> node x <> "}"
 
-wildcard :: Stream -> Text
-wildcard xs = "other {" <> stream xs <> "}"
+wildcard :: Node -> Text
+wildcard x = "other {" <> node x <> "}"

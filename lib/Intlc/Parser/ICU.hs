@@ -11,7 +11,7 @@ import           Intlc.ICU
 import           Intlc.Parser.Error                       (MessageParseErr (..),
                                                            ParseErr (FailedMsgParse),
                                                            failingWith)
-import           Prelude                                  hiding (Type)
+import           Prelude
 import           Text.Megaparsec                          hiding (State, Stream,
                                                            many, some)
 import           Text.Megaparsec.Char
@@ -47,11 +47,11 @@ msg = msgTill =<< asks endOfInput
 
 -- Parse a message until the provided parser matches.
 msgTill :: Parser a -> Parser Message
-msgTill = fmap (Message . mergePlaintext) . streamTill
+msgTill = fmap Message . streamTill
 
 -- Parse a stream until the provided parser matches.
-streamTill :: Parser a -> Parser Stream
-streamTill = manyTill node
+streamTill :: Parser a -> Parser Node
+streamTill = fmap mconcat <$> manyTill node
 
 -- The core parser of this module. Parse as many of these as you'd like until
 -- reaching an anticipated delimiter, such as a double quote in the surrounding
@@ -64,31 +64,31 @@ node = choice
   -- `#`. When there's no such context, fail the parse in effect treating it
   -- as plaintext.
   , asks pluralCtxName >>= \case
-      Just n  -> PluralRef n <$ string "#"
+      Just n  -> PluralRef n Fin <$ string "#"
       Nothing -> empty
-  , Plaintext <$> plaintext
+  , plaintext
   ]
 
 -- Parse plaintext, including single quote escape sequences.
-plaintext :: Parser Text
+plaintext :: Parser Node
 plaintext = choice
   [ try escaped
-  , T.singleton <$> L.charLiteral
+  , flip Char Fin <$> L.charLiteral
   ]
 
 -- Follows ICU 4.8+ spec, see:
 --   https://unicode-org.github.io/icu/userguide/format_parse/messages/#quotingescaping
-escaped :: Parser Text
+escaped :: Parser Node
 escaped = apos *> choice
   -- Double escape two apostrophes as one, regardless of surrounding
   -- syntax: "''" -> "'"
-  [ "'" <$ apos
+  [ flip Char Fin <$> apos
   -- Escape everything until another apostrophe, being careful of internal
   -- double escapes: "'{a''}'" -> "{a'}". Must ensure it doesn't surpass the
   -- bounds of the surrounding parser as per `endOfInput`.
   , try $ do
       eom <- asks endOfInput
-      head' <- T.singleton <$> synOpen
+      head' <- flip Char Fin <$> synOpen
       -- Try and parse until end of input or a lone apostrophe. If end of input
       -- comes first then fail the parse.
       (tail', wasEom) <- someTill_ plaintext $ choice
@@ -96,9 +96,9 @@ escaped = apos *> choice
         , try $ False <$ apos <* notFollowedBy apos
         ]
       guard (not wasEom)
-      pure $ head' <> T.concat tail'
+      pure $ head' <> mconcat tail'
   -- Escape the next syntax character as plaintext: "'{" -> "{"
-  , T.singleton <$> synAll
+  , flip Char Fin <$> synAll
   ]
   where apos = char '\''
         synAll = synLone <|> synOpen <|> synClose
@@ -119,19 +119,19 @@ callback = do
     where children n = do
             eom <- asks endOfInput
             stream <- streamTill (lookAhead $ void (string "</") <|> eom)
-            pure . Callback n . mergePlaintext $ stream
+            pure . flip (Callback n) Fin $ stream
           closing = fmap isJust . hidden . optional . char $ '/'
 
 interp :: Parser Node
 interp = between (char '{') (char '}') $ do
   n <- arg
-  option (String n) (sep *> body n)
+  option (String n Fin) (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice
-          [ uncurry (Bool n) <$> (string "boolean" *> sep *> boolCases)
-          , Number n <$ string "number"
-          , Date n <$> (string "date" *> sep *> dateTimeFmt)
-          , Time n <$> (string "time" *> sep *> dateTimeFmt)
+          [ (\(t, f) -> Bool n t f Fin) <$> (string "boolean" *> sep *> boolCases)
+          , Number n Fin <$ string "number"
+          , flip (Date n) Fin <$> (string "date" *> sep *> dateTimeFmt)
+          , flip (Time n) Fin <$> (string "time" *> sep *> dateTimeFmt)
           , withPluralCtx n $ choice
               [ string "plural"        *> sep *> cardinalCases n
               , string "selectordinal" *> sep *> ordinalCases n
@@ -148,10 +148,10 @@ dateTimeFmt = choice
   , Full   <$ string "full"
   ]
 
-caseBody :: Parser Stream
-caseBody = mergePlaintext <$> (string "{" *> streamTill (string "}"))
+caseBody :: Parser Node
+caseBody = string "{" *> streamTill (string "}")
 
-boolCases :: Parser (Stream, Stream)
+boolCases :: Parser (Node, Node)
 boolCases = (,)
   <$> (string "true"  *> hspace1 *> caseBody)
    <* hspace1
@@ -160,12 +160,12 @@ boolCases = (,)
 selectCases :: Arg -> Parser Node
 selectCases n = choice
   [ reconcile <$> cases <*> optional wildcard
-  , SelectWild n <$> wildcard
+  , flip (SelectWild n) Fin <$> wildcard
   ]
   where cases = NE.sepEndBy1 ((,) <$> (name <* hspace1) <*> caseBody) hspace1
         wildcard = string wildcardName *> hspace1 *> caseBody
-        reconcile cs (Just w) = SelectNamedWild n cs w
-        reconcile cs Nothing  = SelectNamed n cs
+        reconcile cs (Just w) = SelectNamedWild n cs w Fin
+        reconcile cs Nothing  = SelectNamed n cs Fin
         name = try $ mfilter (/= wildcardName) ident
         wildcardName = "other"
 
@@ -173,13 +173,15 @@ cardinalCases :: Arg -> Parser Node
 cardinalCases n = try (cardinalInexactCases n) <|> cardinalExactCases n
 
 cardinalExactCases :: Arg -> Parser Node
-cardinalExactCases n = CardinalExact n <$> NE.sepEndBy1 pluralExactCase hspace1
+cardinalExactCases n = flip (CardinalExact n) Fin <$> NE.sepEndBy1 pluralExactCase hspace1
 
 cardinalInexactCases :: Arg -> Parser Node
-cardinalInexactCases n = uncurry (CardinalInexact n) <$> mixedPluralCases <*> pluralWildcard
+cardinalInexactCases n = uncurry f <$> mixedPluralCases <*> pluralWildcard
+  where f e r w = CardinalInexact n e r w Fin
 
 ordinalCases :: Arg -> Parser Node
-ordinalCases n = uncurry (Ordinal n) <$> mixedPluralCases <*> pluralWildcard
+ordinalCases n = uncurry f <$> mixedPluralCases <*> pluralWildcard
+  where f e r w = Ordinal n e r w Fin
 
 mixedPluralCases :: Parser ([PluralCase PluralExact], [PluralCase PluralRule])
 mixedPluralCases = partitionEithers <$> sepEndBy (eitherP pluralExactCase pluralRuleCase) hspace1
@@ -200,5 +202,5 @@ pluralRule = choice
   , Many <$ string "many"
   ]
 
-pluralWildcard :: Parser Stream
+pluralWildcard :: Parser Node
 pluralWildcard = string "other" *> hspace1 *> caseBody

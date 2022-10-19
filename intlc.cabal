@@ -97,6 +97,7 @@ test-suite test-intlc
     Intlc.Backend.TypeScriptSpec
     Intlc.CompilerSpec
     Intlc.EndToEndSpec
+    Intlc.ICUSpec
     Intlc.LinterSpec
     Intlc.Parser.JSONSpec
     Intlc.Parser.ICUSpec
