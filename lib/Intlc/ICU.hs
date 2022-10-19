@@ -71,19 +71,9 @@ data NodeF a
   | NumberF Arg a
   | DateF Arg DateTimeFmt a
   | TimeF Arg DateTimeFmt a
-  -- The only cardinal plurals which do not require a wildcard are those
-  -- consisting solely of literal/exact cases. This is because within the AST we
-  -- only care about correctness and prospective type safety, not optimal use of
-  -- ICU syntax.
-  --
-  -- Ordinal plurals always require a wildcard as per their intended usage with
-  -- rules, however as with the cardinal plural type we'll allow a wider set of
-  -- suboptimal usages that we can then lint against.
   | CardinalExactF Arg (NonEmpty (PluralCaseF PluralExact a)) a
   | CardinalInexactF Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
   | OrdinalF Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
-  -- Plural hash references have their own distinct type rather than merely
-  -- taking on `Number` to allow compilers to infer appropriately.
   | PluralRefF Arg a
   | SelectNamedF Arg (NonEmpty (SelectCaseF a)) a
   | SelectWildF Arg a a
