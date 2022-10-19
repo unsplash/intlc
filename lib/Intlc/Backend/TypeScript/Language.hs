@@ -1,8 +1,9 @@
 module Intlc.Backend.TypeScript.Language where
 
-import           Data.List.NonEmpty (nub)
-import qualified Data.Map           as M
-import qualified Intlc.ICU          as ICU
+import           Data.Functor.Foldable (cata)
+import           Data.List.NonEmpty    (nub)
+import qualified Data.Map              as M
+import qualified Intlc.ICU             as ICU
 import           Prelude
 
 -- | A representation of the type-level output we will be compiling. It's a
@@ -44,33 +45,30 @@ fromMsg :: Out -> ICU.Message -> TypeOf
 fromMsg x (ICU.Message y) = Lambda (collateArgs . fromNode $ y) x
 
 fromNode :: ICU.Node -> UncollatedArgs
-fromNode ICU.Fin               = mempty
-fromNode (ICU.Char _ x)        = fromNode x
-fromNode (ICU.Bool n x y z)    = (n, TBool) : foldMap fromNode [x, y, z]
-fromNode (ICU.String n x)      = pure (n, TStr) <> fromNode x
-fromNode (ICU.Number n x)      = pure (n, TNum) <> fromNode x
-fromNode (ICU.Date n _ x)      = pure (n, TDate) <> fromNode x
-fromNode (ICU.Time n _ x)      = pure (n, TDate) <> fromNode x
--- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
--- union of number literals.
-fromNode (ICU.CardinalExact n ls x)        = (n, t) : (fromExactPluralCase =<< toList ls) <> fromNode x
-  where t = TNumLitUnion $ caseLit <$> ls
+fromNode = cata $ \case
+  (ICU.BoolF n xs ys zs) -> (n, TBool) : xs <> ys <> zs
+  (ICU.StringF n xs)     -> pure (n, TStr) <> xs
+  (ICU.NumberF n xs)     -> pure (n, TNum) <> xs
+  (ICU.DateF n _ xs)     -> pure (n, TDate) <> xs
+  (ICU.TimeF n _ xs)     -> pure (n, TDate) <> xs
+  -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
+  -- union of number literals.
+  (ICU.CardinalExactF n ls xs)         ->
+    let t = TNumLitUnion $ caseLit <$> ls
         caseLit (ICU.PluralExact y, _) = y
-fromNode (ICU.CardinalInexact n ls rs w x) = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> foldMap fromNode [w, x]
-fromNode (ICU.Ordinal n ls rs w x)         = (n, TNum) : (fromExactPluralCase =<< ls) <> (fromRulePluralCase =<< rs) <> foldMap fromNode [w, x]
--- Plural references are treated as a no-op.
-fromNode (ICU.PluralRef _ x)               = fromNode x
-fromNode (ICU.SelectWild n w x)            = (n, TStr) : foldMap fromNode [w, x]
-fromNode (ICU.SelectNamedWild n cs w x)    = (n, TStr) : (fromSelectCase =<< toList cs) <> foldMap fromNode [w, x]
--- When there's no wildcard case we can compile to a union of string literals.
-fromNode (ICU.SelectNamed n cs x)          = (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs) <> fromNode x
-fromNode (ICU.Callback n x y)              = (n, TEndo) : foldMap fromNode [x, y]
+     in (n, t) : (fromPluralCase =<< toList ls) <> xs
+  (ICU.CardinalInexactF n ls rs ws xs) -> (n, TNum) : (fromPluralCase =<< ls) <> (fromPluralCase =<< rs) <> ws <> xs
+  (ICU.OrdinalF n ls rs ws xs)         -> (n, TNum) : (fromPluralCase =<< ls) <> (fromPluralCase =<< rs) <> ws <> xs
+  (ICU.SelectWildF n ws xs)            -> (n, TStr) : ws <> xs
+  (ICU.SelectNamedWildF n cs ws xs)    -> (n, TStr) : (fromSelectCase =<< toList cs) <> ws <> xs
+  -- When there's no wildcard case we can compile to a union of string literals.
+  (ICU.SelectNamedF n cs xs)           -> (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs) <> xs
+  (ICU.CallbackF n xs ys)              -> (n, TEndo) : xs <> ys
+  -- Plural references are treated as a no-op.
+  x -> fold x
 
-fromExactPluralCase :: ICU.PluralCase ICU.PluralExact -> UncollatedArgs
-fromExactPluralCase = fromNode . snd
+fromPluralCase :: ICU.PluralCaseF a b -> b
+fromPluralCase = snd
 
-fromRulePluralCase :: ICU.PluralCase ICU.PluralRule -> UncollatedArgs
-fromRulePluralCase = fromNode . snd
-
-fromSelectCase :: ICU.SelectCase -> UncollatedArgs
-fromSelectCase = fromNode . snd
+fromSelectCase :: ICU.SelectCaseF a -> a
+fromSelectCase = snd
