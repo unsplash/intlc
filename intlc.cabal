@@ -5,17 +5,11 @@ license:                   MIT
 build-type:                Simple
 
 common common
-  default-language:        Haskell2010
+  default-language:        GHC2021
   default-extensions:
     LambdaCase
     NoImplicitPrelude
     OverloadedStrings
-    -- These are included in GHC2021.
-    DeriveGeneric
-    FlexibleContexts
-    GeneralizedNewtypeDeriving
-    NamedFieldPuns
-    TupleSections
   ghc-options:
     -Wall
   build-depends:
