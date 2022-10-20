@@ -88,4 +88,6 @@ The description is optional and ignored by intlc. It can be used documentatively
 
 ## Contributing
 
-Check out `ARCHITECTURE.md`. Currently building against GHC 9.2.4.
+Check out `ARCHITECTURE.md`.
+
+Currently building against GHC 9.2.4. A Nix flake is included with all necessary dependencies. Contributors on Apple silicon will need to source GHC and HLS externally, for example via ghcup.
