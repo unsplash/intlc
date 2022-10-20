@@ -1,7 +1,6 @@
 -- This module defines an AST for ICU messages. We do not necessarily behave
 -- identically to other implementations.
 {-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveTraversable  #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TypeFamilies       #-}
