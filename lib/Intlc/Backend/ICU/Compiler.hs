@@ -17,9 +17,13 @@ import           Utils                 ((<>^))
 compileMsg :: Message -> Text
 compileMsg = node . unMessage
 
-node :: Node -> Text
-node ast = runReader (cata go ast) (0 :: Int) where
-  go :: Monad m => NodeF (m Text) -> m Text
+type Indents = Int
+
+type Compiler = Reader Indents
+
+node :: Formatting -> Node -> Text
+node fo ast = runReader (cata go ast) 0 where
+  go :: NodeF (Compiler Text) -> Compiler Text
   go = \case
     FinF -> pure mempty
 
@@ -27,7 +31,7 @@ node ast = runReader (cata go ast) (0 :: Int) where
 
     (BoolF { nameF, trueCaseF, falseCaseF, nextF }) ->
       let cs = sequence [("true",) <$> trueCaseF, ("false",) <$> falseCaseF]
-       in (boolean nameF <$> cs) <>^ nextF
+       in (boolean nameF =<< cs) <>^ nextF
 
     (StringF n next) -> (string n <>) <$> next
 
@@ -37,39 +41,39 @@ node ast = runReader (cata go ast) (0 :: Int) where
 
     (TimeF n fmt next) -> (time n fmt <>) <$> next
 
-    (CardinalExactF n xs next) -> (cardinal n <$> exactPluralCases xs) <>^ next
+    (CardinalExactF n xs next) -> (cardinal n =<< exactPluralCases xs) <>^ next
 
     (CardinalInexactF n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
-       in (cardinal n <$> cs) <>^ next
+       in (cardinal n =<< cs) <>^ next
 
     (OrdinalF n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
-       in (ordinal n <$> cs) <>^ next
+       in (ordinal n =<< cs) <>^ next
 
     (PluralRefF _ next) -> ("#" <>) <$> next
 
-    (SelectNamedF n xs y) -> (select n <$> selectCases xs) <>^ y
+    (SelectNamedF n xs y) -> (select n =<< selectCases xs) <>^ y
 
-    (SelectWildF n w x) -> (select n . pure . wildcard <$> w) <>^ x
+    (SelectWildF n w x) -> (select n . pure . wildcard =<< w) <>^ x
 
     (SelectNamedWildF n xs w next) ->
       let cs = (<>) <$> selectCases xs <*> (pure . wildcard <$> w)
-       in (select n <$> cs) <>^ next
+       in (select n =<< cs) <>^ next
 
     (CallbackF n xs next) -> (callback n <$> xs) <>^ next
 
-cardinal :: Arg -> [Case] -> Text
-cardinal n x = typedInterp "plural" n (pure . cases $ x)
+cardinal :: Arg -> [Case] -> Compiler Text
+cardinal n x = typedInterp "plural" n <$> (pure <$> cases x)
 
-ordinal :: Arg -> [Case] -> Text
-ordinal n x = typedInterp "selectordinal" n (pure . cases $ x)
+ordinal :: Arg -> [Case] -> Compiler Text
+ordinal n x = typedInterp "selectordinal" n <$> (pure <$> cases x)
 
-select :: Arg -> [Case] -> Text
-select n x = typedInterp "select" n (pure . cases $ x)
+select :: Arg -> [Case] -> Compiler Text
+select n x = typedInterp "select" n <$> (pure <$> cases x)
 
-boolean :: Arg -> [Case] -> Text
-boolean n x = typedInterp "boolean" n (pure . cases $ x)
+boolean :: Arg -> [Case] -> Compiler Text
+boolean n x = typedInterp "boolean" n <$> (pure <$> cases x)
 
 datetime :: Text -> Arg -> DateTimeFmt -> Text
 datetime t n f = typedInterp t n (pure . dateTimeFmt $ f)
@@ -100,8 +104,8 @@ callback n x = "<" <> unArg n <> ">" <> x <> "</" <> unArg n <> ">"
 
 type Case = (Text, Text)
 
-cases :: [Case] -> Text
-cases = unwords . fmap (uncurry case')
+cases :: [Case] -> Compiler Text
+cases = pure . unwords . fmap (uncurry case')
 
 case' :: Text -> Text -> Text
 case' n x = n <> " {" <> x <> "}"
@@ -109,7 +113,7 @@ case' n x = n <> " {" <> x <> "}"
 wildcard :: Text -> Case
 wildcard = ("other",)
 
-selectCases :: (Traversable t, Applicative f) => t (SelectCaseF (f Text)) -> f [Case]
+selectCases :: Traversable t => t (SelectCaseF (Compiler Text)) -> Compiler [Case]
 selectCases = fmap toList . traverse selectCaseF
 
 selectCaseF :: Functor f => SelectCaseF (f Text) -> f Case
@@ -118,19 +122,19 @@ selectCaseF (n, mx) = selectCase . (n,) <$> mx
 selectCase :: SelectCaseF Text -> Case
 selectCase = id
 
-exactPluralCases :: (Traversable t, Applicative f) => t (PluralCaseF PluralExact (f Text)) -> f [Case]
+exactPluralCases :: Traversable t => t (PluralCaseF PluralExact (Compiler Text)) -> Compiler [Case]
 exactPluralCases = fmap toList . traverse exactPluralCaseF
 
-exactPluralCaseF :: Functor f => PluralCaseF PluralExact (f Text) -> f Case
+exactPluralCaseF :: PluralCaseF PluralExact (Compiler Text) -> Compiler Case
 exactPluralCaseF (n, mx) = exactPluralCase . (n,) <$> mx
 
 exactPluralCase :: PluralCaseF PluralExact Text -> Case
 exactPluralCase (PluralExact n, x) = ("=" <> n, x)
 
-rulePluralCases :: (Traversable t, Applicative f) => t (PluralCaseF PluralRule (f Text)) -> f [Case]
+rulePluralCases :: Traversable t => t (PluralCaseF PluralRule (Compiler Text)) -> Compiler [Case]
 rulePluralCases = fmap toList . traverse rulePluralCaseF
 
-rulePluralCaseF :: Functor f => PluralCaseF PluralRule (f Text) -> f Case
+rulePluralCaseF :: PluralCaseF PluralRule (Compiler Text) -> Compiler Case
 rulePluralCaseF (r, mx) = rulePluralCase . (r,) <$> mx
 
 rulePluralCase :: PluralCaseF PluralRule Text -> Case
