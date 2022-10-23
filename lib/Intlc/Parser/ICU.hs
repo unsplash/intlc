@@ -126,8 +126,8 @@ callback = do
        else closePos `failingWith'` BadClosingCallbackTag oname cname
     where children n = do
             eom <- asks endOfInput
-            stream <- nodesTill (lookAhead $ void (string "</") <|> eom)
-            pure . flip (Callback n) Fin $ stream
+            nodes <- nodesTill (lookAhead $ void (string "</") <|> eom)
+            pure . flip (Callback n) Fin $ nodes
           closing = fmap isJust . hidden . optional . char $ '/'
 
 interp :: Parser Node

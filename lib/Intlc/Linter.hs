@@ -36,7 +36,7 @@ maybeToStatus (Just xs) = Failure xs
 type Rule a = Node -> Maybe a
 
 lintWith :: [Rule a] -> Message -> Status a
-lintWith rules (Message stream) = toStatus $ rules `flap` stream
+lintWith rules (Message x) = toStatus $ rules `flap` x
   where toStatus = maybeToStatus . nonEmpty . catMaybes
 
 lintExternal :: Message -> Status ExternalLint

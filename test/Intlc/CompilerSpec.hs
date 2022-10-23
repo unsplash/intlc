@@ -111,7 +111,7 @@ spec = describe "compiler" $ do
       g [c Zero mempty] `shouldBe` universe
       g [c Many mempty, c Zero mempty] `shouldBe` universe
 
-    it "copies the wildcard stream to new rules" $ do
+    it "copies the wildcard node to new rules" $ do
       let xs = "foo"
       let c = (,)
       let w = id
