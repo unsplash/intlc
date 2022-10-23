@@ -55,11 +55,11 @@ msg = msgTill =<< asks endOfInput
 
 -- Parse a message until the provided parser matches.
 msgTill :: Parser a -> Parser Message
-msgTill = fmap Message . streamTill
+msgTill = fmap Message . nodesTill
 
--- Parse a stream until the provided parser matches.
-streamTill :: Parser a -> Parser Node
-streamTill = fmap mconcat <$> manyTill node
+-- Parse as many `Node`s as possible until the provided parser matches.
+nodesTill :: Parser a -> Parser Node
+nodesTill = fmap mconcat <$> manyTill node
 
 -- The core parser of this module. Parse as many of these as you'd like until
 -- reaching an anticipated delimiter, such as a double quote in the surrounding
@@ -126,7 +126,7 @@ callback = do
        else closePos `failingWith'` BadClosingCallbackTag oname cname
     where children n = do
             eom <- asks endOfInput
-            stream <- streamTill (lookAhead $ void (string "</") <|> eom)
+            stream <- nodesTill (lookAhead $ void (string "</") <|> eom)
             pure . flip (Callback n) Fin $ stream
           closing = fmap isJust . hidden . optional . char $ '/'
 
@@ -157,7 +157,7 @@ dateTimeFmt = choice
   ]
 
 caseBody :: Parser Node
-caseBody = string "{" *> streamTill (string "}")
+caseBody = string "{" *> nodesTill (string "}")
 
 boolCases :: Parser (Node, Node)
 boolCases = (,)
