@@ -88,12 +88,14 @@ spec = describe "ICU parser" $ do
         parse msg "x'y" `shouldParse` Message "x'y"
 
   describe "interpolation" $ do
+    let interp' = interp ?? Fin
+
     it "interpolates appropriately" $ do
-      parse interp "{x}" `shouldParse` String' "x"
+      parse interp' "{x}" `shouldParse` String' "x"
 
     it "only accepts alphanumeric identifiers" $ do
-      parse interp "{XyZ}" `shouldParse` String' "XyZ"
-      parse interp `shouldFailOn` "{x y}"
+      parse interp' "{XyZ}" `shouldParse` String' "XyZ"
+      parse interp' `shouldFailOn` "{x y}"
 
     it "disallows bad types" $ do
       parse msg `shouldFailOn` "{n, enum}"
@@ -101,49 +103,50 @@ spec = describe "ICU parser" $ do
 
     describe "bool" $ do
       it "requires both bool cases" $ do
-        parse interp "{x, boolean, true {y} false {z}}" `shouldParse` Bool' "x" "y" "z"
-        parse interp `shouldFailOn` "{x, boolean, true {y}}"
-        parse interp `shouldFailOn` "{x, boolean, false {y}}"
+        parse interp' "{x, boolean, true {y} false {z}}" `shouldParse` Bool' "x" "y" "z"
+        parse interp' `shouldFailOn` "{x, boolean, true {y}}"
+        parse interp' `shouldFailOn` "{x, boolean, false {y}}"
 
       it "enforces case order" $ do
-        parse interp `shouldFailOn` "{x, boolean, false {y} true {z}}"
+        parse interp' `shouldFailOn` "{x, boolean, false {y} true {z}}"
 
       it "disallows arbitrary cases" $ do
-        parse interp `shouldFailOn` "{x, boolean, true {y} nottrue {z}}"
+        parse interp' `shouldFailOn` "{x, boolean, true {y} nottrue {z}}"
 
     describe "date" $ do
       it "disallows bad formats" $ do
-        parse interp "{x, date, short}" `shouldParse` Date' "x" Short
-        parse interp `shouldFailOn` "{x, date, miniature}"
+        parse interp' "{x, date, short}" `shouldParse` Date' "x" Short
+        parse interp' `shouldFailOn` "{x, date, miniature}"
 
     describe "time" $ do
       it "disallows bad formats" $ do
-        parse interp "{x, time, short}" `shouldParse` Time' "x" Short
-        parse interp `shouldFailOn` "{x, time, miniature}"
+        parse interp' "{x, time, short}" `shouldParse` Time' "x" Short
+        parse interp' `shouldFailOn` "{x, time, miniature}"
 
   describe "callback" $ do
+    let callback' = callback ?? Fin
     let e i = errFancy i . fancy . ErrorCustom . FailedMsgParse
 
     it "parses nested" $ do
-      parse callback "<f><g>x{y}z</g></f>" `shouldParse`
+      parse callback' "<f><g>x{y}z</g></f>" `shouldParse`
         Callback' "f" (Callback' "g" (mconcat ["x", String' "y", "z"]))
 
     it "requires closing tag" $ do
-      parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
+      parse callback' "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
 
     it "requires opening tag" $ do
-      parse callback "</hello> <there>" `shouldFailWith` e 2 (NoOpeningCallbackTag "hello")
+      parse callback' "</hello> <there>" `shouldFailWith` e 2 (NoOpeningCallbackTag "hello")
 
     it "validates closing tag name" $ do
-      parse callback "<hello></hello>" `shouldParse` Callback' "hello" mempty
-      parse callback "<hello></there>" `shouldFailWith` e 9 (BadClosingCallbackTag "hello" "there")
+      parse callback' "<hello></hello>" `shouldParse` Callback' "hello" mempty
+      parse callback' "<hello></there>" `shouldFailWith` e 9 (BadClosingCallbackTag "hello" "there")
 
     it "only accepts alphanumeric identifiers" $ do
-      parse callback "<XyZ></XyZ>" `shouldParse` Callback' "XyZ" mempty
-      parse callback `shouldFailOn` "<x y></x y>"
+      parse callback' "<XyZ></XyZ>" `shouldParse` Callback' "XyZ" mempty
+      parse callback' `shouldFailOn` "<x y></x y>"
 
   describe "plural" $ do
-    let cardinalCases' = cardinalCases "arg" <* eof
+    let cardinalCases' = cardinalCases "arg" <* eof ?? Fin
 
     it "disallows wildcard not at the end" $ do
       parse cardinalCases' `shouldSucceedOn` "=1 {foo} other {bar}"
@@ -165,7 +168,7 @@ spec = describe "ICU parser" $ do
         CardinalInexact' "arg" (pure (PluralExact "0", "foo")) (pure (Few, "bar")) (mconcat ["baz ", PluralRef' "xyz"])
 
   describe "selectordinal" $ do
-    let ordinalCases' = ordinalCases "arg" <* eof
+    let ordinalCases' = ordinalCases "arg" <* eof ?? Fin
 
     it "disallows wildcard not at the end" $ do
       parse ordinalCases' `shouldSucceedOn` "one {foo} other {bar}"
@@ -186,7 +189,7 @@ spec = describe "ICU parser" $ do
         Ordinal' "arg" (pure (PluralExact "0", "foo")) (pure (Few, "bar")) (mconcat ["baz ", PluralRef' "xyz"])
 
   describe "select" $ do
-    let selectCases' = selectCases "arg" <* eof
+    let selectCases' = selectCases "arg" <* eof ?? Fin
 
     it "disallows wildcard not at the end" $ do
       parse selectCases' "foo {bar} other {baz}" `shouldParse`
