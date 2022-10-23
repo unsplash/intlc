@@ -77,7 +77,7 @@ node = choice
   , plaintext
   ]
 
--- Parse plaintext, including single quote escape sequences.
+-- Parse a character or a potentially larger escape sequence.
 plaintext :: Parser Node
 plaintext = choice
   [ try escaped
