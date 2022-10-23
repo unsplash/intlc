@@ -6,7 +6,7 @@
 -- instead used post-flattening. Additionally it only operates upon individual
 -- ICU messages, offloading JSON handling to the caller.
 
-module Intlc.Backend.ICU.Compiler where
+module Intlc.Backend.ICU.Compiler (compileMsg, Formatting (..)) where
 
 import           Data.Functor.Foldable (cata)
 import qualified Data.Text             as T
@@ -14,15 +14,27 @@ import           Intlc.ICU
 import           Prelude
 import           Utils                 ((<>^))
 
-compileMsg :: Message -> Text
-compileMsg = node . unMessage
+compileMsg :: Formatting -> Message -> Text
+compileMsg x y = node x (unMessage y)
 
-type Indents = Int
+data Formatting
+  = SingleLine
+  | MultiLine
 
-type Compiler = Reader Indents
+data Config = Config
+  -- Expected to be potentially supplied externally.
+  { fmt          :: Formatting
+  -- Expected to be supplied internally.
+  , indentLevels :: Int
+  }
+
+type Compiler = Reader Config
+
+increment :: Compiler a -> Compiler a
+increment = local $ \x -> x { indentLevels = x.indentLevels + 1 }
 
 node :: Formatting -> Node -> Text
-node fo ast = runReader (cata go ast) 0 where
+node fo ast = runReader (cata go ast) (Config fo 0) where
   go :: NodeF (Compiler Text) -> Compiler Text
   go = \case
     FinF -> pure mempty
@@ -31,7 +43,7 @@ node fo ast = runReader (cata go ast) 0 where
 
     (BoolF { nameF, trueCaseF, falseCaseF, nextF }) ->
       let cs = sequence [("true",) <$> trueCaseF, ("false",) <$> falseCaseF]
-       in (boolean nameF =<< cs) <>^ nextF
+       in (boolean nameF cs) <>^ nextF
 
     (StringF n next) -> (string n <>) <$> next
 
@@ -41,38 +53,38 @@ node fo ast = runReader (cata go ast) 0 where
 
     (TimeF n fmt next) -> (time n fmt <>) <$> next
 
-    (CardinalExactF n xs next) -> (cardinal n =<< exactPluralCases xs) <>^ next
+    (CardinalExactF n xs next) -> (cardinal n $ exactPluralCases xs) <>^ next
 
     (CardinalInexactF n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
-       in (cardinal n =<< cs) <>^ next
+       in (cardinal n cs) <>^ next
 
     (OrdinalF n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
-       in (ordinal n =<< cs) <>^ next
+       in (ordinal n cs) <>^ next
 
     (PluralRefF _ next) -> ("#" <>) <$> next
 
-    (SelectNamedF n xs y) -> (select n =<< selectCases xs) <>^ y
+    (SelectNamedF n xs y) -> (select n $ selectCases xs) <>^ y
 
-    (SelectWildF n w x) -> (select n . pure . wildcard =<< w) <>^ x
+    (SelectWildF n w x) -> (select n $ pure . wildcard <$> w) <>^ x
 
     (SelectNamedWildF n xs w next) ->
       let cs = (<>) <$> selectCases xs <*> (pure . wildcard <$> w)
-       in (select n =<< cs) <>^ next
+       in (select n cs) <>^ next
 
     (CallbackF n xs next) -> (callback n <$> xs) <>^ next
 
-cardinal :: Arg -> [Case] -> Compiler Text
+cardinal :: Arg -> Compiler [Case] -> Compiler Text
 cardinal n x = typedInterp "plural" n <$> (pure <$> cases x)
 
-ordinal :: Arg -> [Case] -> Compiler Text
+ordinal :: Arg -> Compiler [Case] -> Compiler Text
 ordinal n x = typedInterp "selectordinal" n <$> (pure <$> cases x)
 
-select :: Arg -> [Case] -> Compiler Text
+select :: Arg -> Compiler [Case] -> Compiler Text
 select n x = typedInterp "select" n <$> (pure <$> cases x)
 
-boolean :: Arg -> [Case] -> Compiler Text
+boolean :: Arg -> Compiler [Case] -> Compiler Text
 boolean n x = typedInterp "boolean" n <$> (pure <$> cases x)
 
 datetime :: Text -> Arg -> DateTimeFmt -> Text
@@ -104,8 +116,18 @@ callback n x = "<" <> unArg n <> ">" <> x <> "</" <> unArg n <> ">"
 
 type Case = (Text, Text)
 
-cases :: [Case] -> Compiler Text
-cases = pure . unwords . fmap (uncurry case')
+-- | This is where we'll manage indentation for all case-style interpolations,
+-- hence taking a monadic input.
+cases :: Compiler [Case] -> Compiler Text
+cases mcs = asks fmt >>= \case
+  SingleLine -> unwords . fmap (uncurry case') <$> mcs
+  MultiLine  -> do
+    i <- asks indentLevels
+    let indentedCase = (indentBy (i + 1) <>) . uncurry case'
+    cs <- fmap indentedCase <$> increment mcs
+    pure $ newline <> T.intercalate newline cs <> newline <> indentBy i
+    where newline = "\n"
+          indentBy = flip T.replicate "\t"
 
 case' :: Text -> Text -> Text
 case' n x = n <> " {" <> x <> "}"

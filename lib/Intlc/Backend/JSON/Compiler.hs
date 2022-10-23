@@ -3,7 +3,8 @@ module Intlc.Backend.JSON.Compiler where
 import           Data.List.Extra            (escapeJSON)
 import qualified Data.Map                   as M
 import qualified Data.Text                  as T
-import           Intlc.Backend.ICU.Compiler (compileMsg)
+import           Intlc.Backend.ICU.Compiler (Formatting (SingleLine),
+                                             compileMsg)
 import           Intlc.Core
 import           Prelude
 
@@ -34,7 +35,7 @@ compileDataset = obj . M.toList . M.map translation
 translation :: Translation -> Text
 translation Translation { message, backend, mdesc } = obj . fromList $ ys
   where ys =
-          [ ("message", strVal . compileMsg $ message)
+          [ ("message", strVal . compileMsg SingleLine $ message)
           , ("backend", backendVal)
           , ("description", maybe nullVal strVal mdesc)
           ]
