@@ -5,8 +5,9 @@ import qualified Data.Text          as T
 import           Intlc.Compiler     (compileDataset, compileFlattened)
 import           Intlc.Core
 import           Intlc.Linter
-import           Intlc.Parser       (parseDataset, printErr)
+import           Intlc.Parser       (parseDataset, parseMessage, printErr)
 import           Intlc.Parser.Error (ParseFailure)
+import           Intlc.Prettify     (prettify)
 import           Prelude
 
 main :: IO ()
@@ -14,6 +15,7 @@ main = getOpts >>= \case
   Compile path loc -> tryGetParsedAt path >>= compile loc
   Flatten path     -> tryGetParsedAt path >>= flatten
   Lint    path     -> tryGetParsedAt path >>= lint
+  Prettify msg     -> tryPrettify msg
 
 compile :: MonadIO m => Locale -> Dataset Translation -> m ()
 compile loc = compileDataset loc >>> \case
@@ -25,6 +27,9 @@ flatten = putTextLn . compileFlattened
 
 lint :: MonadIO m => Dataset Translation -> m ()
 lint xs = whenJust (lintDatasetExternal xs) $ die . T.unpack
+
+tryPrettify :: MonadIO m => Text -> m ()
+tryPrettify = either (die . printErr) (putTextLn . prettify) . parseMessage "input"
 
 tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset Translation)
 tryGetParsedAt = parserDie <=< getParsedAt

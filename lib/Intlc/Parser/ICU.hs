@@ -41,6 +41,14 @@ ident = label "alphabetic identifier" $ T.pack <$> some letterChar
 arg :: Parser Arg
 arg = Arg <$> ident
 
+-- | Parse a message until end of input.
+--
+-- To instead parse a message as part of a broader data structure, instead look
+-- at `msg` and its `endOfInput` state property.
+msg' :: Parsec ParseErr Text Message
+msg' = runReaderT msg cfg where
+  cfg = emptyState { endOfInput = eof }
+
 -- Parse a message until the end of input parser matches.
 msg :: Parser Message
 msg = msgTill =<< asks endOfInput
