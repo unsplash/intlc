@@ -24,7 +24,7 @@ spec = describe "linter" $ do
         let s = SelectWild'
 
         lint (Message $ mconcat [s "x" (s "y" mempty), s "z" mempty])
-          `shouldBe` Failure (pure $ RedundantSelect ("x" :| ["y", "z"]))
+          `shouldBe` Failure (RedundantSelect <$> ("x" :| ["y", "z"]))
 
     describe "redundant plural" $ do
       let lint = lintWith' redundantPluralRule
@@ -47,11 +47,11 @@ spec = describe "linter" $ do
 
       it "fails on ordinal plural with only a wildcard" $ do
         lint (Message $ Callback' "y" (Ordinal' "x" [] [] mempty))
-          `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
+          `shouldBe` Failure (pure $ RedundantPlural "x")
 
       it "fails on inexact cardinal plural with only a wildcard" $ do
         lint (Message $ Callback' "y" (CardinalInexact' "x" [] [] mempty))
-          `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
+          `shouldBe` Failure (pure $ RedundantPlural "x")
 
   describe "internal" $ do
     describe "unicode" $ do
@@ -59,11 +59,11 @@ spec = describe "linter" $ do
 
       it "does not lint text with emoji" $ do
         lint (Message "Message with an emoji ❤️ 🥺")
-          `shouldBe` Failure (pure $ InvalidNonAsciiCharacter (fromList "❤️🥺"))
+          `shouldBe` Failure (InvalidNonAsciiCharacter <$> fromList "❤️🥺")
 
       it "does not lint text that is deeply nested with emoji" $ do
         lint (Message $ mconcat [Callback' "Hello" mempty, Bool' "Hello" "Message with an emoji 🥺" mempty])
-          `shouldBe` Failure (fromList [InvalidNonAsciiCharacter (fromList ['🥺'])])
+          `shouldBe` Failure (InvalidNonAsciiCharacter <$> fromList "🥺")
 
       it "lints streams without emoji" $ do
         lint (Message "Text without emoji") `shouldBe` Success

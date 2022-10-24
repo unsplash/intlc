@@ -11,13 +11,13 @@ import           Intlc.ICU
 import           Prelude
 
 data ExternalLint
-  = RedundantSelect (NonEmpty Arg)
-  | RedundantPlural (NonEmpty Arg)
+  = RedundantSelect Arg
+  | RedundantPlural Arg
   deriving (Eq, Show)
 
 data InternalLint
   = TooManyInterpolations (NonEmpty Arg)
-  | InvalidNonAsciiCharacter (NonEmpty Char)
+  | InvalidNonAsciiCharacter Char
   deriving (Eq,Show)
 
 data Status a
@@ -33,11 +33,12 @@ maybeToStatus :: Maybe (NonEmpty a) -> Status a
 maybeToStatus Nothing   = Success
 maybeToStatus (Just xs) = Failure xs
 
-type Rule a = Node -> Maybe a
+type Rule a = Node -> Maybe (NonEmpty a)
 
 lintWith :: [Rule a] -> Message -> Status a
-lintWith rules (Message stream) = toStatus $ rules `flap` stream
-  where toStatus = maybeToStatus . nonEmpty . catMaybes
+lintWith rules (Message ast) = maybeToStatus . catNEMaybes . flap rules $ ast
+  where catNEMaybes :: [Maybe (NonEmpty a)] -> Maybe (NonEmpty a)
+        catNEMaybes = nonEmpty . foldMap (foldMap toList)
 
 lintExternal :: Message -> Status ExternalLint
 lintExternal = lintWith
@@ -59,15 +60,13 @@ lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
 
 lintDatasetExternal :: Dataset Translation -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
-  RedundantSelect xs -> "Redundant select: " <> T.intercalate ", " (fmap unArg . toList $ xs)
-  RedundantPlural xs -> "Redundant plural: " <> T.intercalate ", " (fmap unArg . toList $ xs)
+  RedundantSelect x -> "Redundant select: " <> unArg x
+  RedundantPlural x -> "Redundant plural: " <> unArg x
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
-  TooManyInterpolations xs         -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
-  (InvalidNonAsciiCharacter chars) -> "Following characters are not allowed: " <> intercalateChars chars
-    where intercalateChars:: NonEmpty Char -> Text
-          intercalateChars = T.intercalate " " . toList . fmap T.singleton
+  TooManyInterpolations xs   -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
+  InvalidNonAsciiCharacter x -> "Following character disallowed: " <> T.singleton x
 
 formatFailureWith :: (Functor f, Foldable f) => (a -> Text) -> Text -> f a -> Text
 formatFailureWith f k es = title <> msgs
@@ -78,7 +77,7 @@ formatFailureWith f k es = title <> msgs
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.
 redundantSelectRule :: Rule ExternalLint
-redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
+redundantSelectRule = fmap (fmap RedundantSelect) . nonEmpty . idents where
   idents = cata $ \case
     SelectWildF n xs ys -> n : xs <> ys
     x                   -> fold x
@@ -86,7 +85,7 @@ redundantSelectRule = fmap RedundantSelect . nonEmpty . idents where
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
 redundantPluralRule :: Rule ExternalLint
-redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
+redundantPluralRule = fmap (fmap RedundantPlural) . nonEmpty . idents where
   idents = cata $ \case
     CardinalInexactF n [] [] xs ys -> n : xs <> ys
     OrdinalF         n [] [] xs ys -> n : xs <> ys
@@ -100,7 +99,7 @@ redundantPluralRule = fmap RedundantPlural . nonEmpty . idents where
 -- because the vendor's tool has no issues parsing its syntax and the latter
 -- because it's a special case that we can't rewrite.
 interpolationsRule :: Rule InternalLint
-interpolationsRule = count . idents where
+interpolationsRule = fmap pure . count . idents where
   count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
   idents = cata $ \case
@@ -119,7 +118,7 @@ isAcceptedChar c = isAscii c || c `elem` acceptedChars
 
 unsupportedUnicodeRule :: Rule InternalLint
 unsupportedUnicodeRule = output . nonAscii where
-  output = fmap InvalidNonAsciiCharacter . nonEmpty
+  output = fmap (fmap InvalidNonAsciiCharacter) . nonEmpty
   nonAscii = cata $ \case
     CharF c xs -> guarded (not . isAcceptedChar) c <> xs
     x          -> fold x
