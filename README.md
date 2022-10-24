@@ -65,6 +65,27 @@ welcome:
   Redundant select: name
 ```
 
+### Formatting
+
+Pretty-print an ICU message. Useful for inspecting larger messages such as flattened ones.
+
+```console
+$ cat translations.json
+{"tagline": {"message":"{hasTags, boolean, true {{type, select, overLimit {{upperLimit, number}+ best free {formattedListOfTags} photos on Unsplash} belowLimit {{photoTotal, number} best free {formattedListOfTags} photos on Unsplash}}} false {{type, select, overLimit {{upperLimit, number}+ best free photos on Unsplash} belowLimit {{photoTotal, number} best free photos on Unsplash}}}}"}}
+$ intlc prettify $(cat translations.json | jq -r .tagline.message)
+{hasTags, boolean,
+  true {{type, select,
+    overLimit {{upperLimit, number}+ best free {formattedListOfTags} photos on Unsplash}
+    belowLimit {{photoTotal, number} best free {formattedListOfTags} photos on Unsplash}
+  }}
+  false {{type, select,
+    overLimit {{upperLimit, number}+ best free photos on Unsplash}
+    belowLimit {{photoTotal, number} best free photos on Unsplash}
+  }}
+}
+
+```
+
 ## Schema
 
 Translation files should be encoded as JSON and might look something like this:
