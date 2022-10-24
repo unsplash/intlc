@@ -1,7 +1,8 @@
 module Intlc.EndToEndSpec (spec) where
 
 import qualified Data.Text                  as T
-import           Intlc.Backend.ICU.Compiler (compileMsg)
+import           Intlc.Backend.ICU.Compiler (Formatting (SingleLine),
+                                             compileMsg)
 import           Intlc.Compiler             (compileDataset, expandPlurals)
 import           Intlc.Core                 (Locale (Locale))
 import           Intlc.Parser               (parseDataset)
@@ -19,7 +20,7 @@ parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text
 parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset "test"
 
 parseAndExpandMsg :: Text -> Either ParseFailure Text
-parseAndExpandMsg = fmap (compileMsg . expandPlurals) . parseMsg
+parseAndExpandMsg = fmap (compileMsg SingleLine . expandPlurals) . parseMsg
   where parseMsg = runParser (runReaderT msg (emptyState { endOfInput = eof })) "test"
 
 golden :: String -> Text -> Golden String

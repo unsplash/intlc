@@ -70,6 +70,7 @@ library
     Intlc.Parser.Error
     Intlc.Parser.JSON
     Intlc.Parser.ICU
+    Intlc.Prettify
     Utils
 
 test-suite test-intlc
@@ -97,3 +98,4 @@ test-suite test-intlc
     Intlc.LinterSpec
     Intlc.Parser.JSONSpec
     Intlc.Parser.ICUSpec
+    Intlc.PrettifySpec

@@ -34,7 +34,7 @@ Take a JSON object of ICU messages, and a locale, and output TypeScript to stdou
 
 ```console
 $ cat translations.json
-{"welcome": {"message": "Hello {name}"}}
+{"welcome":{"message": "Hello {name}"}}
 $ intlc compile translations.json -l en-US > translations.ts
 $ cat translations.ts
 export const welcome: (x: { name: string }) => string = x => `Hello ${x.name}`
@@ -59,10 +59,31 @@ Lint against suboptimal use of ICU syntax.
 
 ```console
 $ cat translations.json
-{"welcome": {"message": "Hello {name, select, other {{name}}}"}}
+{"welcome":{"message": "Hello {name, select, other {{name}}}"}}
 $ intlc lint translation.json
 welcome:
   Redundant select: name
+```
+
+### Formatting
+
+Pretty-print an ICU message. Useful for inspecting larger messages such as flattened ones.
+
+```console
+$ cat translations.json
+{"tagline": {"message":"{hasTags, boolean, true {{type, select, overLimit {{upperLimit, number}+ best free {formattedListOfTags} photos on Unsplash} belowLimit {{photoTotal, number} best free {formattedListOfTags} photos on Unsplash}}} false {{type, select, overLimit {{upperLimit, number}+ best free photos on Unsplash} belowLimit {{photoTotal, number} best free photos on Unsplash}}}}"}}
+$ intlc prettify $(cat translations.json | jq -r .tagline.message)
+{hasTags, boolean,
+  true {{type, select,
+    overLimit {{upperLimit, number}+ best free {formattedListOfTags} photos on Unsplash}
+    belowLimit {{photoTotal, number} best free {formattedListOfTags} photos on Unsplash}
+  }}
+  false {{type, select,
+    overLimit {{upperLimit, number}+ best free photos on Unsplash}
+    belowLimit {{photoTotal, number} best free photos on Unsplash}
+  }}
+}
+
 ```
 
 ## Schema

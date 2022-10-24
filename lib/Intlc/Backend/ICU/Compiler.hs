@@ -6,50 +6,161 @@
 -- instead used post-flattening. Additionally it only operates upon individual
 -- ICU messages, offloading JSON handling to the caller.
 
-module Intlc.Backend.ICU.Compiler where
+module Intlc.Backend.ICU.Compiler (compileMsg, Formatting (..)) where
 
 import           Data.Functor.Foldable (cata)
 import qualified Data.Text             as T
 import           Intlc.ICU
 import           Prelude
+import           Utils                 ((<>^))
 
-compileMsg :: Message -> Text
-compileMsg = node . unMessage
+compileMsg :: Formatting -> Message -> Text
+compileMsg x y = node x (unMessage y)
 
-node :: Node -> Text
-node = cata $ \case
-  FinF -> mempty
-  (CharF c x)     -> T.singleton c <> x
-  x@(BoolF {})    -> "{" <> (unArg . nameF $ x) <> ", boolean, true {" <> trueCaseF x <> "} false {" <> falseCaseF x <> "}}" <> nextF x
-  (StringF n x)   -> "{" <> unArg n <> "}" <> x
-  (NumberF n x)   -> "{" <> unArg n <> ", number}" <> x
-  (DateF n fmt x) -> "{" <> unArg n <> ", date, " <> dateTimeFmt fmt  <> "}" <> x
-  (TimeF n fmt x) -> "{" <> unArg n <> ", time, " <> dateTimeFmt fmt  <> "}" <> x
-  (CardinalExactF n xs y)        -> "{" <> unArg n <> ", plural, " <> cases <> "}" <> y
-    where cases = unwords . toList . fmap exactPluralCase $ xs
-  (CardinalInexactF n xs ys w z) -> "{" <> unArg n <> ", plural, " <> cases <> "}" <> z
-    where cases = unwords . mconcat $ [exactPluralCase <$> xs, rulePluralCase <$> ys, pure $ wildcard w]
-  (OrdinalF n xs ys w z)         -> "{" <> unArg n <> ", selectordinal, " <> cases <> "}" <> z
-    where cases = unwords $ (exactPluralCase <$> xs) <> (rulePluralCase <$> ys) <> pure (wildcard w)
-  (PluralRefF _ x)    -> "#" <> x
-  (SelectNamedF n xs y)       -> "{" <> unArg n <> ", select, " <> cases <> "}" <> y
-    where cases = unwords . fmap selectCase . toList $ xs
-  (SelectWildF n w x)         -> "{" <> unArg n <> ", select, " <> wildcard w <> "}" <> x
-  (SelectNamedWildF n xs w y) -> "{" <> unArg n <> ", select, " <> cases <> "}" <> y
-    where cases = unwords . (<> pure (wildcard w)) . fmap selectCase . toList $ xs
-  (CallbackF n xs y) -> "<" <> unArg n <> ">" <> xs <> "</" <> unArg n <> ">" <> y
+data Formatting
+  = SingleLine
+  | MultiLine
 
-dateTimeFmt :: DateTimeFmt -> Text
-dateTimeFmt Short  = "short"
-dateTimeFmt Medium = "medium"
-dateTimeFmt Long   = "long"
-dateTimeFmt Full   = "full"
+data Config = Config
+  -- Expected to be potentially supplied externally.
+  { fmt          :: Formatting
+  -- Expected to be supplied internally.
+  , indentLevels :: Int
+  }
 
-exactPluralCase :: PluralCaseF PluralExact Text -> Text
-exactPluralCase (PluralExact n, x) = "=" <> n <> " {" <> x <> "}"
+type Compiler = Reader Config
 
-rulePluralCase :: PluralCaseF PluralRule Text -> Text
-rulePluralCase (r, x) = pluralRule r <> " {" <> x <> "}"
+increment :: Compiler a -> Compiler a
+increment = local $ \x -> x { indentLevels = x.indentLevels + 1 }
+
+node :: Formatting -> Node -> Text
+node fo ast = runReader (cata go ast) (Config fo 0) where
+  go :: NodeF (Compiler Text) -> Compiler Text
+  go = \case
+    FinF -> pure mempty
+
+    (CharF c next) -> (T.singleton c <>) <$> next
+
+    (BoolF { nameF, trueCaseF, falseCaseF, nextF }) ->
+      let cs = sequence [("true",) <$> trueCaseF, ("false",) <$> falseCaseF]
+       in (boolean nameF cs) <>^ nextF
+
+    (StringF n next) -> (string n <>) <$> next
+
+    (NumberF n next) -> (number n <>) <$> next
+
+    (DateF n fmt next) -> (date n fmt <>) <$> next
+
+    (TimeF n fmt next) -> (time n fmt <>) <$> next
+
+    (CardinalExactF n xs next) -> (cardinal n $ exactPluralCases xs) <>^ next
+
+    (CardinalInexactF n xs ys w next) ->
+      let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
+       in (cardinal n cs) <>^ next
+
+    (OrdinalF n xs ys w next) ->
+      let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
+       in (ordinal n cs) <>^ next
+
+    (PluralRefF _ next) -> ("#" <>) <$> next
+
+    (SelectNamedF n xs y) -> (select n $ selectCases xs) <>^ y
+
+    (SelectWildF n w x) -> (select n $ pure . wildcard <$> w) <>^ x
+
+    (SelectNamedWildF n xs w next) ->
+      let cs = (<>) <$> selectCases xs <*> (pure . wildcard <$> w)
+       in (select n cs) <>^ next
+
+    (CallbackF n xs next) -> (callback n <$> xs) <>^ next
+
+cardinal :: Arg -> Compiler [Case] -> Compiler Text
+cardinal n x = typedInterp "plural" n <$> (pure <$> cases x)
+
+ordinal :: Arg -> Compiler [Case] -> Compiler Text
+ordinal n x = typedInterp "selectordinal" n <$> (pure <$> cases x)
+
+select :: Arg -> Compiler [Case] -> Compiler Text
+select n x = typedInterp "select" n <$> (pure <$> cases x)
+
+boolean :: Arg -> Compiler [Case] -> Compiler Text
+boolean n x = typedInterp "boolean" n <$> (pure <$> cases x)
+
+datetime :: Text -> Arg -> DateTimeFmt -> Text
+datetime t n f = typedInterp t n (pure . dateTimeFmt $ f)
+
+date :: Arg -> DateTimeFmt -> Text
+date = datetime "date"
+
+time :: Arg -> DateTimeFmt -> Text
+time = datetime "time"
+
+typedInterp :: Text -> Arg -> [Text] -> Text
+typedInterp t n xs = interp n (t : xs)
+
+number :: Arg -> Text
+number = flip interp (pure "number")
+
+string :: Arg -> Text
+string = flip interp mempty
+
+interp :: Arg -> [Text] -> Text
+interp n xs = "{" <> interpPieces (unArg n : xs) <> "}"
+
+interpPieces :: [Text] -> Text
+interpPieces = T.intercalate ", "
+
+callback :: Arg -> Text -> Text
+callback n x = "<" <> unArg n <> ">" <> x <> "</" <> unArg n <> ">"
+
+type Case = (Text, Text)
+
+-- | This is where we'll manage indentation for all case-style interpolations,
+-- hence taking a monadic input.
+cases :: Compiler [Case] -> Compiler Text
+cases mcs = asks fmt >>= \case
+  SingleLine -> unwords . fmap (uncurry case') <$> mcs
+  MultiLine  -> do
+    i <- asks indentLevels
+    let indentedCase = (indentBy (i + 1) <>) . uncurry case'
+    cs <- fmap indentedCase <$> increment mcs
+    pure $ newline <> T.intercalate newline cs <> newline <> indentBy i
+    where newline = "\n"
+          indentBy = flip T.replicate "\t"
+
+case' :: Text -> Text -> Text
+case' n x = n <> " {" <> x <> "}"
+
+wildcard :: Text -> Case
+wildcard = ("other",)
+
+selectCases :: Traversable t => t (SelectCaseF (Compiler Text)) -> Compiler [Case]
+selectCases = fmap toList . traverse selectCaseF
+
+selectCaseF :: Functor f => SelectCaseF (f Text) -> f Case
+selectCaseF (n, mx) = selectCase . (n,) <$> mx
+
+selectCase :: SelectCaseF Text -> Case
+selectCase = id
+
+exactPluralCases :: Traversable t => t (PluralCaseF PluralExact (Compiler Text)) -> Compiler [Case]
+exactPluralCases = fmap toList . traverse exactPluralCaseF
+
+exactPluralCaseF :: PluralCaseF PluralExact (Compiler Text) -> Compiler Case
+exactPluralCaseF (n, mx) = exactPluralCase . (n,) <$> mx
+
+exactPluralCase :: PluralCaseF PluralExact Text -> Case
+exactPluralCase (PluralExact n, x) = ("=" <> n, x)
+
+rulePluralCases :: Traversable t => t (PluralCaseF PluralRule (Compiler Text)) -> Compiler [Case]
+rulePluralCases = fmap toList . traverse rulePluralCaseF
+
+rulePluralCaseF :: PluralCaseF PluralRule (Compiler Text) -> Compiler Case
+rulePluralCaseF (r, mx) = rulePluralCase . (r,) <$> mx
+
+rulePluralCase :: PluralCaseF PluralRule Text -> Case
+rulePluralCase = first pluralRule
 
 pluralRule :: PluralRule -> Text
 pluralRule Zero = "zero"
@@ -58,8 +169,8 @@ pluralRule Two  = "two"
 pluralRule Few  = "few"
 pluralRule Many = "many"
 
-selectCase :: SelectCaseF Text -> Text
-selectCase (n, x) = n <> " {" <> x <> "}"
-
-wildcard :: Text -> Text
-wildcard x = "other {" <> x <> "}"
+dateTimeFmt :: DateTimeFmt -> Text
+dateTimeFmt Short  = "short"
+dateTimeFmt Medium = "medium"
+dateTimeFmt Long   = "long"
+dateTimeFmt Full   = "full"
