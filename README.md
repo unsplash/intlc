@@ -34,7 +34,7 @@ Take a JSON object of ICU messages, and a locale, and output TypeScript to stdou
 
 ```console
 $ cat translations.json
-{"welcome": {"message": "Hello {name}"}}
+{"welcome":{"message": "Hello {name}"}}
 $ intlc compile translations.json -l en-US > translations.ts
 $ cat translations.ts
 export const welcome: (x: { name: string }) => string = x => `Hello ${x.name}`
@@ -59,7 +59,7 @@ Lint against suboptimal use of ICU syntax.
 
 ```console
 $ cat translations.json
-{"welcome": {"message": "Hello {name, select, other {{name}}}"}}
+{"welcome":{"message": "Hello {name, select, other {{name}}}"}}
 $ intlc lint translation.json
 welcome:
   Redundant select: name
