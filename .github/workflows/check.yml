@@ -19,16 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: haskell/actions/setup@v2
-        id: setup-haskell
-        with:
-          ghc-version: 9.2.4
-      - run: cabal freeze
+      - uses: cachix/install-nix-action@v18
+      - run: nix develop -c cabal update
+      - run: nix develop -c cabal freeze
       - uses: actions/cache@v3
         with:
-          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          path: ~/.cabal/store
           key: hashFiles('cabal.project.freeze')
-      - run: cabal build
+      - run: nix develop -c cabal build
   test:
     name: Test
     runs-on: ubuntu-latest
