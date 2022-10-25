@@ -90,6 +90,52 @@ spec = describe "linter" $ do
           , DuplicateSelectCase "b" "b2"
           ])
 
+    describe "duplicate plural case" $ do
+      let lint = lintWith' duplicatePluralCasesRule
+
+      it "reports each duplicate after the first" $ do
+        let x = Message $ mconcat
+              [ CardinalExact' "a" (fromList
+                [ ("a1", mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                , ("a1", mempty)
+                , ("a3", Ordinal' "aa"
+                    [ ("aa1", mempty)
+                    , ("aa1", mempty)
+                    ]
+                    [ (One, mempty)
+                    , (Many, mempty)
+                    , (One, mempty)
+                    ]
+                    mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                ])
+              , CardinalInexact' "b"
+                [ ("b1", mempty)
+                , ("b2", mempty)
+                , ("b3", mempty)
+                , ("b2", mempty)
+                ]
+                [ (One, mempty)
+                , (Two, mempty)
+                , (Zero, mempty)
+                , (Two, mempty)
+                ]
+                mempty
+              ]
+        lint x `shouldBe` Failure (fromList
+          [ DuplicatePluralCase "a" "=a1"
+          , DuplicatePluralCase "a" "=a1"
+          , DuplicatePluralCase "a" "=a2"
+          , DuplicatePluralCase "a" "=a1"
+          , DuplicatePluralCase "aa" "=aa1"
+          , DuplicatePluralCase "aa" "one"
+          , DuplicatePluralCase "b" "=b2"
+          , DuplicatePluralCase "b" "two"
+          ])
+
   describe "internal" $ do
     describe "unicode" $ do
       let lint = lintWith' unsupportedUnicodeRule

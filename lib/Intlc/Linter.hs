@@ -1,20 +1,22 @@
 module Intlc.Linter where
 
-import qualified Data.Text             as T
+import qualified Data.Text                  as T
 
-import           Control.Monad.Extra   (pureIf)
-import           Data.Char             (isAscii)
-import           Data.Functor.Foldable (cata)
-import qualified Data.Map              as M
+import           Control.Monad.Extra        (pureIf)
+import           Data.Char                  (isAscii)
+import           Data.Functor.Foldable      (cata)
+import qualified Data.Map                   as M
+import           Intlc.Backend.ICU.Compiler (pluralExact, pluralRule)
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
-import           Utils                 (bun)
+import           Utils                      (bun)
 
 data ExternalLint
   = RedundantSelect Arg
   | RedundantPlural Arg
   | DuplicateSelectCase Arg Text
+  | DuplicatePluralCase Arg Text
   deriving (Eq, Show)
 
 data InternalLint
@@ -47,6 +49,7 @@ lintExternal = lintWith
   [ redundantSelectRule
   , redundantPluralRule
   , duplicateSelectCasesRule
+  , duplicatePluralCasesRule
   ]
 
 lintInternal :: Message -> Status InternalLint
@@ -66,6 +69,7 @@ lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
   RedundantSelect x       -> "Redundant select: " <> unArg x
   RedundantPlural x       -> "Redundant plural: " <> unArg x
   DuplicateSelectCase x y -> "Duplicate select case: " <> unArg x <> ", " <> y
+  DuplicatePluralCase x y -> "Duplicate plural case: " <> unArg x <> ", " <> y
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
@@ -104,6 +108,37 @@ duplicateSelectCasesRule = fmap (fmap (uncurry DuplicateSelectCase)) . nonEmpty 
     x                           -> fold x
   here n = fmap (n,) . bun . fmap fst
   foldSelectCases = foldMap snd
+
+-- Duplicate cases in plural interpolations are redundant.
+duplicatePluralCasesRule :: Rule ExternalLint
+duplicatePluralCasesRule = fmap (fmap (uncurry DuplicatePluralCase)) . nonEmpty . cases where
+  cases = cata $ \case
+    CardinalExactF n xs ys -> mconcat
+      [ hereExact n xs
+      , foldPluralCases xs
+      , ys
+      ]
+    CardinalInexactF n xs ys zs zzs -> mconcat
+      [ hereExact n xs
+      , hereRules n ys
+      , foldPluralCases xs
+      , foldPluralCases ys
+      , zs
+      , zzs
+      ]
+    OrdinalF n xs ys zs zzs -> mconcat
+      [ hereExact n xs
+      , hereRules n ys
+      , foldPluralCases xs
+      , foldPluralCases ys
+      , zs
+      , zzs
+      ]
+    x                      -> fold x
+  hereExact n = fmap ((n,) . pluralExact) . bun . fmap fst
+  hereRules n = fmap ((n,) . pluralRule) . bun . fmap fst
+  foldPluralCases :: Foldable f => f (PluralCaseF a [(Arg, Text)]) -> [(Arg, Text)]
+  foldPluralCases = foldMap snd
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of a

@@ -6,7 +6,7 @@
 -- instead used post-flattening. Additionally it only operates upon individual
 -- ICU messages, offloading JSON handling to the caller.
 
-module Intlc.Backend.ICU.Compiler (compileMsg, Formatting (..)) where
+module Intlc.Backend.ICU.Compiler (compileMsg, Formatting (..), pluralExact, pluralRule) where
 
 import           Data.Functor.Foldable (cata)
 import qualified Data.Text             as T
@@ -151,7 +151,7 @@ exactPluralCaseF :: PluralCaseF PluralExact (Compiler Text) -> Compiler Case
 exactPluralCaseF (n, mx) = exactPluralCase . (n,) <$> mx
 
 exactPluralCase :: PluralCaseF PluralExact Text -> Case
-exactPluralCase (PluralExact n, x) = ("=" <> n, x)
+exactPluralCase = first pluralExact
 
 rulePluralCases :: Traversable t => t (PluralCaseF PluralRule (Compiler Text)) -> Compiler [Case]
 rulePluralCases = fmap toList . traverse rulePluralCaseF
@@ -168,6 +168,9 @@ pluralRule One  = "one"
 pluralRule Two  = "two"
 pluralRule Few  = "few"
 pluralRule Many = "many"
+
+pluralExact :: PluralExact -> Text
+pluralExact (PluralExact n) = "=" <> n
 
 dateTimeFmt :: DateTimeFmt -> Text
 dateTimeFmt Short  = "short"
