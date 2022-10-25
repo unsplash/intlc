@@ -104,11 +104,11 @@ interpolationsRule = fmap pure . count . idents where
   count _        = Nothing
   idents = cata $ \case
     BoolF n xs ys zs            -> n : xs <> ys <> zs
-    SelectNamedF n xs ys        -> n : selCases xs <> ys
+    SelectNamedF n xs ys        -> n : foldSelectCases xs <> ys
     SelectWildF n xs ys         -> n : xs <> ys
-    SelectNamedWildF n xs ys zs -> n : selCases xs <> ys <> zs
+    SelectNamedWildF n xs ys zs -> n : foldSelectCases xs <> ys <> zs
     x                           -> fold x
-  selCases = foldMap snd
+  foldSelectCases = foldMap snd
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
