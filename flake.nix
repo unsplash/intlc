@@ -35,7 +35,9 @@
             git
 
             cabal-install
+            hlint
             haskellPackages.hspec-golden
+            stylish-haskell
 
             # For typechecking golden output
             nodejs
