@@ -47,10 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: haskell/actions/hlint-setup@v2
-      - uses: haskell/actions/hlint-run@v2
-        with:
-          path: '["lib/", "cli/", "internal/"]'
+      - uses: cachix/install-nix-action@v18
+      - run: nix develop -c hlint lib cli internal
   # fmt:
   #   name: Formatting
   #   runs-on: ubuntu-latest
