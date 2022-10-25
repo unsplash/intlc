@@ -53,6 +53,43 @@ spec = describe "linter" $ do
         lint (Message $ Callback' "y" (CardinalInexact' "x" [] [] mempty))
           `shouldBe` Failure (pure $ RedundantPlural "x")
 
+    describe "duplicate select case" $ do
+      let lint = lintWith' duplicateSelectCasesRule
+
+      it "reports each duplicate after the first" $ do
+        let x = Message $ mconcat
+              [ SelectNamed' "a" (fromList
+                [ ("a1", mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                , ("a1", mempty)
+                , ("a3", SelectNamedWild' "aa" (fromList
+                    [ ("aa1", mempty)
+                    , ("aa1", mempty)
+                    ])
+                    mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                ])
+              , SelectNamedWild' "b" (fromList
+                [ ("b1", mempty)
+                , ("b2", mempty)
+                , ("b3", mempty)
+                , ("b2", SelectNamed' "bb" (fromList
+                    [ ("bb1", mempty)
+                    ]))
+                ])
+                mempty
+              ]
+        lint x `shouldBe` Failure (fromList
+          [ DuplicateSelectCase "a" "a1"
+          , DuplicateSelectCase "a" "a1"
+          , DuplicateSelectCase "a" "a2"
+          , DuplicateSelectCase "a" "a1"
+          , DuplicateSelectCase "aa" "aa1"
+          , DuplicateSelectCase "b" "b2"
+          ])
+
   describe "internal" $ do
     describe "unicode" $ do
       let lint = lintWith' unsupportedUnicodeRule

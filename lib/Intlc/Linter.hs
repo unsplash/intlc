@@ -9,10 +9,12 @@ import qualified Data.Map              as M
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
+import           Utils                 (bun)
 
 data ExternalLint
   = RedundantSelect Arg
   | RedundantPlural Arg
+  | DuplicateSelectCase Arg Text
   deriving (Eq, Show)
 
 data InternalLint
@@ -44,6 +46,7 @@ lintExternal :: Message -> Status ExternalLint
 lintExternal = lintWith
   [ redundantSelectRule
   , redundantPluralRule
+  , duplicateSelectCasesRule
   ]
 
 lintInternal :: Message -> Status InternalLint
@@ -60,8 +63,9 @@ lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
 
 lintDatasetExternal :: Dataset Translation -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
-  RedundantSelect x -> "Redundant select: " <> unArg x
-  RedundantPlural x -> "Redundant plural: " <> unArg x
+  RedundantSelect x       -> "Redundant select: " <> unArg x
+  RedundantPlural x       -> "Redundant plural: " <> unArg x
+  DuplicateSelectCase x y -> "Duplicate select case: " <> unArg x <> ", " <> y
 
 lintDatasetInternal :: Dataset Translation -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
@@ -90,6 +94,16 @@ redundantPluralRule = fmap (fmap RedundantPlural) . nonEmpty . idents where
     CardinalInexactF n [] [] xs ys -> n : xs <> ys
     OrdinalF         n [] [] xs ys -> n : xs <> ys
     x                              -> fold x
+
+-- Duplicate case names in select interpolations are redundant.
+duplicateSelectCasesRule :: Rule ExternalLint
+duplicateSelectCasesRule = fmap (fmap (uncurry DuplicateSelectCase)) . nonEmpty . cases where
+  cases = cata $ \case
+    SelectNamedF n xs ys        -> here n xs <> foldSelectCases xs <> ys
+    SelectNamedWildF n xs ys zs -> here n xs <> foldSelectCases xs <> ys <> zs
+    x                           -> fold x
+  here n = fmap (n,) . bun . fmap fst
+  foldSelectCases = foldMap snd
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of a

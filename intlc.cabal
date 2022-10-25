@@ -99,3 +99,4 @@ test-suite test-intlc
     Intlc.Parser.JSONSpec
     Intlc.Parser.ICUSpec
     Intlc.PrettifySpec
+    UtilsSpec
