@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: cachix/install-nix-action@v18
-      - run: nix develop -c hlint lib cli internal
+      - run: nix develop -c hlint lib cli internal test
   fmt:
     name: Formatting
     runs-on: ubuntu-latest
