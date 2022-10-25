@@ -7,55 +7,57 @@ on:
       - master
 
 jobs:
+  validate-nix:
+    name: Validate Nix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+      - run: nix flake check
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: haskell/actions/setup@v2
-        id: setup-haskell
-        with:
-          ghc-version: 9.2.4
-      - run: cabal freeze
+      - uses: cachix/install-nix-action@v18
+      - run: nix develop -c cabal update
+      - run: nix develop -c cabal freeze
       - uses: actions/cache@v3
         with:
-          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          path: ~/.cabal/store
           key: hashFiles('cabal.project.freeze')
-      - run: cabal build
+      - run: nix develop -c cabal build
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: haskell/actions/setup@v2
-        id: setup-haskell
-        with:
-          ghc-version: 9.2.4
-      - run: cabal freeze
+      - uses: cachix/install-nix-action@v18
+      - run: nix develop -c cabal update
+      - run: nix develop -c cabal freeze
       - uses: actions/cache@v3
         with:
-          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          path: ~/.cabal/store
           key: hashFiles('cabal.project.freeze')
-      - run: cabal test
+      - run: nix develop -c cabal test
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: haskell/actions/hlint-setup@v2
-      - uses: haskell/actions/hlint-run@v2
-        with:
-          path: '["lib/", "cli/", "internal/"]'
-  # fmt:
-  #   name: Formatting
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     # stylish-haskell doesn't have a check/dry run option, so we'll run it
-  #     # against files in place and test if there are any diffs with Git.
-  #     - run: |
-  #         curl -sL https://raw.github.com/haskell/stylish-haskell/master/scripts/latest.sh | sh -s 'lib/ src/ test/ -ri'
-  #         git diff-index --exit-code HEAD
+      - uses: cachix/install-nix-action@v18
+      - run: nix develop -c hlint lib cli internal
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+      # stylish-haskell doesn't have a check/dry run option, so we'll run it
+      # against files in place and test if there are any diffs with Git.
+      - run: |
+          nix develop -c stylish-haskell -ir lib cli internal test
+          git diff-index --exit-code HEAD
   typecheck-ts:
     name: Typecheck TypeScript
     runs-on: ubuntu-latest
@@ -64,9 +66,10 @@ jobs:
         working-directory: .golden/ts/
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: cachix/install-nix-action@v18
+      - uses: actions/cache@v3
         with:
-          cache: yarn
-          cache-dependency-path: .golden/ts/yarn.lock
-      - run: yarn install --frozen-lockfile
-      - run: yarn typecheck
+          path: ~/.cache/yarn/v6
+          key: hashFiles('.golden/ts/yarn.lock')
+      - run: nix develop -c yarn install --frozen-lockfile
+      - run: nix develop -c yarn typecheck
