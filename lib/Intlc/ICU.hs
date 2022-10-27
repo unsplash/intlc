@@ -130,7 +130,7 @@ type PluralCaseF a b = (a, b)
 -- it back out without thinking about converting numeric types across
 -- languages.
 newtype PluralExact = PluralExact Text
-  deriving (Show, Eq)
+  deriving newtype (Show, Eq, IsString)
 
 -- "Other" is implied in the wildcard.
 data PluralRule

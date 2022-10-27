@@ -24,7 +24,7 @@ spec = describe "linter" $ do
         let s = SelectWild'
 
         lint (Message $ mconcat [s "x" (s "y" mempty), s "z" mempty])
-          `shouldBe` Failure (pure $ RedundantSelect ("x" :| ["y", "z"]))
+          `shouldBe` Failure (RedundantSelect <$> ("x" :| ["y", "z"]))
 
     describe "redundant plural" $ do
       let lint = lintWith' redundantPluralRule
@@ -47,11 +47,94 @@ spec = describe "linter" $ do
 
       it "fails on ordinal plural with only a wildcard" $ do
         lint (Message $ Callback' "y" (Ordinal' "x" [] [] mempty))
-          `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
+          `shouldBe` Failure (pure $ RedundantPlural "x")
 
       it "fails on inexact cardinal plural with only a wildcard" $ do
         lint (Message $ Callback' "y" (CardinalInexact' "x" [] [] mempty))
-          `shouldBe` Failure (pure . RedundantPlural . pure $ "x")
+          `shouldBe` Failure (pure $ RedundantPlural "x")
+
+    describe "duplicate select case" $ do
+      let lint = lintWith' duplicateSelectCasesRule
+
+      it "reports each duplicate after the first" $ do
+        let x = Message $ mconcat
+              [ SelectNamed' "a" (fromList
+                [ ("a1", mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                , ("a1", mempty)
+                , ("a3", SelectNamedWild' "aa" (fromList
+                    [ ("aa1", mempty)
+                    , ("aa1", mempty)
+                    ])
+                    mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                ])
+              , SelectNamedWild' "b" (fromList
+                [ ("b1", mempty)
+                , ("b2", mempty)
+                , ("b3", mempty)
+                , ("b2", SelectNamed' "bb" (fromList
+                    [ ("bb1", mempty)
+                    ]))
+                ])
+                mempty
+              ]
+        lint x `shouldBe` Failure (fromList
+          [ DuplicateSelectCase "a" "a1"
+          , DuplicateSelectCase "a" "a1"
+          , DuplicateSelectCase "a" "a2"
+          , DuplicateSelectCase "a" "a1"
+          , DuplicateSelectCase "aa" "aa1"
+          , DuplicateSelectCase "b" "b2"
+          ])
+
+    describe "duplicate plural case" $ do
+      let lint = lintWith' duplicatePluralCasesRule
+
+      it "reports each duplicate after the first" $ do
+        let x = Message $ mconcat
+              [ CardinalExact' "a" (fromList
+                [ ("a1", mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                , ("a1", mempty)
+                , ("a3", Ordinal' "aa"
+                    [ ("aa1", mempty)
+                    , ("aa1", mempty)
+                    ]
+                    [ (One, mempty)
+                    , (Many, mempty)
+                    , (One, mempty)
+                    ]
+                    mempty)
+                , ("a2", mempty)
+                , ("a1", mempty)
+                ])
+              , CardinalInexact' "b"
+                [ ("b1", mempty)
+                , ("b2", mempty)
+                , ("b3", mempty)
+                , ("b2", mempty)
+                ]
+                [ (One, mempty)
+                , (Two, mempty)
+                , (Zero, mempty)
+                , (Two, mempty)
+                ]
+                mempty
+              ]
+        lint x `shouldBe` Failure (fromList
+          [ DuplicatePluralCase "a" "=a1"
+          , DuplicatePluralCase "a" "=a1"
+          , DuplicatePluralCase "a" "=a2"
+          , DuplicatePluralCase "a" "=a1"
+          , DuplicatePluralCase "aa" "=aa1"
+          , DuplicatePluralCase "aa" "one"
+          , DuplicatePluralCase "b" "=b2"
+          , DuplicatePluralCase "b" "two"
+          ])
 
   describe "internal" $ do
     describe "unicode" $ do
@@ -59,11 +142,11 @@ spec = describe "linter" $ do
 
       it "does not lint text with emoji" $ do
         lint (Message "Message with an emoji ❤️ 🥺")
-          `shouldBe` Failure (pure $ InvalidNonAsciiCharacter (fromList "❤️🥺"))
+          `shouldBe` Failure (InvalidNonAsciiCharacter <$> fromList "❤️🥺")
 
       it "does not lint text that is deeply nested with emoji" $ do
         lint (Message $ mconcat [Callback' "Hello" mempty, Bool' "Hello" "Message with an emoji 🥺" mempty])
-          `shouldBe` Failure (fromList [InvalidNonAsciiCharacter (fromList ['🥺'])])
+          `shouldBe` Failure (InvalidNonAsciiCharacter <$> fromList "🥺")
 
       it "lints AST without emoji" $ do
         lint (Message "Text without emoji") `shouldBe` Success
