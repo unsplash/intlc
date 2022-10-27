@@ -43,7 +43,7 @@ node fo ast = runReader (cata go ast) (Config fo 0) where
 
     (BoolF { nameF, trueCaseF, falseCaseF, nextF }) ->
       let cs = sequence [("true",) <$> trueCaseF, ("false",) <$> falseCaseF]
-       in (boolean nameF cs) <>^ nextF
+       in boolean nameF cs <>^ nextF
 
     (StringF n next) -> (string n <>) <$> next
 
@@ -53,25 +53,25 @@ node fo ast = runReader (cata go ast) (Config fo 0) where
 
     (TimeF n fmt next) -> (time n fmt <>) <$> next
 
-    (CardinalExactF n xs next) -> (cardinal n $ exactPluralCases xs) <>^ next
+    (CardinalExactF n xs next) -> cardinal n (exactPluralCases xs) <>^ next
 
     (CardinalInexactF n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
-       in (cardinal n cs) <>^ next
+       in cardinal n cs <>^ next
 
     (OrdinalF n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
-       in (ordinal n cs) <>^ next
+       in ordinal n cs <>^ next
 
     (PluralRefF _ next) -> ("#" <>) <$> next
 
-    (SelectNamedF n xs y) -> (select n $ selectCases xs) <>^ y
+    (SelectNamedF n xs y) -> select n (selectCases xs) <>^ y
 
-    (SelectWildF n w x) -> (select n $ pure . wildcard <$> w) <>^ x
+    (SelectWildF n w x) -> select n (pure . wildcard <$> w) <>^ x
 
     (SelectNamedWildF n xs w next) ->
       let cs = (<>) <$> selectCases xs <*> (pure . wildcard <$> w)
-       in (select n cs) <>^ next
+       in select n cs <>^ next
 
     (CallbackF n xs next) -> (callback n <$> xs) <>^ next
 

@@ -148,7 +148,7 @@ spec = describe "linter" $ do
         lint (Message $ mconcat [Callback' "Hello" mempty, Bool' "Hello" "Message with an emoji 🥺" mempty])
           `shouldBe` Failure (InvalidNonAsciiCharacter <$> fromList "🥺")
 
-      it "lints streams without emoji" $ do
+      it "lints AST without emoji" $ do
         lint (Message "Text without emoji") `shouldBe` Success
 
     describe "interpolations" $ do
@@ -156,16 +156,16 @@ spec = describe "linter" $ do
       -- An example interpolation that's affected by this lint rule.
       let f = SelectWild'
 
-      it "lints streams with no interpolations" $ do
+      it "lints AST with no interpolations" $ do
         lint (Message "hello world") `shouldBe` Success
 
-      it "lints streams with 1 simple interpolation" $ do
+      it "lints AST with 1 simple interpolation" $ do
         lint (Message (String' "Hello")) `shouldBe` Success
 
-      it "lints streams with 1 complex interpolation" $ do
+      it "lints AST with 1 complex interpolation" $ do
         lint (Message (f "Hello" mempty)) `shouldBe` Success
 
-      it "lints streams with 1 complex interpolation and 1 simple interpolation" $ do
+      it "lints AST with 1 complex interpolation and 1 simple interpolation" $ do
         lint (Message $ mconcat [f "Hello" mempty, "hello"]) `shouldBe` Success
 
       it "lints plurals and callbacks" $ do
@@ -175,12 +175,12 @@ spec = describe "linter" $ do
         let p n = Ordinal' n [] (pure (Zero, mempty)) mempty
         lint (Message $ mconcat [p "x", p "y"]) `shouldBe` Success
 
-      it "does not lint streams with 2 or more complex interpolations" $ do
+      it "does not lint AST with 2 or more complex interpolations" $ do
         lint (Message $ mconcat [f "x" mempty, f "y" mempty])
           `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y"]))
         lint (Message $ mconcat [f "x" mempty, f "y" mempty, f "z" mempty])
           `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y", "z"]))
 
-      it "does not lint nested streams" $ do
+      it "does not lint AST with nested interpolations" $ do
         lint (Message $ mconcat [f "outer" (f "inner" mempty)])
           `shouldBe` Failure (pure $ TooManyInterpolations ("outer" :| ["inner"]))
