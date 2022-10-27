@@ -25,5 +25,5 @@ spec = describe "Utils" $ do
         ["a", "b", "a"]
 
     it "behaves equivalently for any foldable structure" $ do
-      bun ((fromList ["a", "b", "a", "c", "b", "a"]) :: NonEmpty Text) `shouldBe`
+      bun (fromList ["a", "b", "a", "c", "b", "a"] :: NonEmpty Text) `shouldBe`
         ["a", "b", "a"]
