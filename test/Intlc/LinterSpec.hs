@@ -13,7 +13,7 @@ withAnn = AnnMessage . cata (0 :<) . unMessage
 
 lintWith' :: Rule (WithAnn a) -> Message -> Status a
 lintWith' r = statusSansAnn . lintWith (pure r) . withAnn where
-  statusSansAnn Success = Success
+  statusSansAnn Success      = Success
   statusSansAnn (Failure xs) = Failure (snd <$> xs)
 
 spec :: Spec

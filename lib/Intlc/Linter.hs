@@ -1,18 +1,20 @@
 module Intlc.Linter where
 
-import qualified Data.Text                    as T
+import qualified Data.Text                     as T
 
-import           Control.Comonad              (extract)
-import           Control.Comonad.Trans.Cofree (CofreeF ((:<)))
-import           Control.Monad.Extra          (pureIf)
-import           Data.Char                    (isAscii)
-import           Data.Functor.Foldable        (cata)
-import qualified Data.Map                     as M
-import           Intlc.Backend.ICU.Compiler   (pluralExact, pluralRule)
+import           Control.Comonad               (extract)
+import           Control.Comonad.Trans.Cofree  (CofreeF ((:<)))
+import           Data.Char                     (isAscii)
+import           Data.Functor.Foldable         (cata)
+import           Intlc.Backend.ICU.Compiler    (pluralExact, pluralRule)
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
-import           Utils                        (bun)
+import           Text.Megaparsec               (PosState (PosState),
+                                                defaultTabWidth, initialPos)
+import           Text.Megaparsec.Error
+import           Text.Megaparsec.Error.Builder
+import           Utils                         (bun)
 
 type WithAnn a = (Int, a)
 
@@ -24,12 +26,12 @@ data ExternalLint
   | RedundantPlural Arg
   | DuplicateSelectCase Arg Text
   | DuplicatePluralCase Arg Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 data InternalLint
   = TooManyInterpolations (NonEmpty Arg)
   | InvalidNonAsciiCharacter Char
-  deriving (Eq,Show)
+  deriving (Eq,Show, Ord)
 
 data Status a
   = Success
@@ -65,29 +67,42 @@ lintInternal = lintWith
   , unsupportedUnicodeRule
   ]
 
+-- We're going to reuse Megaparsec's infrastructure to format our lints.
+fmt :: ShowErrorComponent a => FilePath -> Text -> NonEmpty (WithAnn a) -> Text
+fmt path content lints = T.pack $ errorBundlePretty (buildParseErrBundle path content lints)
+
+buildParseErrBundle :: FilePath -> Text -> NonEmpty (WithAnn a) -> ParseErrorBundle Text a
+buildParseErrBundle path content lints = ParseErrorBundle (buildParseErr <$> lints) (buildPosState path content) where
+
+buildParseErr :: WithAnn a -> ParseError Text a
+buildParseErr (i, x) = errFancy i . fancy . ErrorCustom $ x
+
+-- This could probably be rewritten to be more efficient.
+buildPosState :: FilePath -> Text -> PosState Text
+buildPosState path content = PosState content 0 (initialPos path) defaultTabWidth mempty
+
 -- Get the printable output from linting an entire dataset, if any.
-lintDatasetWith :: (AnnMessage -> Status a) -> (Text -> NonEmpty a -> Text) -> Dataset (Translation AnnMessage) -> Maybe Text
-lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
-  where lints = M.mapMaybe (statusToMaybe . linter . message) xs
-        msg = T.intercalate "\n" $ uncurry fmt <$> M.assocs lints
+lintDatasetWith :: ShowErrorComponent a =>
+  (AnnMessage -> Status (WithAnn a)) -> FilePath -> Text -> Dataset (Translation AnnMessage) -> Maybe Text
+lintDatasetWith linter path content = fmap (fmt path content) . foldMap (statusToMaybe . linter . message)
 
-lintDatasetExternal :: Dataset (Translation AnnMessage) -> Maybe Text
-lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
-  RedundantSelect x       -> "Redundant select: " <> unArg x
-  RedundantPlural x       -> "Redundant plural: " <> unArg x
-  DuplicateSelectCase x y -> "Duplicate select case: " <> unArg x <> ", " <> y
-  DuplicatePluralCase x y -> "Duplicate plural case: " <> unArg x <> ", " <> y
+lintDatasetExternal :: FilePath -> Text -> Dataset (Translation AnnMessage) -> Maybe Text
+lintDatasetExternal = lintDatasetWith lintExternal
 
-lintDatasetInternal :: Dataset (Translation AnnMessage) -> Maybe Text
-lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
-  TooManyInterpolations xs   -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
-  InvalidNonAsciiCharacter x -> "Following character disallowed: " <> T.singleton x
+lintDatasetInternal :: FilePath -> Text -> Dataset (Translation AnnMessage) -> Maybe Text
+lintDatasetInternal = lintDatasetWith lintInternal
 
-formatFailureWith :: (Functor f, Foldable f) => (a -> Text) -> Text -> f (WithAnn a) -> Text
-formatFailureWith f k es = title <> msgs
-  where title = k <> ": \n"
-        msgs = T.intercalate "\n" . toList . fmap (indent . f . snd) $ es
-        indent = (" " <>)
+instance ShowErrorComponent ExternalLint where
+  showErrorComponent = (T.unpack .) $ \case
+    RedundantSelect x       -> "Redundant select: " <> unArg x
+    RedundantPlural x       -> "Redundant plural: " <> unArg x
+    DuplicateSelectCase x y -> "Duplicate select case: " <> unArg x <> ", " <> y
+    DuplicatePluralCase x y -> "Duplicate plural case: " <> unArg x <> ", " <> y
+
+instance ShowErrorComponent InternalLint where
+  showErrorComponent = (T.unpack .) $ \case
+    TooManyInterpolations xs   -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
+    InvalidNonAsciiCharacter x -> "Following character disallowed: " <> T.singleton x
 
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.

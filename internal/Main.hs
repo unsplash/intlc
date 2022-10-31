@@ -14,11 +14,14 @@ import           Prelude                     hiding (filter)
 
 main :: IO ()
 main = getOpts >>= \case
-  Lint path     -> tryGetParsedAt path >>= lint
+  Lint path     -> lint path
   ExpandPlurals -> tryGetParsedStdinSansAnn >>= compileExpandedPlurals
 
-lint :: MonadIO m => Dataset (Translation AnnMessage) -> m ()
-lint xs = whenJust (lintDatasetInternal xs) $ die . T.unpack
+lint :: MonadIO m => FilePath -> m ()
+lint path = do
+  raw <- readFileAt path
+  dataset <- parserDie $ parseDataset path raw
+  whenJust (lintDatasetInternal path raw dataset) $ die . T.unpack
 
 compileExpandedPlurals :: MonadIO m => Dataset (Translation Message) -> m ()
 compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals x.message })
@@ -29,14 +32,11 @@ tryGetParsedStdinSansAnn = parserDie . fmap datasetSansAnn =<< getParsedStdin
 tryGetParsedStdin :: IO (Dataset (Translation AnnMessage))
 tryGetParsedStdin = parserDie =<< getParsedStdin
 
-tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset (Translation AnnMessage))
-tryGetParsedAt = parserDie <=< getParsedAt
-
 parserDie :: MonadIO m => Either ParseFailure a -> m a
 parserDie = either (die . printErr) pure
 
 getParsedStdin :: IO (Either ParseFailure (Dataset (Translation AnnMessage)))
 getParsedStdin = parseDataset "stdin" <$> getContents
 
-getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset (Translation AnnMessage)))
-getParsedAt x = parseDataset x . decodeUtf8 <$> readFileBS x
+readFileAt :: MonadIO m => FilePath -> m Text
+readFileAt = fmap decodeUtf8 . readFileBS
