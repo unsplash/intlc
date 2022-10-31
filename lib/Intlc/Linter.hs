@@ -5,7 +5,7 @@ import qualified Data.Text                     as T
 import           Control.Comonad               (extract)
 import           Control.Comonad.Trans.Cofree  (CofreeF ((:<)))
 import           Data.Char                     (isAscii)
-import           Data.Functor.Foldable         (cata)
+import           Data.Functor.Foldable         (cata, para)
 import           Intlc.Backend.ICU.Compiler    (pluralExact, pluralRule)
 import           Intlc.Core
 import           Intlc.ICU
@@ -14,7 +14,7 @@ import           Text.Megaparsec               (PosState (PosState),
                                                 defaultTabWidth, initialPos)
 import           Text.Megaparsec.Error
 import           Text.Megaparsec.Error.Builder
-import           Utils                         (bun)
+import           Utils                         (bun, bunBy)
 
 type WithAnn a = (Int, a)
 
@@ -126,12 +126,16 @@ redundantPluralRule = nonEmpty . idents where
 -- Duplicate case names in select interpolations are redundant.
 duplicateSelectCasesRule :: Rule AnnExternalLint
 duplicateSelectCasesRule = nonEmpty . cases where
-  cases = cata $ \case
-    x@(i :< SelectNamedF n ys _)       -> here i n ys <> fold x
-    x@(i :< SelectNamedWildF n ys _ _) -> here i n ys <> fold x
-    x                                  ->                fold x
-  here i n = fmap (f i n) . bun . fmap fst
-  f i n x = (i, DuplicateSelectCase n x)
+  cases = para $ \case
+    x@(_ :< SelectNamedF n ys _)       -> here n ys <> fold' x
+    x@(_ :< SelectNamedWildF n ys _ _) -> here n ys <> fold' x
+    x                                  ->              fold' x
+  here n xs = fmap (uncurry (f n) . (caseOffset &&& caseName)) . bunBy ((==) `on` caseName) $ xs
+    where caseName = fst
+          caseOffset = uncurry calcCaseNameOffset . caseHead
+          caseHead = second (extract . fst)
+  fold' = fold . fmap snd
+  f n i x = (i, DuplicateSelectCase n x)
 
 -- Duplicate cases in plural interpolations are redundant.
 duplicatePluralCasesRule :: Rule AnnExternalLint
@@ -176,3 +180,8 @@ unsupportedUnicodeRule = nonEmpty . nonAscii where
     x@(i :< CharF c _) -> (f i <$> guarded (not . isAcceptedChar) c) <> fold x
     x                  ->                                               fold x
   f i c = (i, InvalidNonAsciiCharacter c)
+
+-- If we have access to the offset of the head node of an interpolation case, we
+-- we can deduce the offset of the start of the case name.
+calcCaseNameOffset :: Text -> Int -> Int
+calcCaseNameOffset n i = i - 2 - T.length n
