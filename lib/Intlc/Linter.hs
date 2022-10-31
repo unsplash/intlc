@@ -94,15 +94,17 @@ lintDatasetInternal = lintDatasetWith lintInternal
 
 instance ShowErrorComponent ExternalLint where
   showErrorComponent = (T.unpack .) $ \case
-    RedundantSelect x       -> "Redundant select: " <> unArg x
-    RedundantPlural x       -> "Redundant plural: " <> unArg x
-    DuplicateSelectCase x y -> "Duplicate select case: " <> unArg x <> ", " <> y
-    DuplicatePluralCase x y -> "Duplicate plural case: " <> unArg x <> ", " <> y
+    RedundantSelect x       -> "Select named `" <> unArg x <> "` is redundant as it only contains a wildcard."
+    RedundantPlural x       -> "Plural named `" <> unArg x <> "` is redundant as it only contains a wildcard."
+    DuplicateSelectCase x y -> "Select named `" <> unArg x <> "` contains a duplicate case named `" <> y <> "`."
+    DuplicatePluralCase x y -> "Plural named `" <> unArg x <> "` contains a duplicate `" <> y <> "` case."
 
 instance ShowErrorComponent InternalLint where
   showErrorComponent = (T.unpack .) $ \case
-    TooManyInterpolations xs   -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
-    InvalidNonAsciiCharacter x -> "Following character disallowed: " <> T.singleton x
+    TooManyInterpolations xs   -> "Multiple \"complex\" non-plural interpolations in the same message are disallowed. Found names: " <> interps
+      where interps = T.intercalate ", " (fmap (qts . unArg) . toList $ xs)
+            qts x = "`" <> x <> "`"
+    InvalidNonAsciiCharacter x -> "Non-ASCII character `" <> T.singleton x <> "` is disallowed."
 
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.
