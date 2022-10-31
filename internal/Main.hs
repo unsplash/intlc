@@ -14,10 +14,10 @@ import           Prelude                     hiding (filter)
 
 main :: IO ()
 main = getOpts >>= \case
-  Lint path     -> tryGetParsedAtSansAnn path >>= lint
+  Lint path     -> tryGetParsedAt path >>= lint
   ExpandPlurals -> tryGetParsedStdinSansAnn >>= compileExpandedPlurals
 
-lint :: MonadIO m => Dataset (Translation Message) -> m ()
+lint :: MonadIO m => Dataset (Translation AnnMessage) -> m ()
 lint xs = whenJust (lintDatasetInternal xs) $ die . T.unpack
 
 compileExpandedPlurals :: MonadIO m => Dataset (Translation Message) -> m ()
@@ -28,9 +28,6 @@ tryGetParsedStdinSansAnn = parserDie . fmap datasetSansAnn =<< getParsedStdin
 
 tryGetParsedStdin :: IO (Dataset (Translation AnnMessage))
 tryGetParsedStdin = parserDie =<< getParsedStdin
-
-tryGetParsedAtSansAnn :: MonadIO m => FilePath -> m (Dataset (Translation Message))
-tryGetParsedAtSansAnn = parserDie . fmap datasetSansAnn <=< getParsedAt
 
 tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset (Translation AnnMessage))
 tryGetParsedAt = parserDie <=< getParsedAt

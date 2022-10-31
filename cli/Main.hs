@@ -15,7 +15,7 @@ main :: IO ()
 main = getOpts >>= \case
   Compile path loc -> tryGetParsedAtSansAnn path >>= compile loc
   Flatten path     -> tryGetParsedAtSansAnn path >>= flatten
-  Lint    path     -> tryGetParsedAtSansAnn path >>= lint
+  Lint    path     -> tryGetParsedAt path >>= lint
   Prettify msg     -> tryPrettify msg
 
 compile :: MonadIO m => Locale -> Dataset (Translation Message) -> m ()
@@ -26,7 +26,7 @@ compile loc = compileDataset loc >>> \case
 flatten :: MonadIO m => Dataset (Translation Message) -> m ()
 flatten = putTextLn . compileFlattened
 
-lint :: MonadIO m => Dataset (Translation Message) -> m ()
+lint :: MonadIO m => Dataset (Translation AnnMessage) -> m ()
 lint xs = whenJust (lintDatasetExternal xs) $ die . T.unpack
 
 tryPrettify :: MonadIO m => Text -> m ()

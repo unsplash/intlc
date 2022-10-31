@@ -1,16 +1,23 @@
 module Intlc.Linter where
 
-import qualified Data.Text                  as T
+import qualified Data.Text                    as T
 
-import           Control.Monad.Extra        (pureIf)
-import           Data.Char                  (isAscii)
-import           Data.Functor.Foldable      (cata)
-import qualified Data.Map                   as M
-import           Intlc.Backend.ICU.Compiler (pluralExact, pluralRule)
+import           Control.Comonad              (extract)
+import           Control.Comonad.Trans.Cofree (CofreeF ((:<)))
+import           Control.Monad.Extra          (pureIf)
+import           Data.Char                    (isAscii)
+import           Data.Functor.Foldable        (cata)
+import qualified Data.Map                     as M
+import           Intlc.Backend.ICU.Compiler   (pluralExact, pluralRule)
 import           Intlc.Core
 import           Intlc.ICU
 import           Prelude
-import           Utils                      (bun)
+import           Utils                        (bun)
+
+type WithAnn a = (Int, a)
+
+type AnnExternalLint = WithAnn ExternalLint
+type AnnInternalLint = WithAnn InternalLint
 
 data ExternalLint
   = RedundantSelect Arg
@@ -37,14 +44,14 @@ maybeToStatus :: Maybe (NonEmpty a) -> Status a
 maybeToStatus Nothing   = Success
 maybeToStatus (Just xs) = Failure xs
 
-type Rule a = Node -> Maybe (NonEmpty a)
+type Rule a = AnnNode -> Maybe (NonEmpty a)
 
-lintWith :: [Rule a] -> Message -> Status a
-lintWith rules (Message ast) = maybeToStatus . catNEMaybes . flap rules $ ast
+lintWith :: [Rule a] -> AnnMessage -> Status a
+lintWith rules (AnnMessage ast) = maybeToStatus . catNEMaybes . flap rules $ ast
   where catNEMaybes :: [Maybe (NonEmpty a)] -> Maybe (NonEmpty a)
         catNEMaybes = nonEmpty . foldMap (foldMap toList)
 
-lintExternal :: Message -> Status ExternalLint
+lintExternal :: AnnMessage -> Status AnnExternalLint
 lintExternal = lintWith
   [ redundantSelectRule
   , redundantPluralRule
@@ -52,72 +59,76 @@ lintExternal = lintWith
   , duplicatePluralCasesRule
   ]
 
-lintInternal :: Message -> Status InternalLint
+lintInternal :: AnnMessage -> Status AnnInternalLint
 lintInternal = lintWith
   [ interpolationsRule
   , unsupportedUnicodeRule
   ]
 
 -- Get the printable output from linting an entire dataset, if any.
-lintDatasetWith :: (Message -> Status a) -> (Text -> NonEmpty a -> Text) -> Dataset (Translation Message) -> Maybe Text
+lintDatasetWith :: (AnnMessage -> Status a) -> (Text -> NonEmpty a -> Text) -> Dataset (Translation AnnMessage) -> Maybe Text
 lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
   where lints = M.mapMaybe (statusToMaybe . linter . message) xs
         msg = T.intercalate "\n" $ uncurry fmt <$> M.assocs lints
 
-lintDatasetExternal :: Dataset (Translation Message) -> Maybe Text
+lintDatasetExternal :: Dataset (Translation AnnMessage) -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
   RedundantSelect x       -> "Redundant select: " <> unArg x
   RedundantPlural x       -> "Redundant plural: " <> unArg x
   DuplicateSelectCase x y -> "Duplicate select case: " <> unArg x <> ", " <> y
   DuplicatePluralCase x y -> "Duplicate plural case: " <> unArg x <> ", " <> y
 
-lintDatasetInternal :: Dataset (Translation Message) -> Maybe Text
+lintDatasetInternal :: Dataset (Translation AnnMessage) -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
   TooManyInterpolations xs   -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
   InvalidNonAsciiCharacter x -> "Following character disallowed: " <> T.singleton x
 
-formatFailureWith :: (Functor f, Foldable f) => (a -> Text) -> Text -> f a -> Text
+formatFailureWith :: (Functor f, Foldable f) => (a -> Text) -> Text -> f (WithAnn a) -> Text
 formatFailureWith f k es = title <> msgs
   where title = k <> ": \n"
-        msgs = T.intercalate "\n" . toList . fmap (indent . f) $ es
+        msgs = T.intercalate "\n" . toList . fmap (indent . f . snd) $ es
         indent = (" " <>)
 
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.
-redundantSelectRule :: Rule ExternalLint
-redundantSelectRule = fmap (fmap RedundantSelect) . nonEmpty . idents where
+redundantSelectRule :: Rule AnnExternalLint
+redundantSelectRule = nonEmpty . idents where
   idents = cata $ \case
-    x@(SelectWildF n _ _) -> n : fold x
-    x                     ->     fold x
+    x@(i :< SelectWildF n _ _) -> f i n : fold x
+    x                          ->         fold x
+  f i n = (i, RedundantSelect n)
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
-redundantPluralRule :: Rule ExternalLint
-redundantPluralRule = fmap (fmap RedundantPlural) . nonEmpty . idents where
+redundantPluralRule :: Rule AnnExternalLint
+redundantPluralRule = nonEmpty . idents where
   idents = cata $ \case
-    x@(CardinalInexactF n [] [] _ _) -> n : fold x
-    x@(OrdinalF         n [] [] _ _) -> n : fold x
-    x                                ->     fold x
+    x@(i :< CardinalInexactF n [] [] _ _) -> f i n : fold x
+    x@(i :< OrdinalF         n [] [] _ _) -> f i n : fold x
+    x                                     ->         fold x
+  f i n = (i, RedundantPlural n)
 
 -- Duplicate case names in select interpolations are redundant.
-duplicateSelectCasesRule :: Rule ExternalLint
-duplicateSelectCasesRule = fmap (fmap (uncurry DuplicateSelectCase)) . nonEmpty . cases where
+duplicateSelectCasesRule :: Rule AnnExternalLint
+duplicateSelectCasesRule = nonEmpty . cases where
   cases = cata $ \case
-    x@(SelectNamedF n ys _)       -> here n ys <> fold x
-    x@(SelectNamedWildF n ys _ _) -> here n ys <> fold x
-    x                             ->              fold x
-  here n = fmap (n,) . bun . fmap fst
+    x@(i :< SelectNamedF n ys _)       -> here i n ys <> fold x
+    x@(i :< SelectNamedWildF n ys _ _) -> here i n ys <> fold x
+    x                                  ->                fold x
+  here i n = fmap (f i n) . bun . fmap fst
+  f i n x = (i, DuplicateSelectCase n x)
 
 -- Duplicate cases in plural interpolations are redundant.
-duplicatePluralCasesRule :: Rule ExternalLint
-duplicatePluralCasesRule = fmap (fmap (uncurry DuplicatePluralCase)) . nonEmpty . cases where
+duplicatePluralCasesRule :: Rule AnnExternalLint
+duplicatePluralCasesRule = nonEmpty . cases where
   cases = cata $ \case
-    x@(CardinalExactF n ys _)        -> hereExact n ys <>                   fold x
-    x@(CardinalInexactF n ys zs _ _) -> hereExact n ys <> hereRules n zs <> fold x
-    x@(OrdinalF n ys zs _ _)         -> hereExact n ys <> hereRules n zs <> fold x
-    x                                ->                                     fold x
-  hereExact n = fmap ((n,) . pluralExact) . bun . fmap fst
-  hereRules n = fmap ((n,) . pluralRule) . bun . fmap fst
+    x@(i :< CardinalExactF n ys _)        -> hereExact i n ys <>                     fold x
+    x@(i :< CardinalInexactF n ys zs _ _) -> hereExact i n ys <> hereRules i n zs <> fold x
+    x@(i :< OrdinalF n ys zs _ _)         -> hereExact i n ys <> hereRules i n zs <> fold x
+    x                                     ->                                         fold x
+  hereExact i n = fmap (f i n . pluralExact) . bun . fmap fst
+  hereRules i n = fmap (f i n . pluralRule)  . bun . fmap fst
+  f i n x = (i, DuplicatePluralCase n x)
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of a
@@ -126,16 +137,17 @@ duplicatePluralCasesRule = fmap (fmap (uncurry DuplicatePluralCase)) . nonEmpty 
 -- Callbacks and plurals are allowed an unlimited number of times. The former
 -- because the vendor's tool has no issues parsing its syntax and the latter
 -- because it's a special case that we can't rewrite.
-interpolationsRule :: Rule InternalLint
-interpolationsRule = fmap pure . count . idents where
+interpolationsRule :: Rule AnnInternalLint
+interpolationsRule ast = fmap (pure . (start,)) . count . idents $ ast where
   count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
   idents = cata $ \case
-    x@(BoolF n _ _ _)            -> n : fold x
-    x@(SelectNamedF n _ _)       -> n : fold x
-    x@(SelectWildF n _ _)        -> n : fold x
-    x@(SelectNamedWildF n _ _ _) -> n : fold x
-    x                            ->     fold x
+    x@(_ :< BoolF n _ _ _)            -> n : fold x
+    x@(_ :< SelectNamedF n _ _)       -> n : fold x
+    x@(_ :< SelectWildF n _ _)        -> n : fold x
+    x@(_ :< SelectNamedWildF n _ _ _) -> n : fold x
+    x                                 ->     fold x
+  start = extract ast
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
@@ -143,9 +155,9 @@ isAcceptedChar :: Char -> Bool
 isAcceptedChar c = isAscii c || c `elem` acceptedChars
   where acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 
-unsupportedUnicodeRule :: Rule InternalLint
-unsupportedUnicodeRule = output . nonAscii where
-  output = fmap (fmap InvalidNonAsciiCharacter) . nonEmpty
+unsupportedUnicodeRule :: Rule AnnInternalLint
+unsupportedUnicodeRule = nonEmpty . nonAscii where
   nonAscii = cata $ \case
-    x@(CharF c _) -> guarded (not . isAcceptedChar) c <> fold x
-    x             ->                                     fold x
+    x@(i :< CharF c _) -> (f i <$> guarded (not . isAcceptedChar) c) <> fold x
+    x                  ->                                               fold x
+  f i c = (i, InvalidNonAsciiCharacter c)
