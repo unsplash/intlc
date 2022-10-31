@@ -111,7 +111,7 @@ redundantSelectRule = nonEmpty . idents where
   idents = cata $ \case
     x@(i :< SelectWildF n _ _) -> f i n : fold x
     x                          ->         fold x
-  f i n = (i, RedundantSelect n)
+  f i n = (i + 1, RedundantSelect n)
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
@@ -121,7 +121,7 @@ redundantPluralRule = nonEmpty . idents where
     x@(i :< CardinalInexactF n [] [] _ _) -> f i n : fold x
     x@(i :< OrdinalF         n [] [] _ _) -> f i n : fold x
     x                                     ->         fold x
-  f i n = (i, RedundantPlural n)
+  f i n = (i + 1, RedundantPlural n)
 
 -- Duplicate case names in select interpolations are redundant.
 duplicateSelectCasesRule :: Rule AnnExternalLint
