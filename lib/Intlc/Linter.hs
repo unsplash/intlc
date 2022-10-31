@@ -72,7 +72,7 @@ fmt :: ShowErrorComponent a => FilePath -> Text -> NonEmpty (WithAnn a) -> Text
 fmt path content lints = T.pack $ errorBundlePretty (buildParseErrBundle path content lints)
 
 buildParseErrBundle :: FilePath -> Text -> NonEmpty (WithAnn a) -> ParseErrorBundle Text a
-buildParseErrBundle path content lints = ParseErrorBundle (buildParseErr <$> lints) (buildPosState path content) where
+buildParseErrBundle path content lints = ParseErrorBundle (buildParseErr <$> lints) (buildPosState path content)
 
 buildParseErr :: WithAnn a -> ParseError Text a
 buildParseErr (i, x) = errFancy i . fancy . ErrorCustom $ x
@@ -154,11 +154,11 @@ duplicateSelectCasesRule = nonEmpty . cases where
     x@(_ :< SelectNamedF n ys _)       -> here n ys <> fold' x
     x@(_ :< SelectNamedWildF n ys _ _) -> here n ys <> fold' x
     x                                  ->              fold' x
-  here n xs = fmap (uncurry (f n) . (caseOffset &&& caseName)) . bunBy ((==) `on` caseName) $ xs
+  here n = fmap (uncurry (f n) . (caseOffset &&& caseName)) . bunBy ((==) `on` caseName)
     where caseName = fst
           caseOffset = uncurry calcCaseNameOffset . caseHead
           caseHead = second (extract . fst)
-  fold' = fold . fmap snd
+  fold' = foldMap snd
   f n i x = (i, DuplicateSelectCase n x)
 
 -- Duplicate cases in plural interpolations are redundant.
@@ -169,11 +169,11 @@ duplicatePluralCasesRule = nonEmpty . cases where
     x@(_ :< CardinalInexactF n ys zs _ _) -> here pluralExact n ys <> here pluralRule n zs <> fold' x
     x@(_ :< OrdinalF n ys zs _ _)         -> here pluralExact n ys <> here pluralRule n zs <> fold' x
     x                                     ->                                                  fold' x
-  here via n xs = fmap (uncurry (f n) . (caseOffset &&& (via . caseKey))) . bunBy ((==) `on` caseKey) $ xs
+  here via n = fmap (uncurry (f n) . (caseOffset &&& (via . caseKey))) . bunBy ((==) `on` caseKey)
     where caseKey = fst
           caseOffset = uncurry calcCaseNameOffset . first via . caseHead
           caseHead = second (extract . fst)
-  fold' = fold . fmap snd
+  fold' = foldMap snd
   f n i x = (i, DuplicatePluralCase n x)
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
