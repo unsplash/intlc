@@ -6,6 +6,7 @@ import qualified Data.Text                  as T
 import           Intlc.Backend.ICU.Compiler (Formatting (SingleLine),
                                              compileMsg)
 import           Intlc.Core
+import           Intlc.ICU                  (Message)
 import           Prelude
 
 -- Assumes unescaped input.
@@ -29,10 +30,10 @@ obj :: [(Text, Text)] -> Text
 obj xs = "{" <> ys <> "}"
   where ys = T.intercalate "," . fmap (uncurry objPair) $ xs
 
-compileDataset :: Dataset Translation -> Text
+compileDataset :: Dataset (Translation Message) -> Text
 compileDataset = obj . M.toList . M.map translation
 
-translation :: Translation -> Text
+translation :: Translation Message -> Text
 translation Translation { message, backend, mdesc } = obj . fromList $ ys
   where ys =
           [ ("message", strVal . compileMsg SingleLine $ message)

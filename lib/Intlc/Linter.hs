@@ -59,19 +59,19 @@ lintInternal = lintWith
   ]
 
 -- Get the printable output from linting an entire dataset, if any.
-lintDatasetWith :: (Message -> Status a) -> (Text -> NonEmpty a -> Text) -> Dataset Translation -> Maybe Text
+lintDatasetWith :: (Message -> Status a) -> (Text -> NonEmpty a -> Text) -> Dataset (Translation Message) -> Maybe Text
 lintDatasetWith linter fmt xs = pureIf (not $ M.null lints) msg
   where lints = M.mapMaybe (statusToMaybe . linter . message) xs
         msg = T.intercalate "\n" $ uncurry fmt <$> M.assocs lints
 
-lintDatasetExternal :: Dataset Translation -> Maybe Text
+lintDatasetExternal :: Dataset (Translation Message) -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal . formatFailureWith $ \case
   RedundantSelect x       -> "Redundant select: " <> unArg x
   RedundantPlural x       -> "Redundant plural: " <> unArg x
   DuplicateSelectCase x y -> "Duplicate select case: " <> unArg x <> ", " <> y
   DuplicatePluralCase x y -> "Duplicate plural case: " <> unArg x <> ", " <> y
 
-lintDatasetInternal :: Dataset Translation -> Maybe Text
+lintDatasetInternal :: Dataset (Translation Message) -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal . formatFailureWith $ \case
   TooManyInterpolations xs   -> "Multiple complex interpolations: " <> T.intercalate ", " (fmap unArg . toList $ xs)
   InvalidNonAsciiCharacter x -> "Following character disallowed: " <> T.singleton x

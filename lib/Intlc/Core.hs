@@ -15,22 +15,8 @@ data Backend
   | TypeScriptReact
   deriving (Show, Eq, Generic)
 
-data UnparsedTranslation = UnparsedTranslation
-  { umessage :: UnparsedMessage
-  , ubackend :: Backend
-  , umdesc   :: Maybe Text
-  }
-  deriving (Show, Eq, Generic)
-
-data AnnTranslation = AnnTranslation
-  { amessage :: AnnMessage
-  , abackend :: Backend
-  , amdesc   :: Maybe Text
-  }
-  deriving (Show, Eq)
-
-data Translation = Translation
-  { message :: Message
+data Translation a = Translation
+  { message :: a
   , backend :: Backend
   , mdesc   :: Maybe Text
   }
@@ -38,12 +24,12 @@ data Translation = Translation
 
 type Dataset = Map Text
 
-datasetSansAnn :: Dataset AnnTranslation -> Dataset Translation
+datasetSansAnn :: Dataset (Translation AnnMessage) -> Dataset (Translation Message)
 datasetSansAnn = fmap translationSansAnn
 
-translationSansAnn :: AnnTranslation -> Translation
+translationSansAnn :: Translation AnnMessage -> Translation Message
 translationSansAnn x = Translation
-  { message = sansAnnMsg x.amessage
-  , backend = x.abackend
-  , mdesc = x.amdesc
+  { message = sansAnnMsg x.message
+  , backend = x.backend
+  , mdesc = x.mdesc
   }

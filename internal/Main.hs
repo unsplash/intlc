@@ -6,6 +6,7 @@ import           Data.Text.IO                (getContents)
 import           Intlc.Backend.JSON.Compiler (compileDataset)
 import           Intlc.Compiler              (expandPlurals)
 import           Intlc.Core
+import           Intlc.ICU                   (AnnMessage, Message)
 import           Intlc.Linter
 import           Intlc.Parser                (parseDataset, printErr)
 import           Intlc.Parser.Error          (ParseFailure)
@@ -16,29 +17,29 @@ main = getOpts >>= \case
   Lint path     -> tryGetParsedAtSansAnn path >>= lint
   ExpandPlurals -> tryGetParsedStdinSansAnn >>= compileExpandedPlurals
 
-lint :: MonadIO m => Dataset Translation -> m ()
+lint :: MonadIO m => Dataset (Translation Message) -> m ()
 lint xs = whenJust (lintDatasetInternal xs) $ die . T.unpack
 
-compileExpandedPlurals :: MonadIO m => Dataset Translation -> m ()
+compileExpandedPlurals :: MonadIO m => Dataset (Translation Message) -> m ()
 compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals x.message })
 
-tryGetParsedStdinSansAnn :: IO (Dataset Translation)
+tryGetParsedStdinSansAnn :: IO (Dataset (Translation Message))
 tryGetParsedStdinSansAnn = parserDie . fmap datasetSansAnn =<< getParsedStdin
 
-tryGetParsedStdin :: IO (Dataset AnnTranslation)
+tryGetParsedStdin :: IO (Dataset (Translation AnnMessage))
 tryGetParsedStdin = parserDie =<< getParsedStdin
 
-tryGetParsedAtSansAnn :: MonadIO m => FilePath -> m (Dataset Translation)
+tryGetParsedAtSansAnn :: MonadIO m => FilePath -> m (Dataset (Translation Message))
 tryGetParsedAtSansAnn = parserDie . fmap datasetSansAnn <=< getParsedAt
 
-tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset AnnTranslation)
+tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset (Translation AnnMessage))
 tryGetParsedAt = parserDie <=< getParsedAt
 
 parserDie :: MonadIO m => Either ParseFailure a -> m a
 parserDie = either (die . printErr) pure
 
-getParsedStdin :: IO (Either ParseFailure (Dataset AnnTranslation))
+getParsedStdin :: IO (Either ParseFailure (Dataset (Translation AnnMessage)))
 getParsedStdin = parseDataset "stdin" <$> getContents
 
-getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset AnnTranslation))
+getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset (Translation AnnMessage)))
 getParsedAt x = parseDataset x . decodeUtf8 <$> readFileBS x

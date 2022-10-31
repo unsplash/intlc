@@ -10,7 +10,7 @@ import           Prelude
 import           Text.Megaparsec       (runParser)
 import           Text.Megaparsec.Error
 
-parseDataset :: FilePath -> Text -> Either ParseFailure (Dataset AnnTranslation)
+parseDataset :: FilePath -> Text -> Either ParseFailure (Dataset (Translation ICU.AnnMessage))
 parseDataset = runParser (evalStateT dataset (ParserState mempty))
 
 parseMessage :: Text -> Text -> Either ParseFailure ICU.AnnMessage
