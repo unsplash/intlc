@@ -14,7 +14,7 @@ import           Text.Megaparsec               (PosState (PosState),
                                                 defaultTabWidth, initialPos)
 import           Text.Megaparsec.Error
 import           Text.Megaparsec.Error.Builder
-import           Utils                         (bun, bunBy)
+import           Utils                         (bunBy)
 
 type WithAnn a = (Int, a)
 
@@ -140,14 +140,17 @@ duplicateSelectCasesRule = nonEmpty . cases where
 -- Duplicate cases in plural interpolations are redundant.
 duplicatePluralCasesRule :: Rule AnnExternalLint
 duplicatePluralCasesRule = nonEmpty . cases where
-  cases = cata $ \case
-    x@(i :< CardinalExactF n ys _)        -> hereExact i n ys <>                     fold x
-    x@(i :< CardinalInexactF n ys zs _ _) -> hereExact i n ys <> hereRules i n zs <> fold x
-    x@(i :< OrdinalF n ys zs _ _)         -> hereExact i n ys <> hereRules i n zs <> fold x
-    x                                     ->                                         fold x
-  hereExact i n = fmap (f i n . pluralExact) . bun . fmap fst
-  hereRules i n = fmap (f i n . pluralRule)  . bun . fmap fst
-  f i n x = (i, DuplicatePluralCase n x)
+  cases = para $ \case
+    x@(_ :< CardinalExactF n ys _)        -> here pluralExact n ys <>                         fold' x
+    x@(_ :< CardinalInexactF n ys zs _ _) -> here pluralExact n ys <> here pluralRule n zs <> fold' x
+    x@(_ :< OrdinalF n ys zs _ _)         -> here pluralExact n ys <> here pluralRule n zs <> fold' x
+    x                                     ->                                                  fold' x
+  here via n xs = fmap (uncurry (f n) . (caseOffset &&& (via . caseKey))) . bunBy ((==) `on` caseKey) $ xs
+    where caseKey = fst
+          caseOffset = uncurry calcCaseNameOffset . first via . caseHead
+          caseHead = second (extract . fst)
+  fold' = fold . fmap snd
+  f n i x = (i, DuplicatePluralCase n x)
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of a
