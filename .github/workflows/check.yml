@@ -25,7 +25,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ~/.cabal/store
-          key: hashFiles('cabal.project.freeze')
+          key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
       - run: nix develop -c cabal build
   test:
     name: Test
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ~/.cabal/store
-          key: hashFiles('cabal.project.freeze')
+          key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
       - run: nix develop -c cabal test
   lint:
     name: Lint
@@ -70,6 +70,6 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ~/.cache/yarn/v6
-          key: hashFiles('.golden/ts/yarn.lock')
+          key: yarn-${{ runner.os }}-${{ hashFiles('.golden/ts/yarn.lock') }}
       - run: nix develop -c yarn install --frozen-lockfile
       - run: nix develop -c yarn typecheck
