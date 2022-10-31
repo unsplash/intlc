@@ -24,7 +24,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ~/.cabal/store
-          key: hashFiles('cabal.project.freeze')
+          key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
       - name: Build
         run: |
           nix develop -c cabal install --install-method=copy --installdir=dist-newstyle
