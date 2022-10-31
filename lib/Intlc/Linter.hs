@@ -108,6 +108,11 @@ instance ShowErrorComponent ExternalLint where
       RedundantPlural {}     -> "redundant-plural"
       DuplicateSelectCase {} -> "duplicate-select-case"
       DuplicatePluralCase {} -> "duplicate-plural-case"
+  errorComponentLen = \case
+    RedundantSelect x       -> T.length (unArg x)
+    RedundantPlural x       -> T.length (unArg x)
+    DuplicateSelectCase _ x -> T.length x
+    DuplicatePluralCase _ x -> T.length x
 
 instance ShowErrorComponent InternalLint where
   showErrorComponent = T.unpack . uncurry wikify . (wikiName &&& msg) where
@@ -119,6 +124,9 @@ instance ShowErrorComponent InternalLint where
     wikiName = \case
       TooManyInterpolations {}    -> "too-many-interpolations"
       InvalidNonAsciiCharacter {} -> "invalid-non-ascii-char"
+  errorComponentLen = \case
+    TooManyInterpolations {}    -> 1
+    InvalidNonAsciiCharacter {} -> 1
 
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.
