@@ -3,13 +3,17 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 module Intlc.ICU where
 
-import           Data.Functor.Foldable (Base, Corecursive, Recursive)
-import qualified Data.Text             as T
+import           Data.Eq.Deriving             (deriveEq1)
+import           Data.Functor.Foldable        (Base, Corecursive, Recursive,
+                                               cata, embed)
+import qualified Data.Text                    as T
 import           Prelude
+import           Text.Show.Deriving           (deriveShow1)
 
 newtype Message = Message Node
   deriving (Show, Eq)
@@ -143,6 +147,13 @@ data PluralRule
 
 type SelectCase = SelectCaseF Node
 type SelectCaseF a = (Text, a)
+
+-- Use Template Haskell to generate lifted typeclass instances for `NodeF`.
+-- Needs to appear after all the type aliases that `NodeF` references are
+-- defined. Anything else leaning on these instances must appear after this
+-- point.
+$(deriveShow1 ''NodeF)
+$(deriveEq1   ''NodeF)
 
 getNext :: Node -> Maybe Node
 getNext Fin                         = Nothing
