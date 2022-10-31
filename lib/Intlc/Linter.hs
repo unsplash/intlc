@@ -87,58 +87,37 @@ formatFailureWith f k es = title <> msgs
 redundantSelectRule :: Rule ExternalLint
 redundantSelectRule = fmap (fmap RedundantSelect) . nonEmpty . idents where
   idents = cata $ \case
-    SelectWildF n xs ys -> n : xs <> ys
-    x                   -> fold x
+    x@(SelectWildF n _ _) -> n : fold x
+    x                     ->     fold x
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
 redundantPluralRule :: Rule ExternalLint
 redundantPluralRule = fmap (fmap RedundantPlural) . nonEmpty . idents where
   idents = cata $ \case
-    CardinalInexactF n [] [] xs ys -> n : xs <> ys
-    OrdinalF         n [] [] xs ys -> n : xs <> ys
-    x                              -> fold x
+    x@(CardinalInexactF n [] [] _ _) -> n : fold x
+    x@(OrdinalF         n [] [] _ _) -> n : fold x
+    x                                ->     fold x
 
 -- Duplicate case names in select interpolations are redundant.
 duplicateSelectCasesRule :: Rule ExternalLint
 duplicateSelectCasesRule = fmap (fmap (uncurry DuplicateSelectCase)) . nonEmpty . cases where
   cases = cata $ \case
-    SelectNamedF n xs ys        -> here n xs <> foldSelectCases xs <> ys
-    SelectNamedWildF n xs ys zs -> here n xs <> foldSelectCases xs <> ys <> zs
-    x                           -> fold x
+    x@(SelectNamedF n ys _)       -> here n ys <> fold x
+    x@(SelectNamedWildF n ys _ _) -> here n ys <> fold x
+    x                             ->              fold x
   here n = fmap (n,) . bun . fmap fst
-  foldSelectCases = foldMap snd
 
 -- Duplicate cases in plural interpolations are redundant.
 duplicatePluralCasesRule :: Rule ExternalLint
 duplicatePluralCasesRule = fmap (fmap (uncurry DuplicatePluralCase)) . nonEmpty . cases where
   cases = cata $ \case
-    CardinalExactF n xs ys -> mconcat
-      [ hereExact n xs
-      , foldPluralCases xs
-      , ys
-      ]
-    CardinalInexactF n xs ys zs zzs -> mconcat
-      [ hereExact n xs
-      , hereRules n ys
-      , foldPluralCases xs
-      , foldPluralCases ys
-      , zs
-      , zzs
-      ]
-    OrdinalF n xs ys zs zzs -> mconcat
-      [ hereExact n xs
-      , hereRules n ys
-      , foldPluralCases xs
-      , foldPluralCases ys
-      , zs
-      , zzs
-      ]
-    x                      -> fold x
+    x@(CardinalExactF n ys _)        -> hereExact n ys <>                   fold x
+    x@(CardinalInexactF n ys zs _ _) -> hereExact n ys <> hereRules n zs <> fold x
+    x@(OrdinalF n ys zs _ _)         -> hereExact n ys <> hereRules n zs <> fold x
+    x                                ->                                     fold x
   hereExact n = fmap ((n,) . pluralExact) . bun . fmap fst
   hereRules n = fmap ((n,) . pluralRule) . bun . fmap fst
-  foldPluralCases :: Foldable f => f (PluralCaseF a [(Arg, Text)]) -> [(Arg, Text)]
-  foldPluralCases = foldMap snd
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of a
@@ -152,12 +131,11 @@ interpolationsRule = fmap pure . count . idents where
   count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
   idents = cata $ \case
-    BoolF n xs ys zs            -> n : xs <> ys <> zs
-    SelectNamedF n xs ys        -> n : foldSelectCases xs <> ys
-    SelectWildF n xs ys         -> n : xs <> ys
-    SelectNamedWildF n xs ys zs -> n : foldSelectCases xs <> ys <> zs
-    x                           -> fold x
-  foldSelectCases = foldMap snd
+    x@(BoolF n _ _ _)            -> n : fold x
+    x@(SelectNamedF n _ _)       -> n : fold x
+    x@(SelectWildF n _ _)        -> n : fold x
+    x@(SelectNamedWildF n _ _ _) -> n : fold x
+    x                            ->     fold x
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
 -- we've established are safe for use with our vendor's tool.
@@ -169,5 +147,5 @@ unsupportedUnicodeRule :: Rule InternalLint
 unsupportedUnicodeRule = output . nonAscii where
   output = fmap (fmap InvalidNonAsciiCharacter) . nonEmpty
   nonAscii = cata $ \case
-    CharF c xs -> guarded (not . isAcceptedChar) c <> xs
-    x          -> fold x
+    x@(CharF c _) -> guarded (not . isAcceptedChar) c <> fold x
+    x             ->                                     fold x
