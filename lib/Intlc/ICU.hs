@@ -8,6 +8,8 @@
 
 module Intlc.ICU where
 
+import           Control.Comonad.Cofree       (Cofree)
+import           Control.Comonad.Trans.Cofree (CofreeF ((:<)))
 import           Data.Eq.Deriving             (deriveEq1)
 import           Data.Functor.Foldable        (Base, Corecursive, Recursive,
                                                cata, embed)
@@ -86,6 +88,14 @@ data NodeF a
 
 type instance Base Node = NodeF
 
+-- | A `Node` annotated with an `Int` representing a source offset.
+type AnnNode = Cofree NodeF Int
+
+-- | Drop all annotations from an AST/`Node`.
+sansAnn :: AnnNode -> Node
+-- Explanation: https://stackoverflow.com/a/51050171/3369753
+sansAnn = cata $ \(_ :< x) -> embed x
+
 -- Concatenating two `Nodes` places the second at the tail of the first:
 --   Char 'a' Fin <> Char 'b' (Char 'c' Fin) = Char 'a' (Char 'b' (Char 'c' Fin))
 --
@@ -154,6 +164,15 @@ type SelectCaseF a = (Text, a)
 -- point.
 $(deriveShow1 ''NodeF)
 $(deriveEq1   ''NodeF)
+
+newtype AnnMessage = AnnMessage AnnNode
+  deriving (Show, Eq)
+
+unAnnMessage :: AnnMessage -> AnnNode
+unAnnMessage (AnnMessage xs) = xs
+
+sansAnnMsg :: AnnMessage -> Message
+sansAnnMsg = Message . sansAnn . unAnnMessage
 
 getNext :: Node -> Maybe Node
 getNext Fin                         = Nothing

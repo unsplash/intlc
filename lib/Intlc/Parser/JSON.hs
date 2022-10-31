@@ -35,7 +35,7 @@ data ParserState = ParserState
 failingWith' :: MonadParsec ParseErr s m => Int -> JSONParseErr -> m a
 i `failingWith'` e = i `failingWith` FailedJSONParse e
 
-dataset :: Parser (Dataset Translation)
+dataset :: Parser (Dataset AnnTranslation)
 dataset = space *> objMap translation <* space <* eof
 
 -- It's important to use `toPermutationWithDefault` as opposed to standard
@@ -45,15 +45,15 @@ dataset = space *> objMap translation <* space <* eof
 -- Additionally, the consistent application of whitespace is extremely
 -- important, and the permutation appears to operate over the first parser, so
 -- be careful around any abstractions around the key double quotes.
-translation :: Parser Translation
-translation = obj $ intercalateEffect objSep $ Translation
+translation :: Parser AnnTranslation
+translation = obj $ intercalateEffect objSep $ AnnTranslation
   <$> toPermutation                       (objPair' "message"     msg)
   <*> toPermutationWithDefault TypeScript (objPair' "backend"     (backendp <|> TypeScript <$ null))
   <*> toPermutationWithDefault Nothing    (objPair' "description" (Just <$> strLit <|> Nothing <$ null))
 
-msg :: Parser ICU.Message
+msg :: Parser ICU.AnnMessage
 msg = lift $ withRecovery recover p
-  where p = runReaderT (char '"' *> ICUP.msg) icupState
+  where p = runReaderT (char '"' *> ICUP.annMsg) icupState
         icupState = ICUP.emptyState { ICUP.endOfInput = void $ char '"' }
         recover e = error "absurd" <$ consume <* registerParseError e
         -- Once we've recovered we need to consume the rest of the message

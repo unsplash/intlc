@@ -12,7 +12,7 @@ import           Text.Megaparsec       (ErrorFancy (ErrorCustom), ParseError)
 import           Text.RawString.QQ     (r)
 
 parse :: Text -> Either ParseFailure (Dataset Translation)
-parse = parseDataset "test"
+parse = fmap datasetSansAnn . parseDataset "test"
 
 succeedsOn :: Text -> Expectation
 succeedsOn = shouldSucceedOn parse

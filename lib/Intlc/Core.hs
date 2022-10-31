@@ -1,6 +1,6 @@
 module Intlc.Core where
 
-import           Intlc.ICU (Message)
+import           Intlc.ICU (AnnMessage, Message, sansAnnMsg)
 import           Prelude
 
 -- Locales are too broad and too much of a moving target to validate, so this
@@ -22,6 +22,13 @@ data UnparsedTranslation = UnparsedTranslation
   }
   deriving (Show, Eq, Generic)
 
+data AnnTranslation = AnnTranslation
+  { amessage :: AnnMessage
+  , abackend :: Backend
+  , amdesc   :: Maybe Text
+  }
+  deriving (Show, Eq)
+
 data Translation = Translation
   { message :: Message
   , backend :: Backend
@@ -30,3 +37,13 @@ data Translation = Translation
   deriving (Show, Eq)
 
 type Dataset = Map Text
+
+datasetSansAnn :: Dataset AnnTranslation -> Dataset Translation
+datasetSansAnn = fmap translationSansAnn
+
+translationSansAnn :: AnnTranslation -> Translation
+translationSansAnn x = Translation
+  { message = sansAnnMsg x.amessage
+  , backend = x.abackend
+  , mdesc = x.amdesc
+  }

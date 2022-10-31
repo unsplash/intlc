@@ -4,6 +4,7 @@ import           CLI                (Opts (..), getOpts)
 import qualified Data.Text          as T
 import           Intlc.Compiler     (compileDataset, compileFlattened)
 import           Intlc.Core
+import           Intlc.ICU          (sansAnnMsg)
 import           Intlc.Linter
 import           Intlc.Parser       (parseDataset, parseMessage, printErr)
 import           Intlc.Parser.Error (ParseFailure)
@@ -12,9 +13,9 @@ import           Prelude
 
 main :: IO ()
 main = getOpts >>= \case
-  Compile path loc -> tryGetParsedAt path >>= compile loc
-  Flatten path     -> tryGetParsedAt path >>= flatten
-  Lint    path     -> tryGetParsedAt path >>= lint
+  Compile path loc -> tryGetParsedAtSansAnn path >>= compile loc
+  Flatten path     -> tryGetParsedAtSansAnn path >>= flatten
+  Lint    path     -> tryGetParsedAtSansAnn path >>= lint
   Prettify msg     -> tryPrettify msg
 
 compile :: MonadIO m => Locale -> Dataset Translation -> m ()
@@ -29,13 +30,16 @@ lint :: MonadIO m => Dataset Translation -> m ()
 lint xs = whenJust (lintDatasetExternal xs) $ die . T.unpack
 
 tryPrettify :: MonadIO m => Text -> m ()
-tryPrettify = either (die . printErr) (putTextLn . prettify) . parseMessage "input"
+tryPrettify = either (die . printErr) (putTextLn . prettify . sansAnnMsg) . parseMessage "input"
 
-tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset Translation)
+tryGetParsedAtSansAnn :: MonadIO m => FilePath -> m (Dataset Translation)
+tryGetParsedAtSansAnn = parserDie . fmap datasetSansAnn <=< getParsedAt
+
+tryGetParsedAt :: MonadIO m => FilePath -> m (Dataset AnnTranslation)
 tryGetParsedAt = parserDie <=< getParsedAt
 
 parserDie :: MonadIO m => Either ParseFailure a -> m a
 parserDie = either (die . printErr) pure
 
-getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset Translation))
+getParsedAt :: MonadIO m => FilePath -> m (Either ParseFailure (Dataset AnnTranslation))
 getParsedAt x = parseDataset x . decodeUtf8 <$> readFileBS x
