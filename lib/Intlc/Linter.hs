@@ -92,19 +92,33 @@ lintDatasetExternal = lintDatasetWith lintExternal
 lintDatasetInternal :: FilePath -> Text -> Dataset (Translation AnnMessage) -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal
 
+wikify :: Text -> Text -> Text
+wikify name content = name <> ": " <> content <> "\n\nLearn more: " <> link
+  where link = "https://github.com/unsplash/intlc/wiki/Lint-rules-reference#" <> name
+
 instance ShowErrorComponent ExternalLint where
-  showErrorComponent = (T.unpack .) $ \case
-    RedundantSelect x       -> "Select named `" <> unArg x <> "` is redundant as it only contains a wildcard."
-    RedundantPlural x       -> "Plural named `" <> unArg x <> "` is redundant as it only contains a wildcard."
-    DuplicateSelectCase x y -> "Select named `" <> unArg x <> "` contains a duplicate case named `" <> y <> "`."
-    DuplicatePluralCase x y -> "Plural named `" <> unArg x <> "` contains a duplicate `" <> y <> "` case."
+  showErrorComponent = T.unpack . uncurry wikify . (wikiName &&& msg) where
+    msg = \case
+      RedundantSelect x       -> "Select named `" <> unArg x <> "` is redundant as it only contains a wildcard."
+      RedundantPlural x       -> "Plural named `" <> unArg x <> "` is redundant as it only contains a wildcard."
+      DuplicateSelectCase x y -> "Select named `" <> unArg x <> "` contains a duplicate case named `" <> y <> "`."
+      DuplicatePluralCase x y -> "Plural named `" <> unArg x <> "` contains a duplicate `" <> y <> "` case."
+    wikiName = \case
+      RedundantSelect {}     -> "redundant-select"
+      RedundantPlural {}     -> "redundant-plural"
+      DuplicateSelectCase {} -> "duplicate-select-case"
+      DuplicatePluralCase {} -> "duplicate-plural-case"
 
 instance ShowErrorComponent InternalLint where
-  showErrorComponent = (T.unpack .) $ \case
-    TooManyInterpolations xs   -> "Multiple \"complex\" non-plural interpolations in the same message are disallowed. Found names: " <> interps
-      where interps = T.intercalate ", " (fmap (qts . unArg) . toList $ xs)
-            qts x = "`" <> x <> "`"
-    InvalidNonAsciiCharacter x -> "Non-ASCII character `" <> T.singleton x <> "` is disallowed."
+  showErrorComponent = T.unpack . uncurry wikify . (wikiName &&& msg) where
+    msg = \case
+      TooManyInterpolations xs   -> "Multiple \"complex\" non-plural interpolations in the same message are disallowed. Found names: " <> interps
+        where interps = T.intercalate ", " (fmap (qts . unArg) . toList $ xs)
+              qts x = "`" <> x <> "`"
+      InvalidNonAsciiCharacter x -> "Non-ASCII character `" <> T.singleton x <> "` is disallowed."
+    wikiName = \case
+      TooManyInterpolations {}    -> "too-many-interpolations"
+      InvalidNonAsciiCharacter {} -> "invalid-non-ascii-char"
 
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.
