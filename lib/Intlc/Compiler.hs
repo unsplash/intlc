@@ -13,7 +13,7 @@ import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (elem)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
-compileDataset :: Locale -> Dataset (Translation ICU.Message) -> Either (NonEmpty Text) Text
+compileDataset :: Locale -> Dataset (Translation (ICU.Message ICU.Node)) -> Either (NonEmpty Text) Text
 compileDataset l d = validateKeys d $>
   case stmts of
     []     -> JS.emptyModule
@@ -23,7 +23,7 @@ compileDataset l d = validateKeys d $>
         exports = M.foldrWithKey buildCompiledTranslations mempty d
         buildCompiledTranslations k v acc = compileTranslation l k v : acc
 
-validateKeys :: Dataset (Translation ICU.Message) -> Either (NonEmpty Text) ()
+validateKeys :: Dataset (Translation (ICU.Message ICU.Node)) -> Either (NonEmpty Text) ()
 validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
   where toEither []     = Right ()
         toEither (e:es) = Left $ e :| es
@@ -31,18 +31,18 @@ validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
           TypeScript      -> TS.validateKey
           TypeScriptReact -> TS.validateKey
 
-compileTranslation :: Locale -> Text -> Translation ICU.Message -> Text
+compileTranslation :: Locale -> Text -> Translation (ICU.Message ICU.Node) -> Text
 compileTranslation l k (Translation v be _) = case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
-compileFlattened :: Dataset (Translation ICU.Message) -> Text
+compileFlattened :: Dataset (Translation (ICU.Message ICU.Node)) -> Text
 compileFlattened = JSON.compileDataset . mapMsgs flatten
 
-mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset (Translation ICU.Message) -> Dataset (Translation ICU.Message)
+mapMsgs :: (ICU.Message ICU.Node -> ICU.Message ICU.Node) -> Dataset (Translation (ICU.Message ICU.Node)) -> Dataset (Translation (ICU.Message ICU.Node))
 mapMsgs f = fmap $ \x -> x { message = f x.message }
 
-flatten :: ICU.Message -> ICU.Message
+flatten :: ICU.Message ICU.Node -> ICU.Message ICU.Node
 flatten = ICU.Message . go mempty . ICU.unMessage
   where go :: ICU.Node -> ICU.Node -> ICU.Node
         go prev rest =
@@ -67,7 +67,7 @@ flatten = ICU.Message . go mempty . ICU.unMessage
 --
 -- Added plural rules inherit the content of the wildcard. Output order of
 -- rules is unspecified.
-expandPlurals :: ICU.Message -> ICU.Message
+expandPlurals :: ICU.Message ICU.Node -> ICU.Message ICU.Node
 expandPlurals = ICU.Message . cata f . ICU.unMessage
   where f (ICU.CardinalInexactF n exacts rules w y) =
             ICU.CardinalInexact n exacts (toList $ expandRules rules w) w y

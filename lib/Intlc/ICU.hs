@@ -17,11 +17,11 @@ import qualified Data.Text                    as T
 import           Prelude
 import           Text.Show.Deriving           (deriveShow1)
 
-newtype Message = Message Node
+newtype Message a = Message a
   deriving (Show, Eq)
 
-unMessage :: Message -> Node
-unMessage (Message xs) = xs
+unMessage :: Message a -> a
+unMessage (Message x) = x
 
 newtype Arg = Arg Text
   deriving newtype (Show, Eq, Ord, IsString)
@@ -165,14 +165,8 @@ type SelectCaseF a = (Text, a)
 $(deriveShow1 ''NodeF)
 $(deriveEq1   ''NodeF)
 
-newtype AnnMessage = AnnMessage AnnNode
-  deriving (Show, Eq)
-
-unAnnMessage :: AnnMessage -> AnnNode
-unAnnMessage (AnnMessage xs) = xs
-
-sansAnnMsg :: AnnMessage -> Message
-sansAnnMsg = Message . sansAnn . unAnnMessage
+sansAnnMsg :: Message AnnNode -> Message Node
+sansAnnMsg = Message . sansAnn . unMessage
 
 getNext :: Node -> Maybe Node
 getNext Fin                         = Nothing

@@ -12,7 +12,7 @@ import           System.FilePath                   ((<.>), (</>))
 import           Test.Hspec
 import           Test.Hspec.Golden                 (Golden (..), defaultGolden)
 
-golden :: InterpStrat -> (ICU.Message -> Text) -> String -> ICU.Message -> Golden String
+golden :: InterpStrat -> (ICU.Message ICU.Node -> Text) -> String -> ICU.Message ICU.Node -> Golden String
 golden strat compiler name msg = baseCfg
   { goldenFile = goldenFile baseCfg <.> fileExt
   , actualFile = actualFile baseCfg <&> (<.> fileExt)

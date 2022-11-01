@@ -11,7 +11,7 @@ import           Test.Hspec.Megaparsec
 import           Text.Megaparsec       (ErrorFancy (ErrorCustom), ParseError)
 import           Text.RawString.QQ     (r)
 
-parse :: Text -> Either ParseFailure (Dataset (Translation ICU.Message))
+parse :: Text -> Either ParseFailure (Dataset (Translation (ICU.Message ICU.Node)))
 parse = fmap datasetSansAnn . parseDataset "test"
 
 succeedsOn :: Text -> Expectation

@@ -1,6 +1,6 @@
 module Intlc.Core where
 
-import           Intlc.ICU (AnnMessage, Message, sansAnnMsg)
+import           Intlc.ICU (AnnNode, Message, Node, sansAnnMsg)
 import           Prelude
 
 -- Locales are too broad and too much of a moving target to validate, so this
@@ -24,8 +24,8 @@ data Translation a = Translation
 
 type Dataset = Map Text
 
-datasetSansAnn :: Dataset (Translation AnnMessage) -> Dataset (Translation Message)
+datasetSansAnn :: Dataset (Translation (Message AnnNode)) -> Dataset (Translation (Message Node))
 datasetSansAnn = fmap translationSansAnn
 
-translationSansAnn :: Translation AnnMessage -> Translation Message
+translationSansAnn :: Translation (Message AnnNode) -> Translation (Message Node)
 translationSansAnn x = x { message = sansAnnMsg x.message }

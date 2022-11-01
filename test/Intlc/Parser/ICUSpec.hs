@@ -40,7 +40,7 @@ parseF :: Parser (AnnNode -> NodeF AnnNode) -> Text -> Either ParseFailure Node
 parseF = parse . fmap sansAnn' . flip flap fin
 
 -- | Message parser sans annotations.
-msg :: Parser Message
+msg :: Parser (Message Node)
 msg = sansAnnMsg <$> annMsg
 
 spec :: Spec
@@ -117,7 +117,7 @@ spec = describe "ICU parser" $ do
     -- As you can see this isn't fun to write out by hand for tests. This one
     -- test can suffice for ensuring we're parsing annotations correctly.
     it "parses with annotations" $ do
-      parse annMsg "Hello' {n, plural, one {{name}} other {}}!" `shouldParse` AnnMessage
+      parse annMsg "Hello' {n, plural, one {{name}} other {}}!" `shouldParse` Message
         ( 0 :< CharF 'H' (
           1 :< CharF 'e' (
           2 :< CharF 'l' (

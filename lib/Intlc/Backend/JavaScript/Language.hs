@@ -46,7 +46,7 @@ data Branch = Branch Text [Expr]
 newtype Wildcard = Wildcard [Expr]
   deriving (Show, Eq)
 
-fromKeyedMsg :: Text -> ICU.Message -> ASTCompiler Stmt
+fromKeyedMsg :: Text -> ICU.Message ICU.Node -> ASTCompiler Stmt
 fromKeyedMsg n (ICU.Message x) = Stmt n <$> fromNode x
 
 fromNode :: ICU.Node -> ASTCompiler [Expr]

@@ -4,5 +4,5 @@ import           Intlc.Backend.ICU.Compiler (Formatting (..), compileMsg)
 import qualified Intlc.ICU                  as ICU
 import           Prelude
 
-prettify :: ICU.Message -> Text
+prettify :: ICU.Message ICU.Node -> Text
 prettify = compileMsg MultiLine

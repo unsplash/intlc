@@ -6,7 +6,7 @@ import           Data.Text.IO                (getContents)
 import           Intlc.Backend.JSON.Compiler (compileDataset)
 import           Intlc.Compiler              (expandPlurals)
 import           Intlc.Core
-import           Intlc.ICU                   (AnnMessage, Message)
+import           Intlc.ICU                   (AnnNode, Message, Node)
 import           Intlc.Linter
 import           Intlc.Parser                (parseDataset, printErr)
 import           Intlc.Parser.Error          (ParseFailure)
@@ -23,19 +23,19 @@ lint path = do
   dataset <- parserDie $ parseDataset path raw
   whenJust (lintDatasetInternal path raw dataset) $ die . T.unpack
 
-compileExpandedPlurals :: MonadIO m => Dataset (Translation Message) -> m ()
+compileExpandedPlurals :: MonadIO m => Dataset (Translation (Message Node)) -> m ()
 compileExpandedPlurals = putTextLn . compileDataset . fmap (\x -> x { message = expandPlurals x.message })
 
-tryGetParsedStdinSansAnn :: IO (Dataset (Translation Message))
+tryGetParsedStdinSansAnn :: IO (Dataset (Translation (Message Node)))
 tryGetParsedStdinSansAnn = parserDie . fmap datasetSansAnn =<< getParsedStdin
 
-tryGetParsedStdin :: IO (Dataset (Translation AnnMessage))
+tryGetParsedStdin :: IO (Dataset (Translation (Message AnnNode)))
 tryGetParsedStdin = parserDie =<< getParsedStdin
 
 parserDie :: MonadIO m => Either ParseFailure a -> m a
 parserDie = either (die . printErr) pure
 
-getParsedStdin :: IO (Either ParseFailure (Dataset (Translation AnnMessage)))
+getParsedStdin :: IO (Either ParseFailure (Dataset (Translation (Message AnnNode))))
 getParsedStdin = parseDataset "stdin" <$> getContents
 
 readFileAt :: MonadIO m => FilePath -> m Text

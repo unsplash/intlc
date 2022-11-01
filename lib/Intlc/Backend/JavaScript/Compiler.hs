@@ -35,7 +35,7 @@ data Cfg = Cfg
   , overrides :: Overrides
   }
 
-compileStmt :: Overrides -> InterpStrat -> Locale -> Text -> ICU.Message -> Text
+compileStmt :: Overrides -> InterpStrat -> Locale -> Text -> ICU.Message ICU.Node -> Text
 compileStmt o s l k m = f' fromKeyedMsg'
   where f' = flip runReader (Cfg l s o) . stmt
         fromKeyedMsg' = runReader (fromKeyedMsg k m) l

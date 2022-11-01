@@ -8,10 +8,10 @@ import           Prelude
 import           Test.Hspec
 
 -- | Annotate an AST with nonsense. We won't test the annotations.
-withAnn :: Message -> AnnMessage
-withAnn = AnnMessage . cata (0 :<) . unMessage
+withAnn :: Message Node -> Message AnnNode
+withAnn = Message . cata (0 :<) . unMessage
 
-lintWith' :: Rule (WithAnn a) -> Message -> Status a
+lintWith' :: Rule (WithAnn a) -> Message Node -> Status a
 lintWith' r = statusSansAnn . lintWith (pure r) . withAnn where
   statusSansAnn Success      = Success
   statusSansAnn (Failure xs) = Failure (snd <$> xs)

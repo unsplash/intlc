@@ -61,17 +61,17 @@ arg = Arg <$> ident
 --
 -- To instead parse a message as part of a broader data structure, instead look
 -- at `msg` and its `endOfInput` state property.
-annMsg' :: Parsec ParseErr Text AnnMessage
+annMsg' :: Parsec ParseErr Text (Message AnnNode)
 annMsg' = runReaderT annMsg cfg where
   cfg = emptyState { endOfInput = eof }
 
 -- Parse a message with annotations until the end of input parser matches.
-annMsg :: Parser AnnMessage
+annMsg :: Parser (Message AnnNode)
 annMsg = annMsgTill =<< asks endOfInput
 
 -- Parse a message with annotations until the provided parser matches.
-annMsgTill :: Parser a -> Parser AnnMessage
-annMsgTill = fmap AnnMessage . nodesTill
+annMsgTill :: Parser a -> Parser (Message AnnNode)
+annMsgTill = fmap Message . nodesTill
 
 nodesTill :: Parser a -> Parser AnnNode
 nodesTill end = go where

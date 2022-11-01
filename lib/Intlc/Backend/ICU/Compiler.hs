@@ -14,7 +14,7 @@ import           Intlc.ICU
 import           Prelude
 import           Utils                 ((<>^))
 
-compileMsg :: Formatting -> Message -> Text
+compileMsg :: Formatting -> Message Node -> Text
 compileMsg x y = node x (unMessage y)
 
 data Formatting

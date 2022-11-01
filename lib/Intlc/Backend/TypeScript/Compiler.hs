@@ -14,7 +14,7 @@ import qualified Intlc.ICU                         as ICU
 import           Prelude
 import           Utils                             ((<>^))
 
-compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message -> Text
+compileNamedExport :: InterpStrat -> Locale -> Text -> ICU.Message ICU.Node -> Text
 compileNamedExport s l k v = JS.compileStmt o s l k v
   where o = JS.emptyOverrides { JS.stmtOverride = Just stmt, JS.matchLitCondOverride = Just matchLitCond }
         stmt n r = "export const " <> n <> ": " <> compileTypeof s v <> " = " <> arg <> " => " <> r
@@ -26,7 +26,7 @@ compileNamedExport s l k v = JS.compileStmt o s l k v
         hasInterpolations (ICU.Char _ n) = hasInterpolations n
         hasInterpolations _              = True
 
-compileTypeof :: InterpStrat -> ICU.Message -> Text
+compileTypeof :: InterpStrat -> ICU.Message ICU.Node -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
 
 fromStrat :: InterpStrat -> Out

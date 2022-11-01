@@ -48,12 +48,12 @@ maybeToStatus (Just xs) = Failure xs
 
 type Rule a = AnnNode -> Maybe (NonEmpty a)
 
-lintWith :: [Rule a] -> AnnMessage -> Status a
-lintWith rules (AnnMessage ast) = maybeToStatus . catNEMaybes . flap rules $ ast
+lintWith :: [Rule a] -> Message AnnNode -> Status a
+lintWith rules (Message ast) = maybeToStatus . catNEMaybes . flap rules $ ast
   where catNEMaybes :: [Maybe (NonEmpty a)] -> Maybe (NonEmpty a)
         catNEMaybes = nonEmpty . foldMap (foldMap toList)
 
-lintExternal :: AnnMessage -> Status AnnExternalLint
+lintExternal :: Message AnnNode -> Status AnnExternalLint
 lintExternal = lintWith
   [ redundantSelectRule
   , redundantPluralRule
@@ -61,7 +61,7 @@ lintExternal = lintWith
   , duplicatePluralCasesRule
   ]
 
-lintInternal :: AnnMessage -> Status AnnInternalLint
+lintInternal :: Message AnnNode -> Status AnnInternalLint
 lintInternal = lintWith
   [ interpolationsRule
   , unsupportedUnicodeRule
@@ -83,13 +83,13 @@ buildPosState path content = PosState content 0 (initialPos path) defaultTabWidt
 
 -- Get the printable output from linting an entire dataset, if any.
 lintDatasetWith :: ShowErrorComponent a =>
-  (AnnMessage -> Status (WithAnn a)) -> FilePath -> Text -> Dataset (Translation AnnMessage) -> Maybe Text
+  (Message AnnNode -> Status (WithAnn a)) -> FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
 lintDatasetWith linter path content = fmap (fmt path content) . foldMap (statusToMaybe . linter . message)
 
-lintDatasetExternal :: FilePath -> Text -> Dataset (Translation AnnMessage) -> Maybe Text
+lintDatasetExternal :: FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
 lintDatasetExternal = lintDatasetWith lintExternal
 
-lintDatasetInternal :: FilePath -> Text -> Dataset (Translation AnnMessage) -> Maybe Text
+lintDatasetInternal :: FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
 lintDatasetInternal = lintDatasetWith lintInternal
 
 wikify :: Text -> Text -> Text

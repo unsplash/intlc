@@ -41,7 +41,7 @@ isMultiUnion _                 = False
 collateArgs :: UncollatedArgs -> Args
 collateArgs = fmap nub . M.fromListWith (<>) . fmap (second pure)
 
-fromMsg :: Out -> ICU.Message -> TypeOf
+fromMsg :: Out -> ICU.Message ICU.Node -> TypeOf
 fromMsg x (ICU.Message y) = Lambda (collateArgs . fromNode $ y) x
 
 fromNode :: ICU.Node -> UncollatedArgs
