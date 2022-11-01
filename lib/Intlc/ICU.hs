@@ -190,20 +190,20 @@ sever :: Node -> (Node, Maybe Node)
 sever = sansNext &&& getNext
   where sansNext = \case
           Fin                         -> Fin
-          Char c _                    -> Char c Fin
-          String n _                  -> String n Fin
-          Number n _                  -> Number n Fin
-          Date n f _                  -> Date n f Fin
-          Time n f _                  -> Time n f Fin
-          PluralRef n _               -> PluralRef n Fin
-          Bool n t f _                -> Bool n t f Fin
-          CardinalExact n pe _        -> CardinalExact n pe Fin
-          CardinalInexact n pe pr w _ -> CardinalInexact n pe pr w Fin
-          Ordinal n pe pr w _         -> Ordinal n pe pr w Fin
-          SelectNamed n c _           -> SelectNamed n c Fin
-          SelectWild n w _            -> SelectWild n w Fin
-          SelectNamedWild n c w _     -> SelectNamedWild n c w Fin
-          Callback n c _              -> Callback n c Fin
+          Char c _                    -> Char' c
+          String n _                  -> String' n
+          Number n _                  -> Number' n
+          Date n f _                  -> Date' n f
+          Time n f _                  -> Time' n f
+          PluralRef n _               -> PluralRef' n
+          Bool n t f _                -> Bool' n t f
+          CardinalExact n pe _        -> CardinalExact' n pe
+          CardinalInexact n pe pr w _ -> CardinalInexact' n pe pr w
+          Ordinal n pe pr w _         -> Ordinal' n pe pr w
+          SelectNamed n c _           -> SelectNamed' n c
+          SelectWild n w _            -> SelectWild' n w
+          SelectNamedWild n c w _     -> SelectNamedWild' n c w
+          Callback n c _              -> Callback' n c
 
 -- A series of `Node` constructor aliases which partially apply the sibling as
 -- `Fin`. Particularly useful when writing out a large `Node` by hand, for
