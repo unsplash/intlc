@@ -45,23 +45,25 @@ fromMsg :: Out -> ICU.Message -> TypeOf
 fromMsg x (ICU.Message y) = Lambda (collateArgs . fromNode $ y) x
 
 fromNode :: ICU.Node -> UncollatedArgs
-fromNode = cata $ \case
-  x@(ICU.BoolF n _ _ _) -> (n, TBool) : fold x
-  x@(ICU.StringF n _)   -> (n, TStr)  : fold x
-  x@(ICU.NumberF n _)   -> (n, TNum)  : fold x
-  x@(ICU.DateF n _ _)   -> (n, TDate) : fold x
-  x@(ICU.TimeF n _ _)   -> (n, TDate) : fold x
+fromNode = cata $ (maybeToList . marg) <> fold
+
+marg :: ICU.NodeF a -> Maybe (ICU.Arg, In)
+marg = \case
+  ICU.BoolF n _ _ _              -> pure (n, TBool)
+  ICU.StringF n _                -> pure (n, TStr)
+  ICU.NumberF n _                -> pure (n, TNum)
+  ICU.DateF n _ _                -> pure (n, TDate)
+  ICU.TimeF n _ _                -> pure (n, TDate)
   -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
   -- union of number literals.
-  x@(ICU.CardinalExactF n ls _)      -> (n, t) : fold x where
-    t = TNumLitUnion $ caseLit <$> ls
-    caseLit (ICU.PluralExact y, _) = y
-  x@(ICU.CardinalInexactF n _ _ _ _) -> (n, TNum) : fold x
-  x@(ICU.OrdinalF n _ _ _ _)         -> (n, TNum) : fold x
-  x@(ICU.SelectWildF n _ _)          -> (n, TStr) : fold x
-  x@(ICU.SelectNamedWildF n _ _ _)   -> (n, TStr) : fold x
+  ICU.CardinalExactF n ls _      -> pure (n, TNumLitUnion (caseLit <$> ls))
+    where caseLit (ICU.PluralExact y, _) = y
+  ICU.CardinalInexactF n _ _ _ _ -> pure (n, TNum)
+  ICU.OrdinalF n _ _ _ _         -> pure (n, TNum)
+  ICU.SelectWildF n _ _          -> pure (n, TStr)
+  ICU.SelectNamedWildF n _ _ _   -> pure (n, TStr)
   -- When there's no wildcard case we can compile to a union of string literals.
-  x@(ICU.SelectNamedF n cs _)        -> (n, TStrLitUnion (fst <$> cs)) : fold x
-  x@(ICU.CallbackF n _ _)            -> (n, TEndo) : fold x
+  ICU.SelectNamedF n cs _        -> pure (n, TStrLitUnion (fst <$> cs))
+  ICU.CallbackF n _ _            -> pure (n, TEndo)
   -- Plural references are treated as a no-op.
-  x -> fold x
+  _                              -> empty
