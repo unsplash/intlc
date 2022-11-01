@@ -153,7 +153,7 @@ dateTimeFmt ICU.Full   = "full"
 emptyModule :: Text
 emptyModule = "export {}"
 
-buildReactImport :: Dataset Translation -> Maybe Text
+buildReactImport :: Dataset (Translation a) -> Maybe Text
 buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)
   where text = "import { ReactElement } from 'react'"
 

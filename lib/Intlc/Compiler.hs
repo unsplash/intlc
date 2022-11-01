@@ -13,7 +13,7 @@ import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (elem)
 
 -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
-compileDataset :: Locale -> Dataset Translation -> Either (NonEmpty Text) Text
+compileDataset :: Locale -> Dataset (Translation ICU.Message) -> Either (NonEmpty Text) Text
 compileDataset l d = validateKeys d $>
   case stmts of
     []     -> JS.emptyModule
@@ -23,7 +23,7 @@ compileDataset l d = validateKeys d $>
         exports = M.foldrWithKey buildCompiledTranslations mempty d
         buildCompiledTranslations k v acc = compileTranslation l k v : acc
 
-validateKeys :: Dataset Translation -> Either (NonEmpty Text) ()
+validateKeys :: Dataset (Translation ICU.Message) -> Either (NonEmpty Text) ()
 validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
   where toEither []     = Right ()
         toEither (e:es) = Left $ e :| es
@@ -31,15 +31,15 @@ validateKeys = toEither . lefts . fmap (uncurry validate) . M.toList
           TypeScript      -> TS.validateKey
           TypeScriptReact -> TS.validateKey
 
-compileTranslation :: Locale -> Text -> Translation -> Text
+compileTranslation :: Locale -> Text -> Translation ICU.Message -> Text
 compileTranslation l k (Translation v be _) = case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
-compileFlattened :: Dataset Translation -> Text
+compileFlattened :: Dataset (Translation ICU.Message) -> Text
 compileFlattened = JSON.compileDataset . mapMsgs flatten
 
-mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset Translation -> Dataset Translation
+mapMsgs :: (ICU.Message -> ICU.Message) -> Dataset (Translation ICU.Message) -> Dataset (Translation ICU.Message)
 mapMsgs f = fmap $ \x -> x { message = f x.message }
 
 flatten :: ICU.Message -> ICU.Message

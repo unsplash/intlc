@@ -1,6 +1,6 @@
 module Intlc.Core where
 
-import           Intlc.ICU (Message)
+import           Intlc.ICU (AnnMessage, Message, sansAnnMsg)
 import           Prelude
 
 -- Locales are too broad and too much of a moving target to validate, so this
@@ -15,18 +15,21 @@ data Backend
   | TypeScriptReact
   deriving (Show, Eq, Generic)
 
-data UnparsedTranslation = UnparsedTranslation
-  { umessage :: UnparsedMessage
-  , ubackend :: Backend
-  , umdesc   :: Maybe Text
-  }
-  deriving (Show, Eq, Generic)
-
-data Translation = Translation
-  { message :: Message
+data Translation a = Translation
+  { message :: a
   , backend :: Backend
   , mdesc   :: Maybe Text
   }
   deriving (Show, Eq)
 
 type Dataset = Map Text
+
+datasetSansAnn :: Dataset (Translation AnnMessage) -> Dataset (Translation Message)
+datasetSansAnn = fmap translationSansAnn
+
+translationSansAnn :: Translation AnnMessage -> Translation Message
+translationSansAnn x = Translation
+  { message = sansAnnMsg x.message
+  , backend = x.backend
+  , mdesc = x.mdesc
+  }

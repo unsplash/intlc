@@ -1,12 +1,20 @@
 module Intlc.LinterSpec where
 
+import           Control.Comonad.Cofree (Cofree ((:<)))
+import           Data.Functor.Foldable  (cata)
 import           Intlc.ICU
 import           Intlc.Linter
 import           Prelude
 import           Test.Hspec
 
-lintWith' :: Rule a -> Message -> Status a
-lintWith' = lintWith . pure
+-- | Annotate an AST with nonsense. We won't test the annotations.
+withAnn :: Message -> AnnMessage
+withAnn = AnnMessage . cata (0 :<) . unMessage
+
+lintWith' :: Rule (WithAnn a) -> Message -> Status a
+lintWith' r = statusSansAnn . lintWith (pure r) . withAnn where
+  statusSansAnn Success      = Success
+  statusSansAnn (Failure xs) = Failure (snd <$> xs)
 
 spec :: Spec
 spec = describe "linter" $ do

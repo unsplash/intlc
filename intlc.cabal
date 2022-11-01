@@ -16,8 +16,11 @@ common common
   build-depends:
       base                 ^>=4.16
     , bytestring           ^>=0.11
+    , comonad              ^>=5.0
     , containers           ^>=0.6
+    , deriving-compat      ^>=0.6
     , extra                ^>=1.7
+    , free                 ^>=5.1
     , mtl                  ^>=2.2
     , optics               ^>=0.4
     , recursion-schemes    ^>=5.2

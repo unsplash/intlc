@@ -1,3 +1,12 @@
+-- Parse an ICU message with annotations/source offsets. These annotations can
+-- be stripped later externally if unwanted.
+--
+-- Most parsers parse for functions. This might seem counterintuitive, but it's
+-- to match the shape of our AST in which, like a singly-linked list, each node
+-- points to its next sibling. Equivalently a `Parser (a -> NodeF a)` is
+-- typically a parser which has parsed all but the following sibling. A simple
+-- example of this would be `pure (CharF 'a')`.
+--
 -- This module follows the following whitespace rules:
 --   * Consume all whitespace after nodes where possible.
 --   * Therefore, assume no whitespace before nodes.
@@ -5,6 +14,8 @@
 module Intlc.Parser.ICU where
 
 import qualified Control.Applicative.Combinators.NonEmpty as NE
+import           Control.Comonad.Cofree                   (Cofree ((:<)),
+                                                           unwrap)
 import qualified Data.Text                                as T
 import           Data.Void                                ()
 import           Intlc.ICU
@@ -35,36 +46,42 @@ emptyState = ParserState
 
 type Parser = ReaderT ParserState (Parsec ParseErr Text)
 
+-- | Lifts the contents of the parser to contain annotations at this layer of
+-- the `Cofree`.
+withAnn :: Parser (AnnNode -> NodeF AnnNode) -> Parser (AnnNode -> AnnNode)
+withAnn p = (\i f z -> i :< f z) <$> getOffset <*> p
+
 ident :: Parser Text
 ident = label "alphabetic identifier" $ T.pack <$> some letterChar
 
 arg :: Parser Arg
 arg = Arg <$> ident
 
--- | Parse a message until end of input.
+-- | Parse a message with annotations until end of input.
 --
 -- To instead parse a message as part of a broader data structure, instead look
 -- at `msg` and its `endOfInput` state property.
-msg' :: Parsec ParseErr Text Message
-msg' = runReaderT msg cfg where
+annMsg' :: Parsec ParseErr Text AnnMessage
+annMsg' = runReaderT annMsg cfg where
   cfg = emptyState { endOfInput = eof }
 
--- Parse a message until the end of input parser matches.
-msg :: Parser Message
-msg = msgTill =<< asks endOfInput
+-- Parse a message with annotations until the end of input parser matches.
+annMsg :: Parser AnnMessage
+annMsg = annMsgTill =<< asks endOfInput
 
--- Parse a message until the provided parser matches.
-msgTill :: Parser a -> Parser Message
-msgTill = fmap Message . nodesTill
+-- Parse a message with annotations until the provided parser matches.
+annMsgTill :: Parser a -> Parser AnnMessage
+annMsgTill = fmap AnnMessage . nodesTill
 
--- Parse as many `Node`s as possible until the provided parser matches.
-nodesTill :: Parser a -> Parser Node
-nodesTill = fmap mconcat <$> manyTill node
+nodesTill :: Parser a -> Parser AnnNode
+nodesTill end = go where
+  go = fin <|> (withAnn node <*> go)
+  fin = (:< FinF) <$> (getOffset <* end)
 
 -- The core parser of this module. Parse as many of these as you'd like until
 -- reaching an anticipated delimiter, such as a double quote in the surrounding
 -- JSON string or end of input in a REPL.
-node :: Parser Node
+node :: Parser (AnnNode -> NodeF AnnNode)
 node = choice
   [ interp
   , callback
@@ -72,41 +89,41 @@ node = choice
   -- `#`. When there's no such context, fail the parse in effect treating it
   -- as plaintext.
   , asks pluralCtxName >>= \case
-      Just n  -> PluralRef n Fin <$ string "#"
+      Just n  -> PluralRefF n <$ string "#"
       Nothing -> empty
   , plaintext
   ]
 
 -- Parse a character or a potentially larger escape sequence.
-plaintext :: Parser Node
+plaintext :: Parser (AnnNode -> NodeF AnnNode)
 plaintext = choice
   [ try escaped
-  , flip Char Fin <$> L.charLiteral
+  , CharF <$> L.charLiteral
   ]
 
 -- Follows ICU 4.8+ spec, see:
 --   https://unicode-org.github.io/icu/userguide/format_parse/messages/#quotingescaping
-escaped :: Parser Node
+escaped :: Parser (AnnNode -> NodeF AnnNode)
 escaped = apos *> choice
   -- Double escape two apostrophes as one, regardless of surrounding
   -- syntax: "''" -> "'"
-  [ flip Char Fin <$> apos
+  [ CharF <$> apos
   -- Escape everything until another apostrophe, being careful of internal
   -- double escapes: "'{a''}'" -> "{a'}". Must ensure it doesn't surpass the
   -- bounds of the surrounding parser as per `endOfInput`.
   , try $ do
       eom <- asks endOfInput
-      head' <- flip Char Fin <$> synOpen
+      head' <- withAnn (CharF <$> synOpen)
       -- Try and parse until end of input or a lone apostrophe. If end of input
       -- comes first then fail the parse.
-      (tail', wasEom) <- someTill_ plaintext $ choice
+      (tail', wasEom) <- someTill_ (withAnn plaintext) $ choice
         [       True  <$ eom
         , try $ False <$ apos <* notFollowedBy apos
         ]
       guard (not wasEom)
-      pure $ head' <> mconcat tail'
+      pure $ unwrap . foldr (.) id (head' : tail')
   -- Escape the next syntax character as plaintext: "'{" -> "{"
-  , flip Char Fin <$> synAll
+  , CharF <$> synAll
   ]
   where apos = char '\''
         synAll = synLone <|> synOpen <|> synClose
@@ -114,7 +131,7 @@ escaped = apos *> choice
         synOpen = char '{' <|> char '<'
         synClose = char '}' <|> char '>'
 
-callback :: Parser Node
+callback :: Parser (AnnNode -> NodeF AnnNode)
 callback = do
   (openPos, isClosing, oname) <- (,,) <$> (string "<" *> getOffset) <*> closing <*> arg <* string ">"
   when isClosing $ (openPos + 1) `failingWith'` NoOpeningCallbackTag oname
@@ -127,19 +144,19 @@ callback = do
     where children n = do
             eom <- asks endOfInput
             nodes <- nodesTill (lookAhead $ void (string "</") <|> eom)
-            pure . flip (Callback n) Fin $ nodes
+            pure . CallbackF n $ nodes
           closing = fmap isJust . hidden . optional . char $ '/'
 
-interp :: Parser Node
+interp :: Parser (AnnNode -> NodeF AnnNode)
 interp = between (char '{') (char '}') $ do
   n <- arg
-  option (String n Fin) (sep *> body n)
+  option (StringF n) (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice
-          [ (\(t, f) -> Bool n t f Fin) <$> (string "boolean" *> sep *> boolCases)
-          , Number n Fin <$ string "number"
-          , flip (Date n) Fin <$> (string "date" *> sep *> dateTimeFmt)
-          , flip (Time n) Fin <$> (string "time" *> sep *> dateTimeFmt)
+          [ uncurry (BoolF n) <$> (string "boolean" *> sep *> boolCases)
+          , NumberF n <$ string "number"
+          , DateF n <$> (string "date" *> sep *> dateTimeFmt)
+          , TimeF n <$> (string "time" *> sep *> dateTimeFmt)
           , withPluralCtx n $ choice
               [ string "plural"        *> sep *> cardinalCases n
               , string "selectordinal" *> sep *> ordinalCases n
@@ -156,49 +173,47 @@ dateTimeFmt = choice
   , Full   <$ string "full"
   ]
 
-caseBody :: Parser Node
+caseBody :: Parser AnnNode
 caseBody = string "{" *> nodesTill (string "}")
 
-boolCases :: Parser (Node, Node)
+boolCases :: Parser (AnnNode, AnnNode)
 boolCases = (,)
   <$> (string "true"  *> hspace1 *> caseBody)
    <* hspace1
   <*> (string "false" *> hspace1 *> caseBody)
 
-selectCases :: Arg -> Parser Node
+selectCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
 selectCases n = choice
   [ reconcile <$> cases <*> optional wildcard
-  , flip (SelectWild n) Fin <$> wildcard
+  , SelectWildF n <$> wildcard
   ]
   where cases = NE.sepEndBy1 ((,) <$> (name <* hspace1) <*> caseBody) hspace1
         wildcard = string wildcardName *> hspace1 *> caseBody
-        reconcile cs (Just w) = SelectNamedWild n cs w Fin
-        reconcile cs Nothing  = SelectNamed n cs Fin
+        reconcile cs (Just w) = SelectNamedWildF n cs w
+        reconcile cs Nothing  = SelectNamedF n cs
         name = try $ mfilter (/= wildcardName) ident
         wildcardName = "other"
 
-cardinalCases :: Arg -> Parser Node
+cardinalCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
 cardinalCases n = try (cardinalInexactCases n) <|> cardinalExactCases n
 
-cardinalExactCases :: Arg -> Parser Node
-cardinalExactCases n = flip (CardinalExact n) Fin <$> NE.sepEndBy1 pluralExactCase hspace1
+cardinalExactCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
+cardinalExactCases n = CardinalExactF n <$> NE.sepEndBy1 pluralExactCase hspace1
 
-cardinalInexactCases :: Arg -> Parser Node
-cardinalInexactCases n = uncurry f <$> mixedPluralCases <*> pluralWildcard
-  where f e r w = CardinalInexact n e r w Fin
+cardinalInexactCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
+cardinalInexactCases n = uncurry (CardinalInexactF n) <$> mixedPluralCases <*> pluralWildcard
 
-ordinalCases :: Arg -> Parser Node
-ordinalCases n = uncurry f <$> mixedPluralCases <*> pluralWildcard
-  where f e r w = Ordinal n e r w Fin
+ordinalCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
+ordinalCases n = uncurry (OrdinalF n) <$> mixedPluralCases <*> pluralWildcard
 
-mixedPluralCases :: Parser ([PluralCase PluralExact], [PluralCase PluralRule])
+mixedPluralCases :: Parser ([PluralCaseF PluralExact AnnNode], [PluralCaseF PluralRule AnnNode])
 mixedPluralCases = partitionEithers <$> sepEndBy (eitherP pluralExactCase pluralRuleCase) hspace1
 
-pluralExactCase :: Parser (PluralCase PluralExact)
+pluralExactCase :: Parser (PluralCaseF PluralExact AnnNode)
 pluralExactCase = (,) <$> pluralExact <* hspace1 <*> caseBody
   where pluralExact = PluralExact . T.pack <$> (string "=" *> some numberChar)
 
-pluralRuleCase :: Parser (PluralCase PluralRule)
+pluralRuleCase :: Parser (PluralCaseF PluralRule AnnNode)
 pluralRuleCase = (,) <$> pluralRule <* hspace1 <*> caseBody
 
 pluralRule :: Parser PluralRule
@@ -210,5 +225,5 @@ pluralRule = choice
   , Many <$ string "many"
   ]
 
-pluralWildcard :: Parser Node
+pluralWildcard :: Parser AnnNode
 pluralWildcard = string "other" *> hspace1 *> caseBody

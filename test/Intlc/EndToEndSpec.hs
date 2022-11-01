@@ -4,11 +4,12 @@ import qualified Data.Text                  as T
 import           Intlc.Backend.ICU.Compiler (Formatting (SingleLine),
                                              compileMsg)
 import           Intlc.Compiler             (compileDataset, expandPlurals)
-import           Intlc.Core                 (Locale (Locale))
+import           Intlc.Core                 (Locale (Locale), datasetSansAnn)
+import           Intlc.ICU                  (sansAnnMsg)
 import           Intlc.Parser               (parseDataset)
 import           Intlc.Parser.Error         (ParseFailure)
-import           Intlc.Parser.ICU           (ParserState (endOfInput),
-                                             emptyState, msg)
+import           Intlc.Parser.ICU           (ParserState (endOfInput), annMsg,
+                                             emptyState)
 import           Prelude
 import           System.FilePath            ((<.>), (</>))
 import           Test.Hspec
@@ -17,11 +18,11 @@ import           Text.Megaparsec            (eof, runParser)
 import           Text.RawString.QQ          (r)
 
 parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text
-parseAndCompileDataset = compileDataset (Locale "en-US") <=< first (pure . show) . parseDataset "test"
+parseAndCompileDataset = compileDataset (Locale "en-US") . datasetSansAnn <=< first (pure . show) . parseDataset "test"
 
 parseAndExpandMsg :: Text -> Either ParseFailure Text
-parseAndExpandMsg = fmap (compileMsg SingleLine . expandPlurals) . parseMsg
-  where parseMsg = runParser (runReaderT msg (emptyState { endOfInput = eof })) "test"
+parseAndExpandMsg = fmap (compileMsg SingleLine . expandPlurals . sansAnnMsg) . parseMsg
+  where parseMsg = runParser (runReaderT annMsg (emptyState { endOfInput = eof })) "test"
 
 golden :: String -> Text -> Golden String
 golden name in' = baseCfg

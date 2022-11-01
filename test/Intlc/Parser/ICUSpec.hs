@@ -1,20 +1,47 @@
 module Intlc.Parser.ICUSpec (spec) where
 
+import           Control.Comonad.Cofree (Cofree ((:<)))
 import           Intlc.ICU
-import           Intlc.Parser.Error    (MessageParseErr (..),
-                                        ParseErr (FailedMsgParse), ParseFailure)
+import           Intlc.Parser.Error     (MessageParseErr (..),
+                                         ParseErr (FailedMsgParse),
+                                         ParseFailure)
 import           Intlc.Parser.ICU
 import           Prelude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec
-import           Text.Megaparsec       (eof, runParser)
-import           Text.Megaparsec.Error (ErrorFancy (ErrorCustom))
+import           Text.Megaparsec        (eof, runParser)
+import           Text.Megaparsec.Error  (ErrorFancy (ErrorCustom))
 
-parseWith :: ParserState -> Parser a -> Text -> Either ParseFailure a
-parseWith s p = runParser (runReaderT p s) "test"
+-- | Offset parsing won't generally be tested in this module as it just adds
+-- noise.
+--
+-- Most of our parsers return functions awaiting their next sibling. This ties
+-- that knot with a nonsense offset.
+nonsenseAnn :: NodeF AnnNode -> AnnNode
+nonsenseAnn = (-1 :<)
+
+sansAnn' :: NodeF AnnNode -> Node
+sansAnn' = sansAnn . nonsenseAnn
+
+fin :: AnnNode
+fin = nonsenseAnn FinF
+
+runParserWith :: ParserState -> Parser a -> Text -> Either ParseFailure a
+runParserWith s p = runParser (runReaderT p s) "test"
+
+parseWith :: ParserState -> Parser (NodeF AnnNode) -> Text -> Either ParseFailure Node
+parseWith s p = runParserWith s (sansAnn' <$> p)
 
 parse :: Parser a -> Text -> Either ParseFailure a
-parse = parseWith $ emptyState { endOfInput = eof }
+parse = runParserWith $ emptyState { endOfInput = eof }
+
+parseF :: Parser (AnnNode -> NodeF AnnNode) -> Text -> Either ParseFailure Node
+-- The most satisfying line of code I've ever written:
+parseF = parse . fmap sansAnn' . flip flap fin
+
+-- | Message parser sans annotations.
+msg :: Parser Message
+msg = sansAnnMsg <$> annMsg
 
 spec :: Spec
 spec = describe "ICU parser" $ do
@@ -87,13 +114,32 @@ spec = describe "ICU parser" $ do
         parse msg "' '" `shouldParse` Message "' '"
         parse msg "x'y" `shouldParse` Message "x'y"
 
+    -- As you can see this isn't fun to write out by hand for tests. This one
+    -- test can suffice for ensuring we're parsing annotations correctly.
+    it "parses with annotations" $ do
+      parse annMsg "Hello' {n, plural, one {{name}} other {}}!" `shouldParse` AnnMessage
+        ( 0 :< CharF 'H' (
+          1 :< CharF 'e' (
+          2 :< CharF 'l' (
+          3 :< CharF 'l' (
+          4 :< CharF 'o' (
+          5 :< CharF '\'' (
+          6 :< CharF ' ' (
+          7 :< CardinalInexactF "n"
+            mempty
+            (pure (One, 24 :< StringF "name" (30 :< FinF)))
+            (39 :< FinF) (
+          41 :< CharF '!' (
+          42 :< FinF
+        ))))))))))
+
   describe "interpolation" $ do
     it "interpolates appropriately" $ do
-      parse interp "{x}" `shouldParse` String' "x"
+      parseF interp "{x}" `shouldParse` String' "x"
 
     it "only accepts alphanumeric identifiers" $ do
-      parse interp "{XyZ}" `shouldParse` String' "XyZ"
-      parse interp `shouldFailOn` "{x y}"
+      parseF interp "{XyZ}" `shouldParse` String' "XyZ"
+      parseF interp `shouldFailOn` "{x y}"
 
     it "disallows bad types" $ do
       parse msg `shouldFailOn` "{n, enum}"
@@ -101,103 +147,103 @@ spec = describe "ICU parser" $ do
 
     describe "bool" $ do
       it "requires both bool cases" $ do
-        parse interp "{x, boolean, true {y} false {z}}" `shouldParse` Bool' "x" "y" "z"
-        parse interp `shouldFailOn` "{x, boolean, true {y}}"
-        parse interp `shouldFailOn` "{x, boolean, false {y}}"
+        parseF interp "{x, boolean, true {y} false {z}}" `shouldParse` Bool' "x" "y" "z"
+        parseF interp `shouldFailOn` "{x, boolean, true {y}}"
+        parseF interp `shouldFailOn` "{x, boolean, false {y}}"
 
       it "enforces case order" $ do
-        parse interp `shouldFailOn` "{x, boolean, false {y} true {z}}"
+        parseF interp `shouldFailOn` "{x, boolean, false {y} true {z}}"
 
       it "disallows arbitrary cases" $ do
-        parse interp `shouldFailOn` "{x, boolean, true {y} nottrue {z}}"
+        parseF interp `shouldFailOn` "{x, boolean, true {y} nottrue {z}}"
 
     describe "date" $ do
       it "disallows bad formats" $ do
-        parse interp "{x, date, short}" `shouldParse` Date' "x" Short
-        parse interp `shouldFailOn` "{x, date, miniature}"
+        parseF interp "{x, date, short}" `shouldParse` Date' "x" Short
+        parseF interp `shouldFailOn` "{x, date, miniature}"
 
     describe "time" $ do
       it "disallows bad formats" $ do
-        parse interp "{x, time, short}" `shouldParse` Time' "x" Short
-        parse interp `shouldFailOn` "{x, time, miniature}"
+        parseF interp "{x, time, short}" `shouldParse` Time' "x" Short
+        parseF interp `shouldFailOn` "{x, time, miniature}"
 
   describe "callback" $ do
     let e i = errFancy i . fancy . ErrorCustom . FailedMsgParse
 
     it "parses nested" $ do
-      parse callback "<f><g>x{y}z</g></f>" `shouldParse`
+      parseF callback "<f><g>x{y}z</g></f>" `shouldParse`
         Callback' "f" (Callback' "g" (mconcat ["x", String' "y", "z"]))
 
     it "requires closing tag" $ do
-      parse callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
+      parseF callback "<hello> there" `shouldFailWith` e 1 (NoClosingCallbackTag "hello")
 
     it "requires opening tag" $ do
-      parse callback "</hello> <there>" `shouldFailWith` e 2 (NoOpeningCallbackTag "hello")
+      parseF callback "</hello> <there>" `shouldFailWith` e 2 (NoOpeningCallbackTag "hello")
 
     it "validates closing tag name" $ do
-      parse callback "<hello></hello>" `shouldParse` Callback' "hello" mempty
-      parse callback "<hello></there>" `shouldFailWith` e 9 (BadClosingCallbackTag "hello" "there")
+      parseF callback "<hello></hello>" `shouldParse` Callback' "hello" mempty
+      parseF callback "<hello></there>" `shouldFailWith` e 9 (BadClosingCallbackTag "hello" "there")
 
     it "only accepts alphanumeric identifiers" $ do
-      parse callback "<XyZ></XyZ>" `shouldParse` Callback' "XyZ" mempty
-      parse callback `shouldFailOn` "<x y></x y>"
+      parseF callback "<XyZ></XyZ>" `shouldParse` Callback' "XyZ" mempty
+      parseF callback `shouldFailOn` "<x y></x y>"
 
   describe "plural" $ do
     let cardinalCases' = cardinalCases "arg" <* eof
 
     it "disallows wildcard not at the end" $ do
-      parse cardinalCases' `shouldSucceedOn` "=1 {foo} other {bar}"
-      parse cardinalCases' `shouldFailOn` "other {bar} =1 {foo}"
+      parseF cardinalCases' `shouldSucceedOn` "=1 {foo} other {bar}"
+      parseF cardinalCases' `shouldFailOn` "other {bar} =1 {foo}"
 
     it "tolerates empty cases" $ do
-      parse cardinalCases' `shouldSucceedOn` "=1 {} other {}"
+      parseF cardinalCases' `shouldSucceedOn` "=1 {} other {}"
 
     it "tolerates no non-wildcard cases" $ do
-      parse cardinalCases' `shouldSucceedOn` "other {foo}"
+      parseF cardinalCases' `shouldSucceedOn` "other {foo}"
 
     it "requires a wildcard if there are any rule cases" $ do
-      parse cardinalCases' `shouldFailOn`    "=0 {foo} one {bar}"
-      parse cardinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
-      parse cardinalCases' `shouldSucceedOn` "=0 {foo} =1 {bar}"
+      parseF cardinalCases' `shouldFailOn`    "=0 {foo} one {bar}"
+      parseF cardinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parseF cardinalCases' `shouldSucceedOn` "=0 {foo} =1 {bar}"
 
     it "parses literal and plural cases, wildcard, and interpolation node" $ do
-      parseWith (emptyState { pluralCtxName = Just "xyz" }) cardinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) (cardinalCases' ?? fin) "=0 {foo} few {bar} other {baz #}" `shouldParse`
         CardinalInexact' "arg" (pure (PluralExact "0", "foo")) (pure (Few, "bar")) (mconcat ["baz ", PluralRef' "xyz"])
 
   describe "selectordinal" $ do
     let ordinalCases' = ordinalCases "arg" <* eof
 
     it "disallows wildcard not at the end" $ do
-      parse ordinalCases' `shouldSucceedOn` "one {foo} other {bar}"
-      parse ordinalCases' `shouldFailOn` "other {bar} one {foo}"
+      parseF ordinalCases' `shouldSucceedOn` "one {foo} other {bar}"
+      parseF ordinalCases' `shouldFailOn` "other {bar} one {foo}"
 
     it "tolerates empty cases" $ do
-      parse ordinalCases' `shouldSucceedOn` "one {} other {}"
+      parseF ordinalCases' `shouldSucceedOn` "one {} other {}"
 
     it "tolerates no non-wildcard cases" $ do
-      parse ordinalCases' `shouldSucceedOn` "other {foo}"
+      parseF ordinalCases' `shouldSucceedOn` "other {foo}"
 
     it "requires a wildcard" $ do
-      parse ordinalCases' `shouldFailOn`    "=0 {foo} one {bar}"
-      parse ordinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
+      parseF ordinalCases' `shouldFailOn`    "=0 {foo} one {bar}"
+      parseF ordinalCases' `shouldSucceedOn` "=0 {foo} one {bar} other {baz}"
 
     it "parses literal and plural cases, wildcard, and interpolation node" $ do
-      parseWith (emptyState { pluralCtxName = Just "xyz" }) ordinalCases' "=0 {foo} few {bar} other {baz #}" `shouldParse`
+      parseWith (emptyState { pluralCtxName = Just "xyz" }) (ordinalCases' ?? fin) "=0 {foo} few {bar} other {baz #}" `shouldParse`
         Ordinal' "arg" (pure (PluralExact "0", "foo")) (pure (Few, "bar")) (mconcat ["baz ", PluralRef' "xyz"])
 
   describe "select" $ do
     let selectCases' = selectCases "arg" <* eof
 
     it "disallows wildcard not at the end" $ do
-      parse selectCases' "foo {bar} other {baz}" `shouldParse`
+      parseF selectCases' "foo {bar} other {baz}" `shouldParse`
         SelectNamedWild' "arg" (pure ("foo", "bar")) "baz"
-      parse selectCases' `shouldFailOn` "other {bar} foo {baz}"
+      parseF selectCases' `shouldFailOn` "other {bar} foo {baz}"
 
     it "tolerates empty cases" $ do
-      parse selectCases' "x {} other {}" `shouldParse` SelectNamedWild' "arg" (pure ("x", mempty)) mempty
+      parseF selectCases' "x {} other {}" `shouldParse` SelectNamedWild' "arg" (pure ("x", mempty)) mempty
 
     it "allows no non-wildcard case" $ do
-      parse selectCases' "foo {bar}" `shouldParse` SelectNamed' "arg" (pure ("foo", "bar"))
-      parse selectCases' "foo {bar} other {baz}" `shouldParse`
+      parseF selectCases' "foo {bar}" `shouldParse` SelectNamed' "arg" (pure ("foo", "bar"))
+      parseF selectCases' "foo {bar} other {baz}" `shouldParse`
         SelectNamedWild' "arg" (pure ("foo", "bar")) "baz"
-      parse selectCases' "other {foo}" `shouldParse` SelectWild' "arg" "foo"
+      parseF selectCases' "other {foo}" `shouldParse` SelectWild' "arg" "foo"

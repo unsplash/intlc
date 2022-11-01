@@ -3,13 +3,19 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 module Intlc.ICU where
 
-import           Data.Functor.Foldable (Base, Corecursive, Recursive)
-import qualified Data.Text             as T
+import           Control.Comonad.Cofree       (Cofree)
+import           Control.Comonad.Trans.Cofree (CofreeF ((:<)))
+import           Data.Eq.Deriving             (deriveEq1)
+import           Data.Functor.Foldable        (Base, Corecursive, Recursive,
+                                               cata, embed)
+import qualified Data.Text                    as T
 import           Prelude
+import           Text.Show.Deriving           (deriveShow1)
 
 newtype Message = Message Node
   deriving (Show, Eq)
@@ -82,6 +88,14 @@ data NodeF a
 
 type instance Base Node = NodeF
 
+-- | A `Node` annotated with an `Int` representing a source offset.
+type AnnNode = Cofree NodeF Int
+
+-- | Drop all annotations from an AST/`Node`.
+sansAnn :: AnnNode -> Node
+-- Explanation: https://stackoverflow.com/a/51050171/3369753
+sansAnn = cata $ \(_ :< x) -> embed x
+
 -- Concatenating two `Nodes` places the second at the tail of the first:
 --   Char 'a' Fin <> Char 'b' (Char 'c' Fin) = Char 'a' (Char 'b' (Char 'c' Fin))
 --
@@ -143,6 +157,22 @@ data PluralRule
 
 type SelectCase = SelectCaseF Node
 type SelectCaseF a = (Text, a)
+
+-- Use Template Haskell to generate lifted typeclass instances for `NodeF`.
+-- Needs to appear after all the type aliases that `NodeF` references are
+-- defined. Anything else leaning on these instances must appear after this
+-- point.
+$(deriveShow1 ''NodeF)
+$(deriveEq1   ''NodeF)
+
+newtype AnnMessage = AnnMessage AnnNode
+  deriving (Show, Eq)
+
+unAnnMessage :: AnnMessage -> AnnNode
+unAnnMessage (AnnMessage xs) = xs
+
+sansAnnMsg :: AnnMessage -> Message
+sansAnnMsg = Message . sansAnn . unAnnMessage
 
 getNext :: Node -> Maybe Node
 getNext Fin                         = Nothing
