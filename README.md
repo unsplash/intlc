@@ -61,9 +61,16 @@ Lint against suboptimal use of ICU syntax.
 $ cat translations.json
 {"welcome":{"message": "Hello {name, select, other {{name}}}"}}
 $ intlc lint translation.json
-welcome:
-  Redundant select: name
+translations.json:1:32:
+  |
+1 | {"welcome":{"message": "Hello {name, select, other {{name}}}"}}
+  |                                ^^^^
+redundant-select: Select named `name` is redundant as it only contains a wildcard.
+
+Learn more: https://github.com/unsplash/intlc/wiki/Lint-rules-reference#redundant-select
 ```
+
+A reference for lint rules can be found in our wiki: https://github.com/unsplash/intlc/wiki/Lint-rules-reference
 
 ### Formatting
 
