@@ -46,29 +46,22 @@ fromMsg x (ICU.Message y) = Lambda (collateArgs . fromNode $ y) x
 
 fromNode :: ICU.Node -> UncollatedArgs
 fromNode = cata $ \case
-  (ICU.BoolF n xs ys zs) -> (n, TBool) : xs <> ys <> zs
-  (ICU.StringF n xs)     -> pure (n, TStr) <> xs
-  (ICU.NumberF n xs)     -> pure (n, TNum) <> xs
-  (ICU.DateF n _ xs)     -> pure (n, TDate) <> xs
-  (ICU.TimeF n _ xs)     -> pure (n, TDate) <> xs
+  x@(ICU.BoolF n _ _ _) -> (n, TBool) : fold x
+  x@(ICU.StringF n _)   -> (n, TStr)  : fold x
+  x@(ICU.NumberF n _)   -> (n, TNum)  : fold x
+  x@(ICU.DateF n _ _)   -> (n, TDate) : fold x
+  x@(ICU.TimeF n _ _)   -> (n, TDate) : fold x
   -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
   -- union of number literals.
-  (ICU.CardinalExactF n ls xs)         ->
-    let t = TNumLitUnion $ caseLit <$> ls
-        caseLit (ICU.PluralExact y, _) = y
-     in (n, t) : (fromPluralCase =<< toList ls) <> xs
-  (ICU.CardinalInexactF n ls rs ws xs) -> (n, TNum) : (fromPluralCase =<< ls) <> (fromPluralCase =<< rs) <> ws <> xs
-  (ICU.OrdinalF n ls rs ws xs)         -> (n, TNum) : (fromPluralCase =<< ls) <> (fromPluralCase =<< rs) <> ws <> xs
-  (ICU.SelectWildF n ws xs)            -> (n, TStr) : ws <> xs
-  (ICU.SelectNamedWildF n cs ws xs)    -> (n, TStr) : (fromSelectCase =<< toList cs) <> ws <> xs
+  x@(ICU.CardinalExactF n ls _)      -> (n, t) : fold x where
+    t = TNumLitUnion $ caseLit <$> ls
+    caseLit (ICU.PluralExact y, _) = y
+  x@(ICU.CardinalInexactF n _ _ _ _) -> (n, TNum) : fold x
+  x@(ICU.OrdinalF n _ _ _ _)         -> (n, TNum) : fold x
+  x@(ICU.SelectWildF n _ _)          -> (n, TStr) : fold x
+  x@(ICU.SelectNamedWildF n _ _ _)   -> (n, TStr) : fold x
   -- When there's no wildcard case we can compile to a union of string literals.
-  (ICU.SelectNamedF n cs xs)           -> (n, TStrLitUnion (fst <$> cs)) : (fromSelectCase =<< toList cs) <> xs
-  (ICU.CallbackF n xs ys)              -> (n, TEndo) : xs <> ys
+  x@(ICU.SelectNamedF n cs _)        -> (n, TStrLitUnion (fst <$> cs)) : fold x
+  x@(ICU.CallbackF n _ _)            -> (n, TEndo) : fold x
   -- Plural references are treated as a no-op.
   x -> fold x
-
-fromPluralCase :: ICU.PluralCaseF a b -> b
-fromPluralCase = snd
-
-fromSelectCase :: ICU.SelectCaseF a -> a
-fromSelectCase = snd
