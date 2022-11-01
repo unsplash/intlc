@@ -43,7 +43,7 @@ mapMsgs :: (ICU.Message ICU.Node -> ICU.Message ICU.Node) -> Dataset (Translatio
 mapMsgs f = fmap $ \x -> x { message = f x.message }
 
 flatten :: ICU.Message ICU.Node -> ICU.Message ICU.Node
-flatten = ICU.Message . go mempty . ICU.unMessage
+flatten = fmap (go mempty)
   where go :: ICU.Node -> ICU.Node -> ICU.Node
         go prev rest =
           let (curr, mnext) = ICU.sever rest
@@ -68,7 +68,7 @@ flatten = ICU.Message . go mempty . ICU.unMessage
 -- Added plural rules inherit the content of the wildcard. Output order of
 -- rules is unspecified.
 expandPlurals :: ICU.Message ICU.Node -> ICU.Message ICU.Node
-expandPlurals = ICU.Message . cata f . ICU.unMessage
+expandPlurals = fmap (cata f)
   where f (ICU.CardinalInexactF n exacts rules w y) =
             ICU.CardinalInexact n exacts (toList $ expandRules rules w) w y
         f (ICU.OrdinalF n exacts rules w y) =

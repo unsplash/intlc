@@ -9,7 +9,7 @@ import           Test.Hspec
 
 -- | Annotate an AST with nonsense. We won't test the annotations.
 withAnn :: Message Node -> Message AnnNode
-withAnn = Message . cata (0 :<) . unMessage
+withAnn = fmap (cata (0 :<))
 
 lintWith' :: Rule (WithAnn a) -> Message Node -> Status a
 lintWith' r = statusSansAnn . lintWith (pure r) . withAnn where

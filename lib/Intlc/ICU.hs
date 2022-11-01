@@ -18,7 +18,7 @@ import           Prelude
 import           Text.Show.Deriving           (deriveShow1)
 
 newtype Message a = Message a
-  deriving (Show, Eq)
+  deriving (Show, Eq, Functor)
 
 unMessage :: Message a -> a
 unMessage (Message x) = x
@@ -166,7 +166,7 @@ $(deriveShow1 ''NodeF)
 $(deriveEq1   ''NodeF)
 
 sansAnnMsg :: Message AnnNode -> Message Node
-sansAnnMsg = Message . sansAnn . unMessage
+sansAnnMsg = fmap sansAnn
 
 getNext :: Node -> Maybe Node
 getNext Fin                         = Nothing
