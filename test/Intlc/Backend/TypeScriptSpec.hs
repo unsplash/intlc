@@ -1,5 +1,6 @@
 module Intlc.Backend.TypeScriptSpec (spec) where
 
+import           Data.Functor.Foldable             (embed)
 import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
 import           Intlc.Backend.TypeScript.Compiler (compileNamedExport,
@@ -51,11 +52,11 @@ spec = describe "TypeScript compiler" $ do
               , ("Ashley", "fairly good")
               ]
           , ". Finally, you are "
-          , ICU.Bool
-            { ICU.name = "isDev"
-            , ICU.trueCase = "a software engineer"
-            , ICU.falseCase = "something less fun"
-            , ICU.next = mempty
+          , embed $ ICU.BoolF
+            { ICU.nameF = "isDev"
+            , ICU.trueCaseF = "a software engineer"
+            , ICU.falseCaseF = "something less fun"
+            , ICU.nextF = mempty
             }
           , ". Bonus: Some characters that might need escaping! ` ``"
           ]

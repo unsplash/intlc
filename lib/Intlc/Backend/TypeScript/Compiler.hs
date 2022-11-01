@@ -4,6 +4,7 @@
 
 module Intlc.Backend.TypeScript.Compiler (compileNamedExport, compileTypeof, validateKey) where
 
+import           Data.Functor.Foldable             (project)
 import qualified Data.Map                          as M
 import qualified Data.Text                         as T
 import           Intlc.Backend.JavaScript.Compiler (InterpStrat (..))
@@ -22,9 +23,10 @@ compileNamedExport s l k v = JS.compileStmt o s l k v
         -- nested switch output to fail typechecking.
         matchLitCond x = x <> " as typeof " <> x
         arg = if hasInterpolations (ICU.unMessage v) then "x" else "()"
-        hasInterpolations ICU.Fin        = False
-        hasInterpolations (ICU.Char _ n) = hasInterpolations n
-        hasInterpolations _              = True
+        hasInterpolations = project >>> \case
+          ICU.FinF        -> False
+          (ICU.CharF _ n) -> hasInterpolations n
+          _               -> True
 
 compileTypeof :: InterpStrat -> ICU.Message ICU.Node -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o
