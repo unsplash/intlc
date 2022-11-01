@@ -28,8 +28,4 @@ datasetSansAnn :: Dataset (Translation AnnMessage) -> Dataset (Translation Messa
 datasetSansAnn = fmap translationSansAnn
 
 translationSansAnn :: Translation AnnMessage -> Translation Message
-translationSansAnn x = Translation
-  { message = sansAnnMsg x.message
-  , backend = x.backend
-  , mdesc = x.mdesc
-  }
+translationSansAnn x = x { message = sansAnnMsg x.message }
