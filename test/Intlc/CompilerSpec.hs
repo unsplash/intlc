@@ -39,7 +39,7 @@ spec = describe "compiler" $ do
 
   describe "flatten message" $ do
     it "no-ops static" $ do
-      flatten (Message "xyz") `shouldBe` Message "xyz"
+      flatten "xyz" `shouldBe` "xyz"
 
     describe "flattens shallow select" $ do
       let foo = ("foo", "a dog")
@@ -49,12 +49,12 @@ spec = describe "compiler" $ do
         let other = "many dogs"
         let otherf = "I have many dogs"
 
-        flatten (Message $ mconcat ["I have ", SelectNamedWild' "thing" (pure foo) other]) `shouldBe`
-          Message (SelectNamedWild' "thing" (pure foof) otherf)
+        flatten (mconcat ["I have ", SelectNamedWild' "thing" (pure foo) other]) `shouldBe`
+          SelectNamedWild' "thing" (pure foof) otherf
 
       it "without a wildcard" $ do
-        flatten (Message $ mconcat ["I have ", SelectNamed' "thing" (pure foo)]) `shouldBe`
-          Message (SelectNamed' "thing" (pure foof))
+        flatten (mconcat ["I have ", SelectNamed' "thing" (pure foo)]) `shouldBe`
+          SelectNamed' "thing" (pure foof)
 
     it "flattens shallow plural" $ do
       let other = "many dogs"
@@ -62,11 +62,11 @@ spec = describe "compiler" $ do
       let one = (One, "a dog")
       let onef = (One, "I have a dog")
 
-      flatten (Message $ mconcat ["I have ", CardinalInexact' "count" [] (pure one) other]) `shouldBe`
-        Message (CardinalInexact' "count" [] (pure onef) otherf)
+      flatten (mconcat ["I have ", CardinalInexact' "count" [] (pure one) other]) `shouldBe`
+        CardinalInexact' "count" [] (pure onef) otherf
 
     it "flattens deep interpolations" $ do
-      let x = Message $ mconcat
+      let x = mconcat
             [ "I have "
             , CardinalInexact' "count"
               []
@@ -79,22 +79,21 @@ spec = describe "compiler" $ do
               ])
             , "!"
             ]
-      let y = Message $
-            CardinalInexact' "count"
-              []
-              (pure (One, "I have a dog!"))
-              (mconcat [ SelectNamedWild' "name"
-                (pure ("hodor",
-                  mconcat [ "I have "
-                  , Number' "count"
-                  , " dogs, the newest of which is Hodor!"
-                  ]
-                ))
-                (mconcat [ "I have "
+      let y = CardinalInexact' "count"
+            []
+            (pure (One, "I have a dog!"))
+            (mconcat [ SelectNamedWild' "name"
+              (pure ("hodor",
+                mconcat [ "I have "
                 , Number' "count"
-                , " dogs, the newest of which is unknown!"
-                ])
+                , " dogs, the newest of which is Hodor!"
+                ]
+              ))
+              (mconcat [ "I have "
+              , Number' "count"
+              , " dogs, the newest of which is unknown!"
               ])
+            ])
 
       flatten x `shouldBe` y
 
