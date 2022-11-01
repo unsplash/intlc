@@ -37,43 +37,43 @@ node :: Formatting -> Node -> Text
 node fo ast = runReader (cata go ast) (Config fo 0) where
   go :: NodeF (Compiler Text) -> Compiler Text
   go = \case
-    FinF -> pure mempty
+    Fin -> pure mempty
 
-    (CharF c next) -> (T.singleton c <>) <$> next
+    (Char c next) -> (T.singleton c <>) <$> next
 
-    (BoolF { nameF, trueCaseF, falseCaseF, nextF }) ->
+    (Bool { nameF, trueCaseF, falseCaseF, nextF }) ->
       let cs = sequence [("true",) <$> trueCaseF, ("false",) <$> falseCaseF]
        in boolean nameF cs <>^ nextF
 
-    (StringF n next) -> (string n <>) <$> next
+    (String n next) -> (string n <>) <$> next
 
-    (NumberF n next) -> (number n <>) <$> next
+    (Number n next) -> (number n <>) <$> next
 
-    (DateF n fmt next) -> (date n fmt <>) <$> next
+    (Date n fmt next) -> (date n fmt <>) <$> next
 
-    (TimeF n fmt next) -> (time n fmt <>) <$> next
+    (Time n fmt next) -> (time n fmt <>) <$> next
 
-    (CardinalExactF n xs next) -> cardinal n (exactPluralCases xs) <>^ next
+    (CardinalExact n xs next) -> cardinal n (exactPluralCases xs) <>^ next
 
-    (CardinalInexactF n xs ys w next) ->
+    (CardinalInexact n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
        in cardinal n cs <>^ next
 
-    (OrdinalF n xs ys w next) ->
+    (Ordinal n xs ys w next) ->
       let cs = join <$> sequence [exactPluralCases xs, rulePluralCases ys, pure . wildcard <$> w]
        in ordinal n cs <>^ next
 
-    (PluralRefF _ next) -> ("#" <>) <$> next
+    (PluralRef _ next) -> ("#" <>) <$> next
 
-    (SelectNamedF n xs y) -> select n (selectCases xs) <>^ y
+    (SelectNamed n xs y) -> select n (selectCases xs) <>^ y
 
-    (SelectWildF n w x) -> select n (pure . wildcard <$> w) <>^ x
+    (SelectWild n w x) -> select n (pure . wildcard <$> w) <>^ x
 
-    (SelectNamedWildF n xs w next) ->
+    (SelectNamedWild n xs w next) ->
       let cs = (<>) <$> selectCases xs <*> (pure . wildcard <$> w)
        in select n cs <>^ next
 
-    (CallbackF n xs next) -> (callback n <$> xs) <>^ next
+    (Callback n xs next) -> (callback n <$> xs) <>^ next
 
 cardinal :: Arg -> Compiler [Case] -> Compiler Text
 cardinal n x = typedInterp "plural" n <$> (pure <$> cases x)

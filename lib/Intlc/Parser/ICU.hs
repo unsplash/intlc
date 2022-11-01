@@ -5,7 +5,7 @@
 -- to match the shape of our AST in which, like a singly-linked list, each node
 -- points to its next sibling. Equivalently a `Parser (a -> NodeF a)` is
 -- typically a parser which has parsed all but the following sibling. A simple
--- example of this would be `pure (CharF 'a')`.
+-- example of this would be `pure (Char 'a')`.
 --
 -- This module follows the following whitespace rules:
 --   * Consume all whitespace after nodes where possible.
@@ -76,7 +76,7 @@ annMsgTill = fmap Message . nodesTill
 nodesTill :: Parser a -> Parser AnnNode
 nodesTill end = go where
   go = fin <|> (withAnn node <*> go)
-  fin = (:< FinF) <$> (getOffset <* end)
+  fin = (:< Fin) <$> (getOffset <* end)
 
 -- The core parser of this module. Parse as many of these as you'd like until
 -- reaching an anticipated delimiter, such as a double quote in the surrounding
@@ -89,7 +89,7 @@ node = choice
   -- `#`. When there's no such context, fail the parse in effect treating it
   -- as plaintext.
   , asks pluralCtxName >>= \case
-      Just n  -> PluralRefF n <$ string "#"
+      Just n  -> PluralRef n <$ string "#"
       Nothing -> empty
   , plaintext
   ]
@@ -98,7 +98,7 @@ node = choice
 plaintext :: Parser (AnnNode -> NodeF AnnNode)
 plaintext = choice
   [ try escaped
-  , CharF <$> L.charLiteral
+  , Char <$> L.charLiteral
   ]
 
 -- Follows ICU 4.8+ spec, see:
@@ -107,13 +107,13 @@ escaped :: Parser (AnnNode -> NodeF AnnNode)
 escaped = apos *> choice
   -- Double escape two apostrophes as one, regardless of surrounding
   -- syntax: "''" -> "'"
-  [ CharF <$> apos
+  [ Char <$> apos
   -- Escape everything until another apostrophe, being careful of internal
   -- double escapes: "'{a''}'" -> "{a'}". Must ensure it doesn't surpass the
   -- bounds of the surrounding parser as per `endOfInput`.
   , try $ do
       eom <- asks endOfInput
-      head' <- withAnn (CharF <$> synOpen)
+      head' <- withAnn (Char <$> synOpen)
       -- Try and parse until end of input or a lone apostrophe. If end of input
       -- comes first then fail the parse.
       (tail', wasEom) <- someTill_ (withAnn plaintext) $ choice
@@ -123,7 +123,7 @@ escaped = apos *> choice
       guard (not wasEom)
       pure $ unwrap . foldr (.) id (head' : tail')
   -- Escape the next syntax character as plaintext: "'{" -> "{"
-  , CharF <$> synAll
+  , Char <$> synAll
   ]
   where apos = char '\''
         synAll = synLone <|> synOpen <|> synClose
@@ -144,19 +144,19 @@ callback = do
     where children n = do
             eom <- asks endOfInput
             nodes <- nodesTill (lookAhead $ void (string "</") <|> eom)
-            pure . CallbackF n $ nodes
+            pure . Callback n $ nodes
           closing = fmap isJust . hidden . optional . char $ '/'
 
 interp :: Parser (AnnNode -> NodeF AnnNode)
 interp = between (char '{') (char '}') $ do
   n <- arg
-  option (StringF n) (sep *> body n)
+  option (String n) (sep *> body n)
   where sep = string "," <* hspace1
         body n = choice
-          [ uncurry (BoolF n) <$> (string "boolean" *> sep *> boolCases)
-          , NumberF n <$ string "number"
-          , DateF n <$> (string "date" *> sep *> dateTimeFmt)
-          , TimeF n <$> (string "time" *> sep *> dateTimeFmt)
+          [ uncurry (Bool n) <$> (string "boolean" *> sep *> boolCases)
+          , Number n <$ string "number"
+          , Date n <$> (string "date" *> sep *> dateTimeFmt)
+          , Time n <$> (string "time" *> sep *> dateTimeFmt)
           , withPluralCtx n $ choice
               [ string "plural"        *> sep *> cardinalCases n
               , string "selectordinal" *> sep *> ordinalCases n
@@ -185,12 +185,12 @@ boolCases = (,)
 selectCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
 selectCases n = choice
   [ reconcile <$> cases <*> optional wildcard
-  , SelectWildF n <$> wildcard
+  , SelectWild n <$> wildcard
   ]
   where cases = NE.sepEndBy1 ((,) <$> (name <* hspace1) <*> caseBody) hspace1
         wildcard = string wildcardName *> hspace1 *> caseBody
-        reconcile cs (Just w) = SelectNamedWildF n cs w
-        reconcile cs Nothing  = SelectNamedF n cs
+        reconcile cs (Just w) = SelectNamedWild n cs w
+        reconcile cs Nothing  = SelectNamed n cs
         name = try $ mfilter (/= wildcardName) ident
         wildcardName = "other"
 
@@ -198,13 +198,13 @@ cardinalCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
 cardinalCases n = try (cardinalInexactCases n) <|> cardinalExactCases n
 
 cardinalExactCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
-cardinalExactCases n = CardinalExactF n <$> NE.sepEndBy1 pluralExactCase hspace1
+cardinalExactCases n = CardinalExact n <$> NE.sepEndBy1 pluralExactCase hspace1
 
 cardinalInexactCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
-cardinalInexactCases n = uncurry (CardinalInexactF n) <$> mixedPluralCases <*> pluralWildcard
+cardinalInexactCases n = uncurry (CardinalInexact n) <$> mixedPluralCases <*> pluralWildcard
 
 ordinalCases :: Arg -> Parser (AnnNode -> NodeF AnnNode)
-ordinalCases n = uncurry (OrdinalF n) <$> mixedPluralCases <*> pluralWildcard
+ordinalCases n = uncurry (Ordinal n) <$> mixedPluralCases <*> pluralWildcard
 
 mixedPluralCases :: Parser ([PluralCaseF PluralExact AnnNode], [PluralCaseF PluralRule AnnNode])
 mixedPluralCases = partitionEithers <$> sepEndBy (eitherP pluralExactCase pluralRuleCase) hspace1

@@ -134,8 +134,8 @@ redundantSelectRule :: Rule AnnExternalLint
 redundantSelectRule = nonEmpty . idents where
   idents = cata $ (maybeToList . mident) <> fold
   mident = \case
-    i :< SelectWildF n _ _ -> pure (i + 1, RedundantSelect n)
-    _                      -> empty
+    i :< SelectWild n _ _ -> pure (i + 1, RedundantSelect n)
+    _                     -> empty
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
@@ -143,9 +143,9 @@ redundantPluralRule :: Rule AnnExternalLint
 redundantPluralRule = nonEmpty . idents where
   idents = cata $ (maybeToList . mident) <> fold
   mident = \case
-    i :< CardinalInexactF n [] [] _ _ -> pure $ f i n
-    i :< OrdinalF         n [] [] _ _ -> pure $ f i n
-    _                                 -> empty
+    i :< CardinalInexact n [] [] _ _ -> pure $ f i n
+    i :< Ordinal         n [] [] _ _ -> pure $ f i n
+    _                                -> empty
   f i n = (i + 1, RedundantPlural n)
 
 -- Duplicate case names in select interpolations are redundant.
@@ -153,9 +153,9 @@ duplicateSelectCasesRule :: Rule AnnExternalLint
 duplicateSelectCasesRule = nonEmpty . cases where
   cases = para $ (hereCases . tailF) <> foldMap snd
   hereCases = \case
-    SelectNamedF n xs _       -> here n xs
-    SelectNamedWildF n xs _ _ -> here n xs
-    _                         -> mempty
+    SelectNamed n xs _       -> here n xs
+    SelectNamedWild n xs _ _ -> here n xs
+    _                        -> mempty
   here n = fmap (uncurry (f n) . (caseOffset &&& caseName)) . bunBy ((==) `on` caseName)
     where caseName = fst
           caseOffset = uncurry calcCaseNameOffset . caseHead
@@ -167,10 +167,10 @@ duplicatePluralCasesRule :: Rule AnnExternalLint
 duplicatePluralCasesRule = nonEmpty . cases where
   cases = para $ (hereCases . tailF) <> foldMap snd
   hereCases = \case
-    CardinalExactF n ys _        -> here pluralExact n ys
-    CardinalInexactF n ys zs _ _ -> here pluralExact n ys <> here pluralRule n zs
-    OrdinalF n ys zs _ _         -> here pluralExact n ys <> here pluralRule n zs
-    _                            -> mempty
+    CardinalExact n ys _        -> here pluralExact n ys
+    CardinalInexact n ys zs _ _ -> here pluralExact n ys <> here pluralRule n zs
+    Ordinal n ys zs _ _         -> here pluralExact n ys <> here pluralRule n zs
+    _                           -> mempty
   here via n = fmap (uncurry (f n) . (caseOffset &&& (via . caseKey))) . bunBy ((==) `on` caseKey)
     where caseKey = fst
           caseOffset = uncurry calcCaseNameOffset . first via . caseHead
@@ -190,11 +190,11 @@ interpolationsRule ast = fmap (pure . (start,)) . count . idents $ ast where
   count _        = Nothing
   idents = cata $ (maybeToList . mident . tailF) <> fold
   mident = \case
-    BoolF n _ _ _            -> pure n
-    SelectNamedF n _ _       -> pure n
-    SelectWildF n _ _        -> pure n
-    SelectNamedWildF n _ _ _ -> pure n
-    _                        -> empty
+    Bool n _ _ _            -> pure n
+    SelectNamed n _ _       -> pure n
+    SelectWild n _ _        -> pure n
+    SelectNamedWild n _ _ _ -> pure n
+    _                       -> empty
   start = extract ast
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
@@ -207,7 +207,7 @@ unsupportedUnicodeRule :: Rule AnnInternalLint
 unsupportedUnicodeRule = nonEmpty . nonAscii where
   nonAscii = cata $ (maybeToList . mchar) <> fold
   mchar = \case
-    i :< CharF c _ -> (i,) . InvalidNonAsciiCharacter <$> guarded (not . isAcceptedChar) c
+    i :< Char c _ -> (i,) . InvalidNonAsciiCharacter <$> guarded (not . isAcceptedChar) c
     _              -> empty
 
 -- If we have access to the offset of the head node of an interpolation case, we

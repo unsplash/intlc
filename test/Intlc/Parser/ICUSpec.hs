@@ -24,7 +24,7 @@ sansAnn' :: NodeF AnnNode -> Node
 sansAnn' = sansAnn . nonsenseAnn
 
 fin :: AnnNode
-fin = nonsenseAnn FinF
+fin = nonsenseAnn Fin
 
 runParserWith :: ParserState -> Parser a -> Text -> Either ParseFailure a
 runParserWith s p = runParser (runReaderT p s) "test"
@@ -118,19 +118,19 @@ spec = describe "ICU parser" $ do
     -- test can suffice for ensuring we're parsing annotations correctly.
     it "parses with annotations" $ do
       parse annMsg "Hello' {n, plural, one {{name}} other {}}!" `shouldParse` Message
-        ( 0 :< CharF 'H' (
-          1 :< CharF 'e' (
-          2 :< CharF 'l' (
-          3 :< CharF 'l' (
-          4 :< CharF 'o' (
-          5 :< CharF '\'' (
-          6 :< CharF ' ' (
-          7 :< CardinalInexactF "n"
+        ( 0 :< Char 'H' (
+          1 :< Char 'e' (
+          2 :< Char 'l' (
+          3 :< Char 'l' (
+          4 :< Char 'o' (
+          5 :< Char '\'' (
+          6 :< Char ' ' (
+          7 :< CardinalInexact "n"
             mempty
-            (pure (One, 24 :< StringF "name" (30 :< FinF)))
-            (39 :< FinF) (
-          41 :< CharF '!' (
-          42 :< FinF
+            (pure (One, 24 :< String "name" (30 :< Fin)))
+            (39 :< Fin) (
+          41 :< Char '!' (
+          42 :< Fin
         ))))))))))
 
   describe "interpolation" $ do

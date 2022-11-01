@@ -40,13 +40,13 @@ unArg (Arg x) = x
 -- This core type is represented as a "pattern functor". Useful for recursion
 -- schemes and pairing additional data to nodes via the likes of `Cofree`.
 data NodeF a
-  = FinF
-  | CharF Char a
-  | BoolF { nameF :: Arg, trueCaseF :: a, falseCaseF :: a, nextF :: a }
-  | StringF Arg a
-  | NumberF Arg a
-  | DateF Arg DateTimeFmt a
-  | TimeF Arg DateTimeFmt a
+  = Fin
+  | Char Char a
+  | Bool { nameF :: Arg, trueCaseF :: a, falseCaseF :: a, nextF :: a }
+  | String Arg a
+  | Number Arg a
+  | Date Arg DateTimeFmt a
+  | Time Arg DateTimeFmt a
   -- The only cardinal plurals which do not require a wildcard are those
   -- consisting solely of literal/exact cases. This is because within the AST we
   -- only care about correctness and prospective type safety, not optimal use of
@@ -55,16 +55,16 @@ data NodeF a
   -- Ordinal plurals always require a wildcard as per their intended usage with
   -- rules, however as with the cardinal plural type we'll allow a wider set of
   -- suboptimal usages that we can then lint against.
-  | CardinalExactF Arg (NonEmpty (PluralCaseF PluralExact a)) a
-  | CardinalInexactF Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
-  | OrdinalF Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
+  | CardinalExact Arg (NonEmpty (PluralCaseF PluralExact a)) a
+  | CardinalInexact Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
+  | Ordinal Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
-  | PluralRefF Arg a
-  | SelectNamedF Arg (NonEmpty (SelectCaseF a)) a
-  | SelectWildF Arg a a
-  | SelectNamedWildF Arg (NonEmpty (SelectCaseF a)) a a
-  | CallbackF Arg a a
+  | PluralRef Arg a
+  | SelectNamed Arg (NonEmpty (SelectCaseF a)) a
+  | SelectWild Arg a a
+  | SelectNamedWild Arg (NonEmpty (SelectCaseF a)) a a
+  | Callback Arg a a
   deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
 
 -- | `NodeF` recursing on itself, forming a typical, simple AST. By convention
@@ -88,35 +88,35 @@ sansAnn = cata $ \(_ :< x) -> embed x
 -- parameter in `Node`'s constructors were removed and replaced with a list.
 instance Semigroup (NodeF Node) where
   l <> r = case l of
-    FinF                          -> r
-    CharF c l'                    -> CharF c (l' `fconcat` r)
-    BoolF n t f l'                -> BoolF n t f (l' `fconcat` r)
-    StringF n l'                  -> StringF n (l' `fconcat` r)
-    NumberF n l'                  -> NumberF n (l' `fconcat` r)
-    DateF n f l'                  -> DateF n f (l' `fconcat` r)
-    TimeF n f l'                  -> TimeF n f (l' `fconcat` r)
-    CardinalExactF n pe l'        -> CardinalExactF n pe (l' `fconcat` r)
-    CardinalInexactF n pe pr w l' -> CardinalInexactF n pe pr w (l' `fconcat` r)
-    OrdinalF n pe pr w l'         -> OrdinalF n pe pr w (l' `fconcat` r)
-    PluralRefF n l'               -> PluralRefF n (l' `fconcat` r)
-    SelectNamedF n c l'           -> SelectNamedF n c (l' `fconcat` r)
-    SelectWildF n w l'            -> SelectWildF n w (l' `fconcat` r)
-    SelectNamedWildF n c w l'     -> SelectNamedWildF n c w (l' `fconcat` r)
-    CallbackF n c l'              -> CallbackF n c (l' `fconcat` r)
+    Fin                          -> r
+    Char c l'                    -> Char c (l' `fconcat` r)
+    Bool n t f l'                -> Bool n t f (l' `fconcat` r)
+    String n l'                  -> String n (l' `fconcat` r)
+    Number n l'                  -> Number n (l' `fconcat` r)
+    Date n f l'                  -> Date n f (l' `fconcat` r)
+    Time n f l'                  -> Time n f (l' `fconcat` r)
+    CardinalExact n pe l'        -> CardinalExact n pe (l' `fconcat` r)
+    CardinalInexact n pe pr w l' -> CardinalInexact n pe pr w (l' `fconcat` r)
+    Ordinal n pe pr w l'         -> Ordinal n pe pr w (l' `fconcat` r)
+    PluralRef n l'               -> PluralRef n (l' `fconcat` r)
+    SelectNamed n c l'           -> SelectNamed n c (l' `fconcat` r)
+    SelectWild n w l'            -> SelectWild n w (l' `fconcat` r)
+    SelectNamedWild n c w l'     -> SelectNamedWild n c w (l' `fconcat` r)
+    Callback n c l'              -> Callback n c (l' `fconcat` r)
     where fconcat x y = embed $ project x <> y
 
 instance Semigroup Node where
   l <> r = embed (project l <> project r)
 
 instance Monoid (NodeF Node) where
-  mempty = FinF
+  mempty = Fin
 
 instance Monoid Node where
-  mempty = embed FinF
+  mempty = embed Fin
 
 -- "abc" = Char 'a' (Char 'b' (Char 'c' Fin))
 instance IsString Node where
-  fromString = foldr (\c x -> embed (CharF c x)) (embed FinF)
+  fromString = foldr (\c x -> embed (Char c x)) (embed Fin)
 
 data DateTimeFmt
   = Short
@@ -157,41 +157,41 @@ sansAnnMsg :: Message AnnNode -> Message Node
 sansAnnMsg = fmap sansAnn
 
 getNext :: NodeF a -> Maybe a
-getNext FinF                         = Nothing
-getNext (CharF _ x)                  = Just x
-getNext (StringF _ x)                = Just x
-getNext (NumberF _ x)                = Just x
-getNext (DateF _ _ x)                = Just x
-getNext (TimeF _ _ x)                = Just x
-getNext (PluralRefF _ x)             = Just x
-getNext (BoolF _ _ _ x)              = Just x
-getNext (CardinalExactF _ _ x)       = Just x
-getNext (CardinalInexactF _ _ _ _ x) = Just x
-getNext (OrdinalF _ _ _ _ x)         = Just x
-getNext (SelectNamedF _ _ x)         = Just x
-getNext (SelectWildF _ _ x)          = Just x
-getNext (SelectNamedWildF _ _ _ x)   = Just x
-getNext (CallbackF _ _ x)            = Just x
+getNext Fin                         = Nothing
+getNext (Char _ x)                  = Just x
+getNext (String _ x)                = Just x
+getNext (Number _ x)                = Just x
+getNext (Date _ _ x)                = Just x
+getNext (Time _ _ x)                = Just x
+getNext (PluralRef _ x)             = Just x
+getNext (Bool _ _ _ x)              = Just x
+getNext (CardinalExact _ _ x)       = Just x
+getNext (CardinalInexact _ _ _ _ x) = Just x
+getNext (Ordinal _ _ _ _ x)         = Just x
+getNext (SelectNamed _ _ x)         = Just x
+getNext (SelectWild _ _ x)          = Just x
+getNext (SelectNamedWild _ _ _ x)   = Just x
+getNext (Callback _ _ x)            = Just x
 
 -- Pulls out the next node and replaces it, if any, with `Fin`.
 sever :: Node -> (Node, Maybe Node)
 sever = (sansNext &&& getNext) . project
   where sansNext = \case
-          FinF                         -> embed FinF
-          CharF c _                    -> Char' c
-          StringF n _                  -> String' n
-          NumberF n _                  -> Number' n
-          DateF n f _                  -> Date' n f
-          TimeF n f _                  -> Time' n f
-          PluralRefF n _               -> PluralRef' n
-          BoolF n t f _                -> Bool' n t f
-          CardinalExactF n pe _        -> CardinalExact' n pe
-          CardinalInexactF n pe pr w _ -> CardinalInexact' n pe pr w
-          OrdinalF n pe pr w _         -> Ordinal' n pe pr w
-          SelectNamedF n c _           -> SelectNamed' n c
-          SelectWildF n w _            -> SelectWild' n w
-          SelectNamedWildF n c w _     -> SelectNamedWild' n c w
-          CallbackF n c _              -> Callback' n c
+          Fin                         -> embed Fin
+          Char c _                    -> Char' c
+          String n _                  -> String' n
+          Number n _                  -> Number' n
+          Date n f _                  -> Date' n f
+          Time n f _                  -> Time' n f
+          PluralRef n _               -> PluralRef' n
+          Bool n t f _                -> Bool' n t f
+          CardinalExact n pe _        -> CardinalExact' n pe
+          CardinalInexact n pe pr w _ -> CardinalInexact' n pe pr w
+          Ordinal n pe pr w _         -> Ordinal' n pe pr w
+          SelectNamed n c _           -> SelectNamed' n c
+          SelectWild n w _            -> SelectWild' n w
+          SelectNamedWild n c w _     -> SelectNamedWild' n c w
+          Callback n c _              -> Callback' n c
 
 -- A series of `Node` constructor aliases which partially apply the sibling as
 -- `Fin`. Particularly useful when writing out a large `Node` by hand, for
@@ -200,43 +200,43 @@ sever = (sansNext &&& getNext) . project
 -- It looks like pattern constructors can't make use of some abstractions, hence
 -- the direct use of the `Fix` constructor.
 pattern Char' :: Char -> Node
-pattern Char' c = Fix (CharF c (Fix FinF))
+pattern Char' c = Fix (Char c (Fix Fin))
 
 pattern String' :: Arg -> Node
-pattern String' n = Fix (StringF n (Fix FinF))
+pattern String' n = Fix (String n (Fix Fin))
 
 pattern Number' :: Arg -> Node
-pattern Number' n = Fix (NumberF n (Fix FinF))
+pattern Number' n = Fix (Number n (Fix Fin))
 
 pattern Date' :: Arg -> DateTimeFmt -> Node
-pattern Date' n f = Fix (DateF n f (Fix FinF))
+pattern Date' n f = Fix (Date n f (Fix Fin))
 
 pattern Time' :: Arg -> DateTimeFmt -> Node
-pattern Time' n f = Fix (TimeF n f (Fix FinF))
+pattern Time' n f = Fix (Time n f (Fix Fin))
 
 pattern Bool' :: Arg -> Node -> Node -> Node
-pattern Bool' n t f = Fix (BoolF n t f (Fix FinF))
+pattern Bool' n t f = Fix (Bool n t f (Fix Fin))
 
 pattern CardinalExact' :: Arg -> NonEmpty (PluralCase PluralExact) -> Node
-pattern CardinalExact' n pe = Fix (CardinalExactF n pe (Fix FinF))
+pattern CardinalExact' n pe = Fix (CardinalExact n pe (Fix Fin))
 
 pattern CardinalInexact' :: Arg -> [PluralCase PluralExact] -> [PluralCase PluralRule] -> Node -> Node
-pattern CardinalInexact' n pe pr w = Fix (CardinalInexactF n pe pr w (Fix FinF))
+pattern CardinalInexact' n pe pr w = Fix (CardinalInexact n pe pr w (Fix Fin))
 
 pattern Ordinal' :: Arg -> [PluralCase PluralExact] -> [PluralCase PluralRule] -> Node -> Node
-pattern Ordinal' n pe pr w = Fix (OrdinalF n pe pr w (Fix FinF))
+pattern Ordinal' n pe pr w = Fix (Ordinal n pe pr w (Fix Fin))
 
 pattern PluralRef' :: Arg -> Node
-pattern PluralRef' n = Fix (PluralRefF n (Fix FinF))
+pattern PluralRef' n = Fix (PluralRef n (Fix Fin))
 
 pattern SelectNamed' :: Arg -> NonEmpty SelectCase -> Node
-pattern SelectNamed' n c = Fix (SelectNamedF n c (Fix FinF))
+pattern SelectNamed' n c = Fix (SelectNamed n c (Fix Fin))
 
 pattern SelectWild' :: Arg -> Node -> Node
-pattern SelectWild' n w = Fix (SelectWildF n w (Fix FinF))
+pattern SelectWild' n w = Fix (SelectWild n w (Fix Fin))
 
 pattern SelectNamedWild' :: Arg -> NonEmpty SelectCase -> Node -> Node
-pattern SelectNamedWild' n c w = Fix (SelectNamedWildF n c w (Fix FinF))
+pattern SelectNamedWild' n c w = Fix (SelectNamedWild n c w (Fix Fin))
 
 pattern Callback' :: Arg -> Node -> Node
-pattern Callback' n w = Fix (CallbackF n w (Fix FinF))
+pattern Callback' n w = Fix (Callback n w (Fix Fin))

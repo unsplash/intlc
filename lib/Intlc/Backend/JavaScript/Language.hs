@@ -51,39 +51,39 @@ fromKeyedMsg n (ICU.Message x) = Stmt n <$> fromNode x
 
 fromNode :: ICU.Node -> ASTCompiler [Expr]
 fromNode = cataA $ \case
-  ICU.FinF        -> pure mempty
-  (ICU.CharF c x) -> pure (pure (TPrint (T.singleton c))) <>^ x
-  x@ICU.BoolF {}  -> do
+  ICU.Fin        -> pure mempty
+  (ICU.Char c x) -> pure (pure (TPrint (T.singleton c))) <>^ x
+  x@ICU.Bool {}  -> do
         l <- fromBoolCase True (ICU.trueCaseF x)
         r <- fromBoolCase False (ICU.falseCaseF x)
         let start = TMatch . Match (ICU.nameF x) LitCond . LitMatchRet $ l :| [r]
         pure (pure start) <>^ ICU.nextF x
-  (ICU.StringF n x)      -> pure (pure (TStr n)) <>^ x
-  (ICU.NumberF n x)      -> pure (pure (TNum n)) <>^ x
-  (ICU.DateF n x y)      -> pure (pure (TDate n x)) <>^ y
-  (ICU.TimeF n x y)      -> pure (pure (TTime n x)) <>^ y
-  (ICU.CardinalExactF n lcs x)              -> (pure . TMatch . Match n LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)) <>^ x
-  (ICU.CardinalInexactF n lcs [] w x)       -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
+  (ICU.String n x)      -> pure (pure (TStr n)) <>^ x
+  (ICU.Number n x)      -> pure (pure (TNum n)) <>^ x
+  (ICU.Date n x y)      -> pure (pure (TDate n x)) <>^ y
+  (ICU.Time n x y)      -> pure (pure (TTime n x)) <>^ y
+  (ICU.CardinalExact n lcs x)              -> (pure . TMatch . Match n LitCond . LitMatchRet <$> (fromExactPluralCase `mapM` lcs)) <>^ x
+  (ICU.CardinalInexact n lcs [] w x)       -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
       where ret = NonLitMatchRet <$> (fromExactPluralCase `mapM` lcs) <*> (Wildcard <$> w)
-  (ICU.CardinalInexactF n [] rcs w x)       -> (pure . TMatch . Match n CardinalPluralRuleCond <$> ret) <>^ x
+  (ICU.CardinalInexact n [] rcs w x)       -> (pure . TMatch . Match n CardinalPluralRuleCond <$> ret) <>^ x
       where ret = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w)
-  (ICU.CardinalInexactF n (lc:lcs) rcs w x) -> (pure . TMatch . Match n LitCond <$> litRet) <>^ x
+  (ICU.CardinalInexact n (lc:lcs) rcs w x) -> (pure . TMatch . Match n LitCond <$> litRet) <>^ x
       where litRet = RecMatchRet <$> (fromExactPluralCase `mapM` lcs') <*> (Match n CardinalPluralRuleCond <$> ruleRet)
             ruleRet = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w)
             lcs' = lc :| lcs
-  (ICU.OrdinalF n [] rcs w x)               -> (pure . TMatch . Match n OrdinalPluralRuleCond <$> m) <>^ x
+  (ICU.Ordinal n [] rcs w x)               -> (pure . TMatch . Match n OrdinalPluralRuleCond <$> m) <>^ x
       where m = NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w)
-  (ICU.OrdinalF n (lc:lcs) rcs w x)         -> (pure . TMatch . Match n LitCond <$> m) <>^ x
+  (ICU.Ordinal n (lc:lcs) rcs w x)         -> (pure . TMatch . Match n LitCond <$> m) <>^ x
       where m = RecMatchRet <$> ((:|) <$> fromExactPluralCase lc <*> (fromExactPluralCase `mapM` lcs)) <*> im
             im = Match n OrdinalPluralRuleCond <$> (NonLitMatchRet <$> (fromRulePluralCase `mapM` rcs) <*> (Wildcard <$> w))
-  (ICU.PluralRefF n x)   -> pure (pure (TNum n)) <>^ x
-  (ICU.SelectNamedF n cs x)       -> (pure . TMatch . Match n LitCond . LitMatchRet <$> ret) <>^ x
+  (ICU.PluralRef n x)   -> pure (pure (TNum n)) <>^ x
+  (ICU.SelectNamed n cs x)       -> (pure . TMatch . Match n LitCond . LitMatchRet <$> ret) <>^ x
     where ret = fromSelectCase `mapM` cs
-  (ICU.SelectWildF n w x)         -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
+  (ICU.SelectWild n w x)         -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
     where ret = NonLitMatchRet mempty <$> (Wildcard <$> w)
-  (ICU.SelectNamedWildF n cs w x) -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
+  (ICU.SelectNamedWild n cs w x) -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
     where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> (Wildcard <$> w)
-  (ICU.CallbackF n x y) -> (pure . TApply n <$> x) <>^ y
+  (ICU.Callback n x y) -> (pure . TApply n <$> x) <>^ y
 
 fromExactPluralCase :: ICU.PluralCaseF ICU.PluralExact (ASTCompiler [Expr]) -> ASTCompiler Branch
 fromExactPluralCase (ICU.PluralExact n, x) = Branch n <$> x

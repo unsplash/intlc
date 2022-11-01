@@ -24,9 +24,9 @@ compileNamedExport s l k v = JS.compileStmt o s l k v
         matchLitCond x = x <> " as typeof " <> x
         arg = if hasInterpolations (ICU.unMessage v) then "x" else "()"
         hasInterpolations = project >>> \case
-          ICU.FinF        -> False
-          (ICU.CharF _ n) -> hasInterpolations n
-          _               -> True
+          ICU.Fin        -> False
+          (ICU.Char _ n) -> hasInterpolations n
+          _              -> True
 
 compileTypeof :: InterpStrat -> ICU.Message ICU.Node -> Text
 compileTypeof x = let o = fromStrat x in flip runReader o . typeof . fromMsg o

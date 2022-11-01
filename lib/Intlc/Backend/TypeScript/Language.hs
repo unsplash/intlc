@@ -49,21 +49,21 @@ fromNode = cata $ (maybeToList . marg) <> fold
 
 marg :: ICU.NodeF a -> Maybe (ICU.Arg, In)
 marg = \case
-  ICU.BoolF n _ _ _              -> pure (n, TBool)
-  ICU.StringF n _                -> pure (n, TStr)
-  ICU.NumberF n _                -> pure (n, TNum)
-  ICU.DateF n _ _                -> pure (n, TDate)
-  ICU.TimeF n _ _                -> pure (n, TDate)
+  ICU.Bool n _ _ _              -> pure (n, TBool)
+  ICU.String n _                -> pure (n, TStr)
+  ICU.Number n _                -> pure (n, TNum)
+  ICU.Date n _ _                -> pure (n, TDate)
+  ICU.Time n _ _                -> pure (n, TDate)
   -- We can compile exact cardinal plurals (i.e. those without a wildcard) to a
   -- union of number literals.
-  ICU.CardinalExactF n ls _      -> pure (n, TNumLitUnion (caseLit <$> ls))
+  ICU.CardinalExact n ls _      -> pure (n, TNumLitUnion (caseLit <$> ls))
     where caseLit (ICU.PluralExact y, _) = y
-  ICU.CardinalInexactF n _ _ _ _ -> pure (n, TNum)
-  ICU.OrdinalF n _ _ _ _         -> pure (n, TNum)
-  ICU.SelectWildF n _ _          -> pure (n, TStr)
-  ICU.SelectNamedWildF n _ _ _   -> pure (n, TStr)
+  ICU.CardinalInexact n _ _ _ _ -> pure (n, TNum)
+  ICU.Ordinal n _ _ _ _         -> pure (n, TNum)
+  ICU.SelectWild n _ _          -> pure (n, TStr)
+  ICU.SelectNamedWild n _ _ _   -> pure (n, TStr)
   -- When there's no wildcard case we can compile to a union of string literals.
-  ICU.SelectNamedF n cs _        -> pure (n, TStrLitUnion (fst <$> cs))
-  ICU.CallbackF n _ _            -> pure (n, TEndo)
+  ICU.SelectNamed n cs _        -> pure (n, TStrLitUnion (fst <$> cs))
+  ICU.Callback n _ _            -> pure (n, TEndo)
   -- Plural references are treated as a no-op.
   _                              -> empty

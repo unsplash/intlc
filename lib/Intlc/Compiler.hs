@@ -48,17 +48,17 @@ flatten = go mempty
         go prev rest =
           let (curr, mnext) = ICU.sever rest
               next = fold mnext
-              rec mid = go (embed ICU.FinF) (prev <> mid <> next)
+              rec mid = go (embed ICU.Fin) (prev <> mid <> next)
            in case project curr of
-            ICU.FinF                         -> prev
-            ICU.BoolF n x y _                -> ICU.Bool' n (rec x) (rec y)
-            ICU.CardinalExactF n xs _        -> ICU.CardinalExact' n (mapPluralCase rec <$> xs)
-            ICU.CardinalInexactF n xs ys w _ -> ICU.CardinalInexact' n (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
-            ICU.OrdinalF n xs ys w _         -> ICU.Ordinal' n (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
-            ICU.PluralRefF n _               -> ICU.PluralRef' n
-            ICU.SelectNamedF n xs _          -> ICU.SelectNamed' n (mapSelectCase rec <$> xs)
-            ICU.SelectWildF n w _            -> ICU.SelectWild' n (rec w)
-            ICU.SelectNamedWildF n xs w _    -> ICU.SelectNamedWild' n (mapSelectCase rec <$> xs) (rec w)
+            ICU.Fin                         -> prev
+            ICU.Bool n x y _                -> ICU.Bool' n (rec x) (rec y)
+            ICU.CardinalExact n xs _        -> ICU.CardinalExact' n (mapPluralCase rec <$> xs)
+            ICU.CardinalInexact n xs ys w _ -> ICU.CardinalInexact' n (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
+            ICU.Ordinal n xs ys w _         -> ICU.Ordinal' n (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
+            ICU.PluralRef n _               -> ICU.PluralRef' n
+            ICU.SelectNamed n xs _          -> ICU.SelectNamed' n (mapSelectCase rec <$> xs)
+            ICU.SelectWild n w _            -> ICU.SelectWild' n (rec w)
+            ICU.SelectNamedWild n xs w _    -> ICU.SelectNamedWild' n (mapSelectCase rec <$> xs) (rec w)
             _                               -> go (prev <> curr) next
 
 -- Expands any plural with a rule to contain every rule. This makes ICU plural
@@ -69,10 +69,10 @@ flatten = go mempty
 -- rules is unspecified.
 expandPlurals :: ICU.Message ICU.Node -> ICU.Message ICU.Node
 expandPlurals = fmap (cata (embed . f))
-  where f (ICU.CardinalInexactF n exacts rules w y) =
-            ICU.CardinalInexactF n exacts (toList $ expandRules rules w) w y
-        f (ICU.OrdinalF n exacts rules w y) =
-            ICU.OrdinalF n exacts (toList $ expandRules rules w) w y
+  where f (ICU.CardinalInexact n exacts rules w y) =
+            ICU.CardinalInexact n exacts (toList $ expandRules rules w) w y
+        f (ICU.Ordinal n exacts rules w y) =
+            ICU.Ordinal n exacts (toList $ expandRules rules w) w y
         f y = y
 
 expandRules :: (Functor f, Foldable f) => f (ICU.PluralCase ICU.PluralRule) -> ICU.Node -> NonEmpty (ICU.PluralCase ICU.PluralRule)
