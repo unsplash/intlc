@@ -13,7 +13,6 @@ import           Control.Comonad.Trans.Cofree (CofreeF ((:<)))
 import           Data.Eq.Deriving             (deriveEq1)
 import           Data.Fix                     (Fix (Fix))
 import           Data.Functor.Foldable        (cata, embed, project)
-import qualified Data.Text                    as T
 import           Prelude
 import           Text.Show.Deriving           (deriveShow1)
 
@@ -118,10 +117,6 @@ instance Monoid Node where
 -- "abc" = Char 'a' (Char 'b' (Char 'c' Fin))
 instance IsString Node where
   fromString = foldr (\c x -> embed (CharF c x)) (embed FinF)
-
--- | Consider utilising -XOverloadedStrings instead.
-fromText :: Text -> Node
-fromText = fromString . T.unpack
 
 data DateTimeFmt
   = Short
