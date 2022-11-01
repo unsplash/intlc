@@ -151,30 +151,30 @@ redundantPluralRule = nonEmpty . idents where
 -- Duplicate case names in select interpolations are redundant.
 duplicateSelectCasesRule :: Rule AnnExternalLint
 duplicateSelectCasesRule = nonEmpty . cases where
-  cases = para $ \case
-    x@(_ :< SelectNamedF n ys _)       -> here n ys <> fold' x
-    x@(_ :< SelectNamedWildF n ys _ _) -> here n ys <> fold' x
-    x                                  ->              fold' x
+  cases = para $ (hereCases . tailF) <> foldMap snd
+  hereCases = \case
+    SelectNamedF n xs _       -> here n xs
+    SelectNamedWildF n xs _ _ -> here n xs
+    _                         -> mempty
   here n = fmap (uncurry (f n) . (caseOffset &&& caseName)) . bunBy ((==) `on` caseName)
     where caseName = fst
           caseOffset = uncurry calcCaseNameOffset . caseHead
           caseHead = second (extract . fst)
-  fold' = foldMap snd
   f n i x = (i, DuplicateSelectCase n x)
 
 -- Duplicate cases in plural interpolations are redundant.
 duplicatePluralCasesRule :: Rule AnnExternalLint
 duplicatePluralCasesRule = nonEmpty . cases where
-  cases = para $ \case
-    x@(_ :< CardinalExactF n ys _)        -> here pluralExact n ys <>                         fold' x
-    x@(_ :< CardinalInexactF n ys zs _ _) -> here pluralExact n ys <> here pluralRule n zs <> fold' x
-    x@(_ :< OrdinalF n ys zs _ _)         -> here pluralExact n ys <> here pluralRule n zs <> fold' x
-    x                                     ->                                                  fold' x
+  cases = para $ (hereCases . tailF) <> foldMap snd
+  hereCases = \case
+    CardinalExactF n ys _        -> here pluralExact n ys
+    CardinalInexactF n ys zs _ _ -> here pluralExact n ys <> here pluralRule n zs
+    OrdinalF n ys zs _ _         -> here pluralExact n ys <> here pluralRule n zs
+    _                            -> mempty
   here via n = fmap (uncurry (f n) . (caseOffset &&& (via . caseKey))) . bunBy ((==) `on` caseKey)
     where caseKey = fst
           caseOffset = uncurry calcCaseNameOffset . first via . caseHead
           caseHead = second (extract . fst)
-  fold' = foldMap snd
   f n i x = (i, DuplicatePluralCase n x)
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
