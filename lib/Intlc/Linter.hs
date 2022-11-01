@@ -3,7 +3,7 @@ module Intlc.Linter where
 import qualified Data.Text                     as T
 
 import           Control.Comonad               (extract)
-import           Control.Comonad.Trans.Cofree  (CofreeF ((:<)))
+import           Control.Comonad.Trans.Cofree  (CofreeF ((:<)), tailF)
 import           Data.Char                     (isAscii)
 import           Data.Functor.Foldable         (cata, para)
 import           Intlc.Backend.ICU.Compiler    (pluralExact, pluralRule)
@@ -132,19 +132,20 @@ instance ShowErrorComponent InternalLint where
 -- replaced with plain string interpolations.
 redundantSelectRule :: Rule AnnExternalLint
 redundantSelectRule = nonEmpty . idents where
-  idents = cata $ \case
-    x@(i :< SelectWildF n _ _) -> f i n : fold x
-    x                          ->         fold x
-  f i n = (i + 1, RedundantSelect n)
+  idents = cata $ (maybeToList . mident) <> fold
+  mident = \case
+    i :< SelectWildF n _ _ -> pure (i + 1, RedundantSelect n)
+    _                      -> empty
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
 redundantPluralRule :: Rule AnnExternalLint
 redundantPluralRule = nonEmpty . idents where
-  idents = cata $ \case
-    x@(i :< CardinalInexactF n [] [] _ _) -> f i n : fold x
-    x@(i :< OrdinalF         n [] [] _ _) -> f i n : fold x
-    x                                     ->         fold x
+  idents = cata $ (maybeToList . mident) <> fold
+  mident = \case
+    i :< CardinalInexactF n [] [] _ _ -> pure $ f i n
+    i :< OrdinalF         n [] [] _ _ -> pure $ f i n
+    _                                 -> empty
   f i n = (i + 1, RedundantPlural n)
 
 -- Duplicate case names in select interpolations are redundant.
@@ -187,12 +188,13 @@ interpolationsRule :: Rule AnnInternalLint
 interpolationsRule ast = fmap (pure . (start,)) . count . idents $ ast where
   count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
-  idents = cata $ \case
-    x@(_ :< BoolF n _ _ _)            -> n : fold x
-    x@(_ :< SelectNamedF n _ _)       -> n : fold x
-    x@(_ :< SelectWildF n _ _)        -> n : fold x
-    x@(_ :< SelectNamedWildF n _ _ _) -> n : fold x
-    x                                 ->     fold x
+  idents = cata $ (maybeToList . mident . tailF) <> fold
+  mident = \case
+    BoolF n _ _ _            -> pure n
+    SelectNamedF n _ _       -> pure n
+    SelectWildF n _ _        -> pure n
+    SelectNamedWildF n _ _ _ -> pure n
+    _                        -> empty
   start = extract ast
 
 -- Allows any ASCII character as well as a handful of Unicode characters that
@@ -203,10 +205,10 @@ isAcceptedChar c = isAscii c || c `elem` acceptedChars
 
 unsupportedUnicodeRule :: Rule AnnInternalLint
 unsupportedUnicodeRule = nonEmpty . nonAscii where
-  nonAscii = cata $ \case
-    x@(i :< CharF c _) -> (f i <$> guarded (not . isAcceptedChar) c) <> fold x
-    x                  ->                                               fold x
-  f i c = (i, InvalidNonAsciiCharacter c)
+  nonAscii = cata $ (maybeToList . mchar) <> fold
+  mchar = \case
+    i :< CharF c _ -> (i,) . InvalidNonAsciiCharacter <$> guarded (not . isAcceptedChar) c
+    _              -> empty
 
 -- If we have access to the offset of the head node of an interpolation case, we
 -- we can deduce the offset of the start of the case name.
