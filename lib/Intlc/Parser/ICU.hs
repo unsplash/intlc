@@ -18,7 +18,9 @@ import           Control.Comonad.Cofree                   (Cofree ((:<)),
                                                            unwrap)
 import qualified Data.Text                                as T
 import           Data.Void                                ()
-import           Intlc.ICU
+import           Intlc.ICU                                hiding (char,
+                                                           selectCases,
+                                                           wildcard)
 import           Intlc.Parser.Error                       (MessageParseErr (..),
                                                            ParseErr (FailedMsgParse),
                                                            failingWith)

@@ -1,7 +1,7 @@
 module Intlc.Parser.ICUSpec (spec) where
 
 import           Control.Comonad.Cofree (Cofree ((:<)))
-import           Intlc.ICU
+import           Intlc.ICU              hiding (selectCases)
 import           Intlc.Parser.Error     (MessageParseErr (..),
                                          ParseErr (FailedMsgParse),
                                          ParseFailure)

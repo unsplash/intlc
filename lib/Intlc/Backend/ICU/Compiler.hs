@@ -10,7 +10,7 @@ module Intlc.Backend.ICU.Compiler (compileMsg, Formatting (..), pluralExact, plu
 
 import           Data.Functor.Foldable (cata)
 import qualified Data.Text             as T
-import           Intlc.ICU
+import           Intlc.ICU             hiding (selectCases, wildcard)
 import           Prelude
 import           Utils                 ((<>^))
 

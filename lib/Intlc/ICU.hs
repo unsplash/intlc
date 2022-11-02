@@ -38,12 +38,34 @@ unArg (Arg x) = x
 -- schemes and pairing additional data to nodes via the likes of `Cofree`.
 data NodeF a
   = Fin
-  | Char Char a
-  | Bool { name :: Arg, trueCase :: a, falseCase :: a, next :: a }
-  | String Arg a
-  | Number Arg a
-  | Date Arg DateTimeFmt a
-  | Time Arg DateTimeFmt a
+  | Char
+    { char :: Char
+    , next :: a
+    }
+  | Bool
+    { name      :: Arg
+    , trueCase  :: a
+    , falseCase :: a
+    , next      :: a
+    }
+  | String
+    { name :: Arg
+    , next :: a
+    }
+  | Number
+    { name :: Arg
+    , next :: a
+    }
+  | Date
+    { name   :: Arg
+    , format :: DateTimeFmt
+    , next   :: a
+    }
+  | Time
+    { name   :: Arg
+    , format :: DateTimeFmt
+    , next   :: a
+    }
   -- The only cardinal plurals which do not require a wildcard are those
   -- consisting solely of literal/exact cases. This is because within the AST we
   -- only care about correctness and prospective type safety, not optimal use of
@@ -52,16 +74,52 @@ data NodeF a
   -- Ordinal plurals always require a wildcard as per their intended usage with
   -- rules, however as with the cardinal plural type we'll allow a wider set of
   -- suboptimal usages that we can then lint against.
-  | CardinalExact Arg (NonEmpty (PluralCaseF PluralExact a)) a
-  | CardinalInexact Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
-  | Ordinal Arg [PluralCaseF PluralExact a] [PluralCaseF PluralRule a] a a
+  | CardinalExact
+    { name         :: Arg
+    , exactCasesNE :: NonEmpty (PluralCaseF PluralExact a)
+    , next         :: a
+    }
+  | CardinalInexact
+    { name       :: Arg
+    , exactCases :: [PluralCaseF PluralExact a]
+    , ruleCases  :: [PluralCaseF PluralRule a]
+    , wildcard   :: a
+    , next       :: a
+    }
+  | Ordinal
+    { name       :: Arg
+    , exactCases :: [PluralCaseF PluralExact a]
+    , ruleCases  :: [PluralCaseF PluralRule a]
+    , wildcard   :: a
+    , next       :: a
+    }
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
-  | PluralRef Arg a
-  | SelectNamed Arg (NonEmpty (SelectCaseF a)) a
-  | SelectWild Arg a a
-  | SelectNamedWild Arg (NonEmpty (SelectCaseF a)) a a
-  | Callback Arg a a
+  | PluralRef
+    { name :: Arg
+    , next :: a
+    }
+  | SelectNamed
+    { name        :: Arg
+    , selectCases :: NonEmpty (SelectCaseF a)
+    , next        :: a
+    }
+  | SelectWild
+    { name     :: Arg
+    , wildcard :: a
+    , next     :: a
+    }
+  | SelectNamedWild
+    { name        :: Arg
+    , selectCases :: NonEmpty (SelectCaseF a)
+    , wildcard    :: a
+    , next        :: a
+    }
+  | Callback
+    { name  :: Arg
+    , child :: a
+    , next  :: a
+    }
   deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
 
 -- | `NodeF` recursing on itself, forming a typical, simple AST. By convention
