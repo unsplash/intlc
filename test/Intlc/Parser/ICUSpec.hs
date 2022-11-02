@@ -41,7 +41,7 @@ parseF = parse . fmap sansAnn' . flip flap fin
 
 -- | Message parser sans annotations.
 msg :: Parser (Message Node)
-msg = sansAnnMsg <$> annMsg
+msg = fmap sansAnn <$> annMsg
 
 spec :: Spec
 spec = describe "ICU parser" $ do

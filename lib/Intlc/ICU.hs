@@ -150,9 +150,6 @@ type SelectCaseF a = (Text, a)
 $(deriveShow1 ''NodeF)
 $(deriveEq1   ''NodeF)
 
-sansAnnMsg :: Message AnnNode -> Message Node
-sansAnnMsg = fmap sansAnn
-
 getNext :: NodeF a -> Maybe a
 getNext Fin                         = Nothing
 getNext (Char _ x)                  = Just x

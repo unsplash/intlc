@@ -4,7 +4,7 @@ import           CLI                (Opts (..), getOpts)
 import qualified Data.Text          as T
 import           Intlc.Compiler     (compileDataset, compileFlattened)
 import           Intlc.Core
-import           Intlc.ICU          (AnnNode, Message, Node, sansAnnMsg)
+import           Intlc.ICU          (AnnNode, Message, Node, sansAnn)
 import           Intlc.Linter
 import           Intlc.Parser       (parseDataset, parseMessage, printErr)
 import           Intlc.Parser.Error (ParseFailure)
@@ -33,7 +33,7 @@ lint path = do
   whenJust (lintDatasetExternal path raw dataset) $ die . T.unpack
 
 tryPrettify :: MonadIO m => Text -> m ()
-tryPrettify = either (die . printErr) (putTextLn . prettify . sansAnnMsg) . parseMessage "input"
+tryPrettify = either (die . printErr) (putTextLn . prettify . fmap sansAnn) . parseMessage "input"
 
 tryGetParsedAtSansAnn :: MonadIO m => FilePath -> m (Dataset (Translation (Message Node)))
 tryGetParsedAtSansAnn = parserDie . fmap datasetSansAnn <=< getParsedAt

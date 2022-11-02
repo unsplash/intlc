@@ -5,7 +5,7 @@ import           Intlc.Backend.ICU.Compiler (Formatting (SingleLine),
                                              compileMsg)
 import           Intlc.Compiler             (compileDataset, expandPlurals)
 import           Intlc.Core                 (Locale (Locale), datasetSansAnn)
-import           Intlc.ICU                  (sansAnnMsg)
+import           Intlc.ICU                  (sansAnn)
 import           Intlc.Parser               (parseDataset)
 import           Intlc.Parser.Error         (ParseFailure)
 import           Intlc.Parser.ICU           (ParserState (endOfInput), annMsg,
@@ -21,7 +21,7 @@ parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text
 parseAndCompileDataset = compileDataset (Locale "en-US") . datasetSansAnn <=< first (pure . show) . parseDataset "test"
 
 parseAndExpandMsg :: Text -> Either ParseFailure Text
-parseAndExpandMsg = fmap (compileMsg SingleLine . expandPlurals . sansAnnMsg) . parseMsg
+parseAndExpandMsg = fmap (compileMsg SingleLine . expandPlurals . fmap sansAnn) . parseMsg
   where parseMsg = runParser (runReaderT annMsg (emptyState { endOfInput = eof })) "test"
 
 golden :: String -> Text -> Golden String
