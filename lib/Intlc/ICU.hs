@@ -71,10 +71,6 @@ data NodeF a
   -- consisting solely of literal/exact cases. This is because within the AST we
   -- only care about correctness and prospective type safety, not optimal use of
   -- ICU syntax.
-  --
-  -- Ordinal plurals always require a wildcard as per their intended usage with
-  -- rules, however as with the cardinal plural type we'll allow a wider set of
-  -- suboptimal usages that we can then lint against.
   | CardinalExact
     { name         :: Arg
     , exactCasesNE :: NonEmpty (PluralCaseF PluralExact a)
@@ -87,6 +83,9 @@ data NodeF a
     , wildcard   :: a
     , next       :: a
     }
+  -- Ordinal plurals always require a wildcard as per their intended usage with
+  -- rules, however as with the cardinal plural type we'll allow a wider set of
+  -- suboptimal usages that we can then lint against.
   | Ordinal
     { name       :: Arg
     , exactCases :: [PluralCaseF PluralExact a]
