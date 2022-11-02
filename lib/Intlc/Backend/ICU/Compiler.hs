@@ -41,9 +41,9 @@ node fo ast = runReader (cata go ast) (Config fo 0) where
 
     (Char c next) -> (T.singleton c <>) <$> next
 
-    (Bool { nameF, trueCaseF, falseCaseF, nextF }) ->
-      let cs = sequence [("true",) <$> trueCaseF, ("false",) <$> falseCaseF]
-       in boolean nameF cs <>^ nextF
+    (Bool { name, trueCase, falseCase, next }) ->
+      let cs = sequence [("true",) <$> trueCase, ("false",) <$> falseCase]
+       in boolean name cs <>^ next
 
     (String n next) -> (string n <>) <$> next
 

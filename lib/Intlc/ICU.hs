@@ -39,7 +39,7 @@ unArg (Arg x) = x
 data NodeF a
   = Fin
   | Char Char a
-  | Bool { nameF :: Arg, trueCaseF :: a, falseCaseF :: a, nextF :: a }
+  | Bool { name :: Arg, trueCase :: a, falseCase :: a, next :: a }
   | String Arg a
   | Number Arg a
   | Date Arg DateTimeFmt a
