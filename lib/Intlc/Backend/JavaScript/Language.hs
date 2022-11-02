@@ -53,10 +53,10 @@ fromNode :: ICU.Node -> ASTCompiler [Expr]
 fromNode = cataA $ \case
   ICU.Fin        -> pure mempty
   (ICU.Char c x) -> pure (pure (TPrint (T.singleton c))) <>^ x
-  (ICU.Bool { ICU.name, ICU.trueCase, ICU.falseCase, ICU.next })  -> do
+  (ICU.Bool { ICU.arg, ICU.trueCase, ICU.falseCase, ICU.next })  -> do
         l <- fromBoolCase True trueCase
         r <- fromBoolCase False falseCase
-        let start = TMatch . Match name LitCond . LitMatchRet $ l :| [r]
+        let start = TMatch . Match arg LitCond . LitMatchRet $ l :| [r]
         pure (pure start) <>^ next
   (ICU.String n x)      -> pure (pure (TStr n)) <>^ x
   (ICU.Number n x)      -> pure (pure (TNum n)) <>^ x

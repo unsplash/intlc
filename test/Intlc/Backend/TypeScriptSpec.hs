@@ -53,7 +53,7 @@ spec = describe "TypeScript compiler" $ do
               ]
           , ". Finally, you are "
           , embed $ ICU.Bool
-            { ICU.name = "isDev"
+            { ICU.arg = "isDev"
             , ICU.trueCase = "a software engineer"
             , ICU.falseCase = "something less fun"
             , ICU.next = mempty

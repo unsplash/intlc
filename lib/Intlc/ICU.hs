@@ -44,26 +44,26 @@ data NodeF a
     , next :: a
     }
   | Bool
-    { name      :: Arg
+    { arg       :: Arg
     , trueCase  :: a
     , falseCase :: a
     , next      :: a
     }
   | String
-    { name :: Arg
+    { arg  :: Arg
     , next :: a
     }
   | Number
-    { name :: Arg
+    { arg  :: Arg
     , next :: a
     }
   | Date
-    { name   :: Arg
+    { arg    :: Arg
     , format :: DateTimeFmt
     , next   :: a
     }
   | Time
-    { name   :: Arg
+    { arg    :: Arg
     , format :: DateTimeFmt
     , next   :: a
     }
@@ -72,12 +72,12 @@ data NodeF a
   -- only care about correctness and prospective type safety, not optimal use of
   -- ICU syntax.
   | CardinalExact
-    { name         :: Arg
+    { arg          :: Arg
     , exactCasesNE :: NonEmpty (PluralCaseF PluralExact a)
     , next         :: a
     }
   | CardinalInexact
-    { name       :: Arg
+    { arg        :: Arg
     , exactCases :: [PluralCaseF PluralExact a]
     , ruleCases  :: [PluralCaseF PluralRule a]
     , wildcard   :: a
@@ -87,7 +87,7 @@ data NodeF a
   -- rules, however as with the cardinal plural type we'll allow a wider set of
   -- suboptimal usages that we can then lint against.
   | Ordinal
-    { name       :: Arg
+    { arg        :: Arg
     , exactCases :: [PluralCaseF PluralExact a]
     , ruleCases  :: [PluralCaseF PluralRule a]
     , wildcard   :: a
@@ -96,27 +96,27 @@ data NodeF a
   -- Plural hash references have their own distinct type rather than merely
   -- taking on `Number` to allow compilers to infer appropriately.
   | PluralRef
-    { name :: Arg
+    { arg  :: Arg
     , next :: a
     }
   | SelectNamed
-    { name        :: Arg
+    { arg         :: Arg
     , selectCases :: NonEmpty (SelectCaseF a)
     , next        :: a
     }
   | SelectWild
-    { name     :: Arg
+    { arg      :: Arg
     , wildcard :: a
     , next     :: a
     }
   | SelectNamedWild
-    { name        :: Arg
+    { arg         :: Arg
     , selectCases :: NonEmpty (SelectCaseF a)
     , wildcard    :: a
     , next        :: a
     }
   | Callback
-    { name  :: Arg
+    { arg   :: Arg
     , child :: a
     , next  :: a
     }
