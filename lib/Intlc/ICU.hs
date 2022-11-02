@@ -1,10 +1,7 @@
 -- This module defines an AST for ICU messages. We do not necessarily behave
 -- identically to other implementations.
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE PatternSynonyms    #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Intlc.ICU where
 
@@ -23,7 +20,7 @@ unMessage :: Message a -> a
 unMessage (Message x) = x
 
 newtype Arg = Arg Text
-  deriving newtype (Show, Eq, Ord, IsString)
+  deriving (Show, Eq, Ord, IsString)
 
 unArg :: Arg -> Text
 unArg (Arg x) = x
@@ -132,7 +129,7 @@ type PluralCaseF a b = (a, b)
 -- it back out without thinking about converting numeric types across
 -- languages.
 newtype PluralExact = PluralExact Text
-  deriving newtype (Show, Eq, IsString)
+  deriving (Show, Eq, IsString)
 
 -- "Other" is implied in the wildcard.
 data PluralRule
