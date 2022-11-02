@@ -1,7 +1,8 @@
 -- This module defines an AST for ICU messages. We do not necessarily behave
 -- identically to other implementations.
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE PatternSynonyms  #-}
+{-# LANGUAGE TemplateHaskell  #-}
 
 module Intlc.ICU where
 

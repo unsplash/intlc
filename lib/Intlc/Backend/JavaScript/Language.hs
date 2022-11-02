@@ -54,10 +54,10 @@ fromNode = cataA $ \case
   ICU.Fin        -> pure mempty
   (ICU.Char c x) -> pure (pure (TPrint (T.singleton c))) <>^ x
   x@ICU.Bool {}  -> do
-        l <- fromBoolCase True (ICU.trueCase x)
-        r <- fromBoolCase False (ICU.falseCase x)
-        let start = TMatch . Match (ICU.name x) LitCond . LitMatchRet $ l :| [r]
-        pure (pure start) <>^ ICU.next x
+        l <- fromBoolCase True x.trueCase
+        r <- fromBoolCase False x.falseCase
+        let start = TMatch . Match x.name LitCond . LitMatchRet $ l :| [r]
+        pure (pure start) <>^ x.next
   (ICU.String n x)      -> pure (pure (TStr n)) <>^ x
   (ICU.Number n x)      -> pure (pure (TNum n)) <>^ x
   (ICU.Date n x y)      -> pure (pure (TDate n x)) <>^ y
