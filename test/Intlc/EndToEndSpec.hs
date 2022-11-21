@@ -37,11 +37,11 @@ golden name in' = baseCfg
 
 spec :: Spec
 spec = describe "end-to-end" $ do
-  describe "compile" $ do
+  describe "compilation" $ do
     let x =*= y = parseAndCompileDataset x `shouldBe` Right y
     let withReactImport = ("import { ReactElement } from 'react'\n" <>)
 
-    it "example message" $ do
+    it "compiles to golden output" $ do
       golden "example" [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]
 
     it "compiles valid JS module format given empty input" $ do
@@ -93,7 +93,8 @@ spec = describe "end-to-end" $ do
     it "TypeScriptReact backend" $ do
       [r|{ "f": { "message": "{x} <z>{y, number}</z>", "backend": "tsx" } }|]
         =*= withReactImport "export const f: (x: { x: string; y: number; z: (x: ReactElement) => ReactElement }) => ReactElement = x => <>{x.x} {x.z(<>{new Intl.NumberFormat('en-US').format(x.y)}</>)}</>"
-  describe "expand plurals" $ do
+
+  describe "plural expansion" $ do
     let x =*= y = parseAndExpandMsg x `shouldBe` Right y
 
     -- For the utmost confidence this was written by hand. Have run reading it!
