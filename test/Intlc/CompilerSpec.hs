@@ -57,8 +57,8 @@ spec = describe "compiler" $ do
           SelectNamed' "thing" (pure foof)
 
     it "flattens shallow plural" $ do
-      let other = "many dogs"
-      let otherf = "I have many dogs"
+      let other = PluralRef' "count" <> " dogs"
+      let otherf = "I have " <> PluralRef' "count" <> " dogs"
       let one = (One, "a dog")
       let onef = (One, "I have a dog")
 
