@@ -55,7 +55,6 @@ flatten = go mempty
             ICU.CardinalExact n xs _        -> ICU.CardinalExact' n (mapPluralCase rec <$> xs)
             ICU.CardinalInexact n xs ys w _ -> ICU.CardinalInexact' n (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
             ICU.Ordinal n xs ys w _         -> ICU.Ordinal' n (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
-            ICU.PluralRef n _               -> ICU.PluralRef' n
             ICU.SelectNamed n xs _          -> ICU.SelectNamed' n (mapSelectCase rec <$> xs)
             ICU.SelectWild n w _            -> ICU.SelectWild' n (rec w)
             ICU.SelectNamedWild n xs w _    -> ICU.SelectNamedWild' n (mapSelectCase rec <$> xs) (rec w)
