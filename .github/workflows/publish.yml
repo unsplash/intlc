@@ -18,16 +18,20 @@ jobs:
     runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
-      - run: nix develop -c cabal update
-      - run: nix develop -c cabal freeze
+      # Using Nix causes dynamic linking issues on macOS. It's easier to
+      # workaround on Linux with patchelf at least. (Yes, building statically
+      # would be substantially better.)
+      - uses: haskell/actions/setup@v2
+        with:
+          ghc-version: 9.2.4
+      - run: cabal freeze
       - uses: actions/cache@v3
         with:
           path: ~/.cabal/store
           key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
       - name: Build
         run: |
-          nix develop -c cabal install --install-method=copy --installdir=dist-newstyle
+          cabal install --install-method=copy --installdir=dist-newstyle
           mv dist-newstyle/intlc dist-newstyle/intlc_${{ matrix.os.name }}
           mv dist-newstyle/intlc-internal dist-newstyle/intlc-internal_${{ matrix.os.name }}
       - name: Release
