@@ -1,12 +1,13 @@
 module CLI (Opts (..), getOpts) where
 
-import           Intlc.Core          (Locale (..))
+import qualified Intlc.Backend.JSON.Compiler as JSON
+import           Intlc.Core                  (Locale (..))
 import           Options.Applicative
 import           Prelude
 
 data Opts
   = Compile FilePath Locale
-  | Flatten FilePath
+  | Flatten FilePath JSON.Formatting
   | Lint    FilePath
   | Prettify Text
 
@@ -26,7 +27,7 @@ compile :: Parser Opts
 compile = Compile <$> pathp <*> localep
 
 flatten :: Parser Opts
-flatten = Flatten <$> pathp
+flatten = Flatten <$> pathp <*> minifyp
 
 lint :: Parser Opts
 lint = Lint <$> pathp
@@ -39,6 +40,9 @@ pathp = argument str (metavar "filepath")
 
 localep :: Parser Locale
 localep = Locale <$> strOption (short 'l' <> long "locale")
+
+minifyp :: Parser JSON.Formatting
+minifyp = flag JSON.Pretty JSON.Minified (long "minify")
 
 prettify :: Parser Opts
 prettify = Prettify <$> msgp

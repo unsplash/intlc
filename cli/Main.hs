@@ -16,7 +16,7 @@ import           Prelude
 main :: IO ()
 main = getOpts >>= \case
   Compile path loc -> tryGetParsedAtSansAnn path >>= compile loc
-  Flatten path     -> tryGetParsedAtSansAnn path >>= flatten
+  Flatten path fo  -> tryGetParsedAtSansAnn path >>= flatten fo
   Lint    path     -> lint path
   Prettify msg     -> tryPrettify msg
 
@@ -25,8 +25,8 @@ compile loc = compileDataset loc >>> \case
   Left es -> die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList $ es
   Right x -> putTextLn x
 
-flatten :: MonadIO m => Dataset (Translation (Message Node)) -> m ()
-flatten = putTextLn . compileFlattened JSON.Minified
+flatten :: MonadIO m => JSON.Formatting -> Dataset (Translation (Message Node)) -> m ()
+flatten fo = putTextLn . compileFlattened fo
 
 lint :: MonadIO m => FilePath -> m ()
 lint path = do
