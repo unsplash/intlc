@@ -45,13 +45,13 @@ obj :: Compiler [(Text, Text)] -> Compiler Text
 obj xs = asks fmt >>= \case
   Minified -> do
     let objPair k v = objKey k <> ":" <> v
-    contents <- fmap (T.intercalate "," . fmap (uncurry objPair)) $ xs
+    contents <- T.intercalate "," . fmap (uncurry objPair) <$> xs
     pure $ "{" <> contents <> "}"
   Pretty   -> do
     i <- asks indentLevels
-    let objPair k v = (indentBy (i + 1) <>) $ objKey k <> ": " <> v
-    contents <- fmap (T.intercalate ("," <> newline) . fmap (uncurry objPair)) . increment $ xs
-    pure $ "{" <> newline <> contents <> newline <> indentBy i <> "}"
+    let objPair k v = newline <> indentBy (i + 1) <> objKey k <> ": " <> v
+    contents <- fmap (T.intercalate "," . fmap (uncurry objPair)) . increment $ xs
+    pure $ "{" <> contents <> newline <> indentBy i <> "}"
     where newline = "\n"
           indentBy = flip T.replicate "\t"
 

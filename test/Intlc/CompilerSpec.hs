@@ -43,10 +43,7 @@ spec = describe "compiler" $ do
       it "prettified" $ do
         let toTabs = T.replace "  " "\t"
 
-        -- Ideally this'd be improved, but the current simple algo gives us
-        -- this on an empty dataset.
         f JSON.Pretty mempty `shouldBe` [r|{
-
 }|]
 
         f JSON.Pretty xs `shouldBe` toTabs [r|{
