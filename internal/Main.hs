@@ -14,8 +14,8 @@ import           Prelude                     hiding (filter)
 
 main :: IO ()
 main = getOpts >>= \case
-  Lint path     -> lint path
-  ExpandPlurals -> tryGetParsedStdinSansAnn >>= compileExpandedPlurals
+  Lint path        -> lint path
+  ExpandPlurals fo -> tryGetParsedStdinSansAnn >>= compileExpandedPlurals fo
 
 lint :: MonadIO m => FilePath -> m ()
 lint path = do
@@ -23,8 +23,8 @@ lint path = do
   dataset <- parserDie $ parseDataset path raw
   whenJust (lintDatasetInternal path raw dataset) $ die . T.unpack
 
-compileExpandedPlurals :: MonadIO m => Dataset (Translation (Message Node)) -> m ()
-compileExpandedPlurals = putTextLn . JSON.compileDataset JSON.Minified . fmap f
+compileExpandedPlurals :: MonadIO m => JSON.Formatting -> Dataset (Translation (Message Node)) -> m ()
+compileExpandedPlurals fo = putTextLn . JSON.compileDataset fo . fmap f
   where f x = x { message = expandPlurals x.message }
 
 tryGetParsedStdinSansAnn :: IO (Dataset (Translation (Message Node)))

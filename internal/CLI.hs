@@ -1,12 +1,13 @@
 module CLI (Opts (..), getOpts) where
 
+import qualified Intlc.Backend.JSON.Compiler as JSON
 import           Options.Applicative
 import           Prelude
 
 data Opts
   = Lint FilePath
   -- Takes stdin.
-  | ExpandPlurals
+  | ExpandPlurals JSON.Formatting
 
 getOpts :: IO Opts
 getOpts = execParser (info (opts <**> helper) (progDesc h))
@@ -22,7 +23,10 @@ lint :: Parser Opts
 lint = Lint <$> pathp
 
 expandPlurals :: Parser Opts
-expandPlurals = pure ExpandPlurals
+expandPlurals = ExpandPlurals <$> minifyp
 
 pathp :: Parser FilePath
 pathp = argument str (metavar "filepath")
+
+minifyp :: Parser JSON.Formatting
+minifyp = flag JSON.Pretty JSON.Minified (long "minify")
