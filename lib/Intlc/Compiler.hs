@@ -37,7 +37,7 @@ compileTranslation l k (Translation v be _) = case be of
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
 compileFlattened :: Dataset (Translation (ICU.Message ICU.Node)) -> Text
-compileFlattened = JSON.compileDataset . mapMsgs (fmap flatten)
+compileFlattened = JSON.compileDataset JSON.Minified . mapMsgs (fmap flatten)
 
 mapMsgs :: (ICU.Message ICU.Node -> ICU.Message ICU.Node) -> Dataset (Translation (ICU.Message ICU.Node)) -> Dataset (Translation (ICU.Message ICU.Node))
 mapMsgs f = fmap $ \x -> x { message = f x.message }

@@ -3,11 +3,27 @@ module Intlc.Backend.JSON.Compiler where
 import           Data.List.Extra            (escapeJSON)
 import qualified Data.Map                   as M
 import qualified Data.Text                  as T
-import           Intlc.Backend.ICU.Compiler (Formatting (SingleLine),
-                                             compileMsg)
+import qualified Intlc.Backend.ICU.Compiler as ICU
 import           Intlc.Core
 import           Intlc.ICU                  (Message, Node)
 import           Prelude
+
+type Compiler = Reader Config
+
+data Config = Config
+  -- Expected to be potentially supplied externally.
+  { fmt          :: Formatting
+  -- Expected to be supplied internally.
+  , indentLevels :: Int
+  }
+
+-- | For prettified formatting we simply indent and inject newlines at objects.
+data Formatting
+  = Minified
+  | Pretty
+
+increment :: Compiler a -> Compiler a
+increment = local $ \x -> x { indentLevels = x.indentLevels + 1 }
 
 -- Assumes unescaped input.
 dblqts :: Text -> Text
@@ -23,20 +39,31 @@ nullVal = "null"
 objKey :: Text -> Text
 objKey = dblqts
 
-objPair :: Text -> Text -> Text
-objPair k v = objKey k <> ":" <> v
+-- | This is where we'll manage indentation for all objects, hence taking a
+-- monadic input.
+obj :: Compiler [(Text, Text)] -> Compiler Text
+obj xs = asks fmt >>= \case
+  Minified -> do
+    let objPair k v = objKey k <> ":" <> v
+    contents <- fmap (T.intercalate "," . fmap (uncurry objPair)) $ xs
+    pure $ "{" <> contents <> "}"
+  Pretty   -> do
+    i <- asks indentLevels
+    let objPair k v = (indentBy (i + 1) <>) $ objKey k <> ": " <> v
+    contents <- fmap (T.intercalate ("," <> newline) . fmap (uncurry objPair)) . increment $ xs
+    pure $ "{" <> newline <> contents <> newline <> indentBy i <> "}"
+    where newline = "\n"
+          indentBy = flip T.replicate "\t"
 
-obj :: [(Text, Text)] -> Text
-obj xs = "{" <> ys <> "}"
-  where ys = T.intercalate "," . fmap (uncurry objPair) $ xs
+compileDataset :: Formatting -> Dataset (Translation (Message Node)) -> Text
+compileDataset fo ds = runReader (dataset ds) (Config fo 0)
+  where dataset = obj . traverse (uncurry f) . M.toList
+        f x = fmap (x,) . translation
 
-compileDataset :: Dataset (Translation (Message Node)) -> Text
-compileDataset = obj . M.toList . M.map translation
-
-translation :: Translation (Message Node) -> Text
-translation Translation { message, backend, mdesc } = obj . fromList $ ys
+translation :: Translation (Message Node) -> Compiler Text
+translation Translation { message, backend, mdesc } = obj . pure . fromList $ ys
   where ys =
-          [ ("message", strVal . compileMsg SingleLine $ message)
+          [ ("message", strVal . ICU.compileMsg ICU.SingleLine $ message)
           , ("backend", backendVal)
           , ("description", maybe nullVal strVal mdesc)
           ]
