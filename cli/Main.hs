@@ -1,14 +1,16 @@
 module Main where
 
-import           CLI                (Opts (..), getOpts)
-import qualified Data.Text          as T
-import           Intlc.Compiler     (compileDataset, compileFlattened)
+import           CLI                         (Opts (..), getOpts)
+import qualified Data.Text                   as T
+import qualified Intlc.Backend.JSON.Compiler as JSON
+import           Intlc.Compiler              (compileDataset, compileFlattened)
 import           Intlc.Core
-import           Intlc.ICU          (AnnNode, Message, Node, sansAnn)
+import           Intlc.ICU                   (AnnNode, Message, Node, sansAnn)
 import           Intlc.Linter
-import           Intlc.Parser       (parseDataset, parseMessage, printErr)
-import           Intlc.Parser.Error (ParseFailure)
-import           Intlc.Prettify     (prettify)
+import           Intlc.Parser                (parseDataset, parseMessage,
+                                              printErr)
+import           Intlc.Parser.Error          (ParseFailure)
+import           Intlc.Prettify              (prettify)
 import           Prelude
 
 main :: IO ()
@@ -24,7 +26,7 @@ compile loc = compileDataset loc >>> \case
   Right x -> putTextLn x
 
 flatten :: MonadIO m => Dataset (Translation (Message Node)) -> m ()
-flatten = putTextLn . compileFlattened
+flatten = putTextLn . compileFlattened JSON.Minified
 
 lint :: MonadIO m => FilePath -> m ()
 lint path = do
