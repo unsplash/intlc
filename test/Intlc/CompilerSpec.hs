@@ -1,13 +1,15 @@
 module Intlc.CompilerSpec (spec) where
 
-import           Intlc.Compiler    (compileDataset, compileFlattened,
-                                    expandRules, flatten)
-import           Intlc.Core        (Backend (..), Locale (Locale),
-                                    Translation (Translation))
+import qualified Data.Text                   as T
+import qualified Intlc.Backend.JSON.Compiler as JSON
+import           Intlc.Compiler              (compileDataset, compileFlattened,
+                                              expandRules, flatten)
+import           Intlc.Core                  (Backend (..), Locale (Locale),
+                                              Translation (Translation))
 import           Intlc.ICU
-import           Prelude           hiding (one)
+import           Prelude                     hiding (one)
 import           Test.Hspec
-import           Text.RawString.QQ (r)
+import           Text.RawString.QQ           (r)
 
 spec :: Spec
 spec = describe "compiler" $ do
@@ -25,16 +27,45 @@ spec = describe "compiler" $ do
       f [""] `shouldSatisfy` isLeft
 
   describe "compile flattened dataset" $ do
-    it "flattens messages and outputs JSON" $ do
-      compileFlattened (fromList
-        [ ("x", Translation (Message "xfoo") TypeScript Nothing)
-        , ("z", Translation (Message "zfoo") TypeScriptReact (Just "zbar"))
-        , ("y", Translation (Message $ mconcat ["yfoo ", String' "ybar"]) TypeScript Nothing)
-        ])
-          `shouldBe` [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
+    let f = compileFlattened
+
+    describe "flattens messages and outputs JSON" $ do
+      let xs = fromList
+            [ ("x", Translation (Message "xfoo") TypeScript Nothing)
+            , ("z", Translation (Message "zfoo") TypeScriptReact (Just "zbar"))
+            , ("y", Translation (Message $ mconcat ["yfoo ", String' "ybar"]) TypeScript Nothing)
+            ]
+
+      it "minified" $ do
+        f JSON.Minified xs `shouldBe`
+          [r|{"x":{"message":"xfoo","backend":"ts","description":null},"y":{"message":"yfoo {ybar}","backend":"ts","description":null},"z":{"message":"zfoo","backend":"tsx","description":"zbar"}}|]
+
+      it "prettified" $ do
+        let toTabs = T.replace "  " "\t"
+
+        f JSON.Pretty mempty `shouldBe` [r|{
+}|]
+
+        f JSON.Pretty xs `shouldBe` toTabs [r|{
+  "x": {
+    "message": "xfoo",
+    "backend": "ts",
+    "description": null
+  },
+  "y": {
+    "message": "yfoo {ybar}",
+    "backend": "ts",
+    "description": null
+  },
+  "z": {
+    "message": "zfoo",
+    "backend": "tsx",
+    "description": "zbar"
+  }
+}|]
 
     it "escapes double quotes in JSON" $ do
-      compileFlattened (fromList [("x\"y", Translation (Message "\"z\"") TypeScript Nothing)])
+      f JSON.Minified (fromList [("x\"y", Translation (Message "\"z\"") TypeScript Nothing)])
         `shouldBe` [r|{"x\"y":{"message":"\"z\"","backend":"ts","description":null}}|]
 
   describe "flatten message" $ do
