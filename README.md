@@ -26,6 +26,7 @@ Available commands:
   compile
   flatten
   lint
+  prettify
 ```
 
 ### Compiling
