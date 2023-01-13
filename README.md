@@ -49,7 +49,7 @@ Hoist selectors up as much as possible. This is often preferred by translators.
 ```console
 $ cat translations.json
 {"openSource":{"message": "Open source at {company} is {company, select, Unsplash {encouraged!} other {unknown}}"}}
-$ intlc flatten translations.json
+$ intlc flatten --minify translations.json
 {"openSource":{"message":"{company, select, Unsplash {Open source at {company} is encouraged!} other {Open source at {company} is unknown}}"}}
 ```
 
