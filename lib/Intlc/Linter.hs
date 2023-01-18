@@ -16,10 +16,18 @@ import           Text.Megaparsec.Error
 import           Text.Megaparsec.Error.Builder
 import           Utils                         (bunBy)
 
+data LintRuleset
+  = AllLints
+  | ExternalLintsOnly
+
 type WithAnn a = (Int, a)
 
-type AnnExternalLint = WithAnn ExternalLint
-type AnnInternalLint = WithAnn InternalLint
+type AnnLint = WithAnn Lint
+
+data Lint
+  = External ExternalLint
+  | Internal InternalLint
+  deriving (Eq, Show, Ord)
 
 data ExternalLint
   = RedundantSelect Arg
@@ -36,7 +44,13 @@ data InternalLint
 data Status a
   = Success
   | Failure (NonEmpty a)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
+
+instance Semigroup (Status a) where
+  Success      <> Success      = Success
+  Success      <> x@Failure {} = x
+  x@Failure {} <> Success      = x
+  Failure xs <> Failure ys     = Failure (xs <> ys)
 
 statusToMaybe :: Status a -> Maybe (NonEmpty a)
 statusToMaybe Success      = Nothing
@@ -53,16 +67,16 @@ lintWith rules (Message ast) = maybeToStatus . catNEMaybes . flap rules $ ast
   where catNEMaybes :: [Maybe (NonEmpty a)] -> Maybe (NonEmpty a)
         catNEMaybes = nonEmpty . foldMap (foldMap toList)
 
-lintExternal :: Message AnnNode -> Status AnnExternalLint
-lintExternal = lintWith
+externalLints :: [Rule AnnLint]
+externalLints =
   [ redundantSelectRule
   , redundantPluralRule
   , duplicateSelectCasesRule
   , duplicatePluralCasesRule
   ]
 
-lintInternal :: Message AnnNode -> Status AnnInternalLint
-lintInternal = lintWith
+internalLints :: [Rule AnnLint]
+internalLints =
   [ interpolationsRule
   , unsupportedUnicodeRule
   ]
@@ -81,20 +95,19 @@ buildParseErr (i, x) = errFancy i . fancy . ErrorCustom $ x
 buildPosState :: FilePath -> Text -> PosState Text
 buildPosState path content = PosState content 0 (initialPos path) defaultTabWidth mempty
 
--- Get the printable output from linting an entire dataset, if any.
-lintDatasetWith :: ShowErrorComponent a =>
-  (Message AnnNode -> Status (WithAnn a)) -> FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
-lintDatasetWith linter path content = fmap (fmt path content) . foldMap (statusToMaybe . linter . message)
-
-lintDatasetExternal :: FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
-lintDatasetExternal = lintDatasetWith lintExternal
-
-lintDatasetInternal :: FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
-lintDatasetInternal = lintDatasetWith lintInternal
+lintDataset :: LintRuleset -> FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
+lintDataset lr path content = fmap (fmt path content) . foldMap (statusToMaybe . lint . message)
+  where lint = lintWith $ case lr of
+                 AllLints          -> externalLints <> internalLints
+                 ExternalLintsOnly -> externalLints
 
 wikify :: Text -> Text -> Text
 wikify name content = name <> ": " <> content <> "\n\nLearn more: " <> link
   where link = "https://github.com/unsplash/intlc/wiki/Lint-rules-reference#" <> name
+
+instance ShowErrorComponent Lint where
+  showErrorComponent (External x) = showErrorComponent x
+  showErrorComponent (Internal x) = showErrorComponent x
 
 instance ShowErrorComponent ExternalLint where
   showErrorComponent = T.unpack . uncurry wikify . (wikiName &&& msg) where
@@ -130,26 +143,26 @@ instance ShowErrorComponent InternalLint where
 
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.
-redundantSelectRule :: Rule AnnExternalLint
+redundantSelectRule :: Rule AnnLint
 redundantSelectRule = nonEmpty . idents where
   idents = cata $ (maybeToList . mident) <> fold
   mident = \case
-    i :< SelectWild n _ _ -> pure (i + 1, RedundantSelect n)
+    i :< SelectWild n _ _ -> pure (i + 1, External (RedundantSelect n))
     _                     -> empty
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
-redundantPluralRule :: Rule AnnExternalLint
+redundantPluralRule :: Rule AnnLint
 redundantPluralRule = nonEmpty . idents where
   idents = cata $ (maybeToList . mident) <> fold
   mident = \case
     i :< CardinalInexact n [] [] _ _ -> pure $ f i n
     i :< Ordinal         n [] [] _ _ -> pure $ f i n
     _                                -> empty
-  f i n = (i + 1, RedundantPlural n)
+  f i n = (i + 1, External (RedundantPlural n))
 
 -- Duplicate case names in select interpolations are redundant.
-duplicateSelectCasesRule :: Rule AnnExternalLint
+duplicateSelectCasesRule :: Rule AnnLint
 duplicateSelectCasesRule = nonEmpty . cases where
   cases = para $ (hereCases . tailF) <> foldMap snd
   hereCases = \case
@@ -160,10 +173,10 @@ duplicateSelectCasesRule = nonEmpty . cases where
     where caseName = fst
           caseOffset = uncurry calcCaseNameOffset . caseHead
           caseHead = second (extract . fst)
-  f n i x = (i, DuplicateSelectCase n x)
+  f n i x = (i, External (DuplicateSelectCase n x))
 
 -- Duplicate cases in plural interpolations are redundant.
-duplicatePluralCasesRule :: Rule AnnExternalLint
+duplicatePluralCasesRule :: Rule AnnLint
 duplicatePluralCasesRule = nonEmpty . cases where
   cases = para $ (hereCases . tailF) <> foldMap snd
   hereCases = \case
@@ -175,7 +188,7 @@ duplicatePluralCasesRule = nonEmpty . cases where
     where caseKey = fst
           caseOffset = uncurry calcCaseNameOffset . first via . caseHead
           caseHead = second (extract . fst)
-  f n i x = (i, DuplicatePluralCase n x)
+  f n i x = (i, External (DuplicatePluralCase n x))
 
 -- Our translation vendor has poor support for ICU syntax, and their parser
 -- particularly struggles with interpolations. This rule limits the use of a
@@ -184,9 +197,9 @@ duplicatePluralCasesRule = nonEmpty . cases where
 -- Callbacks and plurals are allowed an unlimited number of times. The former
 -- because the vendor's tool has no issues parsing its syntax and the latter
 -- because it's a special case that we can't rewrite.
-interpolationsRule :: Rule AnnInternalLint
+interpolationsRule :: Rule AnnLint
 interpolationsRule ast = fmap (pure . (start,)) . count . idents $ ast where
-  count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
+  count (x:y:zs) = Just . Internal . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
   idents = cata $ (maybeToList . mident . tailF) <> fold
   mident = \case
@@ -203,11 +216,11 @@ isAcceptedChar :: Char -> Bool
 isAcceptedChar c = isAscii c || c `elem` acceptedChars
   where acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 
-unsupportedUnicodeRule :: Rule AnnInternalLint
+unsupportedUnicodeRule :: Rule AnnLint
 unsupportedUnicodeRule = nonEmpty . nonAscii where
   nonAscii = cata $ (maybeToList . mchar) <> fold
   mchar = \case
-    i :< Char c _ -> (i,) . InvalidNonAsciiCharacter <$> guarded (not . isAcceptedChar) c
+    i :< Char c _ -> (i,) . Internal . InvalidNonAsciiCharacter <$> guarded (not . isAcceptedChar) c
     _              -> empty
 
 -- If we have access to the offset of the head node of an interpolation case, we

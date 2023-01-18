@@ -32,7 +32,7 @@ spec = describe "linter" $ do
         let s = SelectWild'
 
         lint (Message $ mconcat [s "x" (s "y" mempty), s "z" mempty])
-          `shouldBe` Failure (RedundantSelect <$> ("x" :| ["y", "z"]))
+          `shouldBe` Failure (External . RedundantSelect <$> ("x" :| ["y", "z"]))
 
     describe "redundant plural" $ do
       let lint = lintWith' redundantPluralRule
@@ -55,11 +55,11 @@ spec = describe "linter" $ do
 
       it "fails on ordinal plural with only a wildcard" $ do
         lint (Message $ Callback' "y" (Ordinal' "x" [] [] mempty))
-          `shouldBe` Failure (pure $ RedundantPlural "x")
+          `shouldBe` Failure (pure . External $ RedundantPlural "x")
 
       it "fails on inexact cardinal plural with only a wildcard" $ do
         lint (Message $ Callback' "y" (CardinalInexact' "x" [] [] mempty))
-          `shouldBe` Failure (pure $ RedundantPlural "x")
+          `shouldBe` Failure (pure . External $ RedundantPlural "x")
 
     describe "duplicate select case" $ do
       let lint = lintWith' duplicateSelectCasesRule
@@ -89,7 +89,7 @@ spec = describe "linter" $ do
                 ])
                 mempty
               ]
-        lint x `shouldBe` Failure (fromList
+        lint x `shouldBe` Failure (fromList $ External <$>
           [ DuplicateSelectCase "a" "a1"
           , DuplicateSelectCase "a" "a1"
           , DuplicateSelectCase "a" "a2"
@@ -133,7 +133,7 @@ spec = describe "linter" $ do
                 ]
                 mempty
               ]
-        lint x `shouldBe` Failure (fromList
+        lint x `shouldBe` Failure (fromList $ External <$>
           [ DuplicatePluralCase "a" "=a1"
           , DuplicatePluralCase "a" "=a1"
           , DuplicatePluralCase "a" "=a2"
@@ -150,11 +150,11 @@ spec = describe "linter" $ do
 
       it "does not lint text with emoji" $ do
         lint (Message "Message with an emoji ❤️ 🥺")
-          `shouldBe` Failure (InvalidNonAsciiCharacter <$> fromList "❤️🥺")
+          `shouldBe` Failure (Internal . InvalidNonAsciiCharacter <$> fromList "❤️🥺")
 
       it "does not lint text that is deeply nested with emoji" $ do
         lint (Message $ mconcat [Callback' "Hello" mempty, Bool' "Hello" "Message with an emoji 🥺" mempty])
-          `shouldBe` Failure (InvalidNonAsciiCharacter <$> fromList "🥺")
+          `shouldBe` Failure (Internal . InvalidNonAsciiCharacter <$> fromList "🥺")
 
       it "lints AST without emoji" $ do
         lint (Message "Text without emoji") `shouldBe` Success
@@ -185,10 +185,10 @@ spec = describe "linter" $ do
 
       it "does not lint AST with 2 or more complex interpolations" $ do
         lint (Message $ mconcat [f "x" mempty, f "y" mempty])
-          `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y"]))
+          `shouldBe` Failure (pure . Internal $ TooManyInterpolations ("x" :| ["y"]))
         lint (Message $ mconcat [f "x" mempty, f "y" mempty, f "z" mempty])
-          `shouldBe` Failure (pure $ TooManyInterpolations ("x" :| ["y", "z"]))
+          `shouldBe` Failure (pure . Internal $ TooManyInterpolations ("x" :| ["y", "z"]))
 
       it "does not lint AST with nested interpolations" $ do
         lint (Message $ mconcat [f "outer" (f "inner" mempty)])
-          `shouldBe` Failure (pure $ TooManyInterpolations ("outer" :| ["inner"]))
+          `shouldBe` Failure (pure . Internal $ TooManyInterpolations ("outer" :| ["inner"]))

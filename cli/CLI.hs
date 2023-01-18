@@ -2,13 +2,14 @@ module CLI (Opts (..), getOpts) where
 
 import qualified Intlc.Backend.JSON.Compiler as JSON
 import           Intlc.Core                  (Locale (..))
+import           Intlc.Linter                (LintRuleset (..))
 import           Options.Applicative
 import           Prelude
 
 data Opts
   = Compile FilePath Locale
   | Flatten FilePath JSON.Formatting
-  | Lint    FilePath
+  | Lint    FilePath LintRuleset
   | Prettify Text
 
 getOpts :: IO Opts
@@ -30,7 +31,8 @@ flatten :: Parser Opts
 flatten = Flatten <$> pathp <*> minifyp
 
 lint :: Parser Opts
-lint = Lint <$> pathp
+lint = Lint <$> pathp <*> internalp
+  where internalp = flag ExternalLintsOnly AllLints (long "with-internal" <> hidden)
 
 msgp :: Parser Text
 msgp = argument str (metavar "message")

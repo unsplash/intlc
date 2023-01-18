@@ -17,7 +17,7 @@ main :: IO ()
 main = getOpts >>= \case
   Compile path loc -> tryGetParsedAtSansAnn path >>= compile loc
   Flatten path fo  -> tryGetParsedAtSansAnn path >>= flatten fo
-  Lint    path     -> lint path
+  Lint    path lr  -> lint lr path
   Prettify msg     -> tryPrettify msg
 
 compile :: MonadIO m => Locale -> Dataset (Translation (Message Node)) -> m ()
@@ -28,11 +28,11 @@ compile loc = compileDataset loc >>> \case
 flatten :: MonadIO m => JSON.Formatting -> Dataset (Translation (Message Node)) -> m ()
 flatten fo = putTextLn . compileFlattened fo
 
-lint :: MonadIO m => FilePath -> m ()
-lint path = do
+lint :: MonadIO m => LintRuleset -> FilePath -> m ()
+lint lr path = do
   raw <- readFileAt path
   dataset <- parserDie $ parseDataset path raw
-  whenJust (lintDatasetExternal path raw dataset) $ die . T.unpack
+  whenJust (lintDataset lr path raw dataset) $ die . T.unpack
 
 tryPrettify :: MonadIO m => Text -> m ()
 tryPrettify = either (die . printErr) (putTextLn . prettify . fmap sansAnn) . parseMessage "input"
