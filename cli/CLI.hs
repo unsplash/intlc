@@ -1,4 +1,4 @@
-module CLI (Opts (..), getOpts) where
+module CLI (Opts (..), getOpts, ICUModifiers (..)) where
 
 import qualified Intlc.Backend.JSON.Compiler as JSON
 import           Intlc.Core                  (Locale (..))
@@ -8,9 +8,12 @@ import           Prelude
 
 data Opts
   = Compile FilePath Locale
-  | Flatten FilePath JSON.Formatting
+  | Flatten FilePath JSON.Formatting [ICUModifiers]
   | Lint    FilePath LintRuleset
   | Prettify Text
+
+data ICUModifiers
+  = ExpandPlurals
 
 getOpts :: IO Opts
 getOpts = execParser (info (opts <**> helper) (progDesc h))
@@ -28,7 +31,8 @@ compile :: Parser Opts
 compile = Compile <$> pathp <*> localep
 
 flatten :: Parser Opts
-flatten = Flatten <$> pathp <*> minifyp
+flatten = Flatten <$> pathp <*> minifyp <*> expandp
+  where expandp = flag mempty (pure ExpandPlurals) (long "expand-plurals" <> hidden)
 
 lint :: Parser Opts
 lint = Lint <$> pathp <*> internalp

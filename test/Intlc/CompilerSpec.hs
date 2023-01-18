@@ -2,7 +2,7 @@ module Intlc.CompilerSpec (spec) where
 
 import qualified Data.Text                   as T
 import qualified Intlc.Backend.JSON.Compiler as JSON
-import           Intlc.Compiler              (compileDataset, compileFlattened,
+import           Intlc.Compiler              (compileDataset, compileToJSON,
                                               expandRules, flatten)
 import           Intlc.Core                  (Backend (..), Locale (Locale),
                                               Translation (Translation))
@@ -27,7 +27,7 @@ spec = describe "compiler" $ do
       f [""] `shouldSatisfy` isLeft
 
   describe "compile flattened dataset" $ do
-    let f = compileFlattened
+    let f = compileToJSON flatten
 
     describe "flattens messages and outputs JSON" $ do
       let xs = fromList

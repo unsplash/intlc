@@ -42,16 +42,6 @@ executable intlc
   other-modules:
     CLI
 
-executable intlc-internal
-  import:                  common
-  hs-source-dirs:          internal/
-  main-is:                 Main.hs
-  build-depends:
-      intlc
-    , optparse-applicative ^>=0.16
-  other-modules:
-    CLI
-
 library
   import:                  common
   hs-source-dirs:          lib/

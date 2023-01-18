@@ -1,32 +1,37 @@
 module Main where
 
-import           CLI                         (Opts (..), getOpts)
-import qualified Data.Text                   as T
-import qualified Intlc.Backend.JSON.Compiler as JSON
-import           Intlc.Compiler              (compileDataset, compileFlattened)
+import           CLI                (ICUModifiers (..), Opts (..), getOpts)
+import qualified Data.Text          as T
+import           Intlc.Compiler     (compileDataset, compileToJSON,
+                                     expandPlurals, flatten)
 import           Intlc.Core
-import           Intlc.ICU                   (AnnNode, Message, Node, sansAnn)
+import           Intlc.ICU          (AnnNode, Message, Node, sansAnn)
 import           Intlc.Linter
-import           Intlc.Parser                (parseDataset, parseMessage,
-                                              printErr)
-import           Intlc.Parser.Error          (ParseFailure)
-import           Intlc.Prettify              (prettify)
+import           Intlc.Parser       (parseDataset, parseMessage, printErr)
+import           Intlc.Parser.Error (ParseFailure)
+import           Intlc.Prettify     (prettify)
 import           Prelude
 
 main :: IO ()
 main = getOpts >>= \case
-  Compile path loc -> tryGetParsedAtSansAnn path >>= compile loc
-  Flatten path fo  -> tryGetParsedAtSansAnn path >>= flatten fo
-  Lint    path lr  -> lint lr path
-  Prettify msg     -> tryPrettify msg
+  Compile path loc   -> tryGetParsedAtSansAnn path >>= compile loc
+  Flatten path fo ms -> tryGetParsedAtSansAnn path >>= (compileToJSON f fo >>> putTextLn)
+    -- Beware that not all transformations can safely fuse. For example
+    -- flattening must run against the entire AST by itself to necessarily be
+    -- coherent.
+    --
+    -- Beware also a simple `mconcat` against `mods` without the clarifying
+    -- `Endo`!
+    where f = appEndo (mconcat (Endo <$> mods)) . flatten
+          mods = ms <&> \case
+            ExpandPlurals -> expandPlurals
+  Lint    path lr    -> lint lr path
+  Prettify msg       -> tryPrettify msg
 
 compile :: MonadIO m => Locale -> Dataset (Translation (Message Node)) -> m ()
 compile loc = compileDataset loc >>> \case
   Left es -> die . T.unpack . ("Invalid keys:\n" <>) . T.intercalate "\n" . fmap ("\t" <>) . toList $ es
   Right x -> putTextLn x
-
-flatten :: MonadIO m => JSON.Formatting -> Dataset (Translation (Message Node)) -> m ()
-flatten fo = putTextLn . compileFlattened fo
 
 lint :: MonadIO m => LintRuleset -> FilePath -> m ()
 lint lr path = do
