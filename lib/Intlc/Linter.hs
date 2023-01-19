@@ -1,26 +1,23 @@
 module Intlc.Linter where
 
-import qualified Data.Text                     as T
+import qualified Data.Text                    as T
 
-import           Control.Comonad               (extract)
-import           Control.Comonad.Trans.Cofree  (CofreeF ((:<)), tailF)
-import           Data.Char                     (isAscii)
-import           Data.Functor.Foldable         (cata, para)
-import           Intlc.Backend.ICU.Compiler    (pluralExact, pluralRule)
+import           Control.Comonad              (extract)
+import           Control.Comonad.Trans.Cofree (CofreeF ((:<)), tailF)
+import           Data.Char                    (isAscii)
+import           Data.Functor.Foldable        (cata, para)
+import           Intlc.Backend.ICU.Compiler   (pluralExact, pluralRule)
 import           Intlc.Core
+import           Intlc.Error                  (WithAnn)
+import qualified Intlc.Error                  as Err
 import           Intlc.ICU
 import           Prelude
-import           Text.Megaparsec               (PosState (PosState),
-                                                defaultTabWidth, initialPos)
 import           Text.Megaparsec.Error
-import           Text.Megaparsec.Error.Builder
-import           Utils                         (bunBy)
+import           Utils                        (bunBy)
 
 data LintRuleset
   = AllLints
   | ExternalLintsOnly
-
-type WithAnn a = (Int, a)
 
 type AnnLint = WithAnn Lint
 
@@ -67,22 +64,8 @@ internalLints =
   , unsupportedUnicodeRule
   ]
 
--- We're going to reuse Megaparsec's infrastructure to format our lints.
-fmt :: ShowErrorComponent a => FilePath -> Text -> NonEmpty (WithAnn a) -> Text
-fmt path content lints = T.pack $ errorBundlePretty (buildParseErrBundle path content lints)
-
-buildParseErrBundle :: FilePath -> Text -> NonEmpty (WithAnn a) -> ParseErrorBundle Text a
-buildParseErrBundle path content lints = ParseErrorBundle (buildParseErr <$> lints) (buildPosState path content)
-
-buildParseErr :: WithAnn a -> ParseError Text a
-buildParseErr (i, x) = errFancy i . fancy . ErrorCustom $ x
-
--- This could probably be rewritten to be more efficient.
-buildPosState :: FilePath -> Text -> PosState Text
-buildPosState path content = PosState content 0 (initialPos path) defaultTabWidth mempty
-
 lintDataset :: LintRuleset -> FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
-lintDataset lr path content = fmap (fmt path content) . foldMap (statusToMaybe . lint . message)
+lintDataset lr path content = fmap (Err.fmt path content) . foldMap (statusToMaybe . lint . message)
   where lint = lintWith $ case lr of
                  AllLints          -> externalLints <> internalLints
                  ExternalLintsOnly -> externalLints

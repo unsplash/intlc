@@ -57,6 +57,7 @@ library
     Intlc.Backend.TypeScript.Language
     Intlc.Backend.TypeScript.Compiler
     Intlc.Core
+    Intlc.Error
     Intlc.ICU
     Intlc.Linter
     Intlc.Parser

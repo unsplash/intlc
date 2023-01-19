@@ -2,6 +2,7 @@ module Intlc.LinterSpec where
 
 import           Control.Comonad.Cofree (Cofree ((:<)))
 import           Data.Functor.Foldable  (cata)
+import           Intlc.Error            (WithAnn)
 import           Intlc.ICU
 import           Intlc.Linter
 import           Prelude
