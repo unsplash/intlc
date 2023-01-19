@@ -21,7 +21,7 @@ parseAndCompileDataset :: Text -> Either (NonEmpty Text) Text
 parseAndCompileDataset = compileDataset (Locale "en-US") . datasetSansAnn <=< first (pure . show) . parseDataset "test"
 
 parseAndExpandMsg :: Text -> Either ParseFailure Text
-parseAndExpandMsg = fmap (compileMsg SingleLine . expandPlurals . fmap sansAnn) . parseMsg
+parseAndExpandMsg = fmap (compileMsg SingleLine . fmap (expandPlurals . sansAnn)) . parseMsg
   where parseMsg = runParser (runReaderT annMsg (emptyState { endOfInput = eof })) "test"
 
 golden :: String -> Text -> Golden String

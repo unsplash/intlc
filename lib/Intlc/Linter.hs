@@ -16,27 +16,27 @@ import           Text.Megaparsec.Error
 import           Text.Megaparsec.Error.Builder
 import           Utils                         (bunBy)
 
+data LintRuleset
+  = AllLints
+  | ExternalLintsOnly
+
 type WithAnn a = (Int, a)
 
-type AnnExternalLint = WithAnn ExternalLint
-type AnnInternalLint = WithAnn InternalLint
+type AnnLint = WithAnn Lint
 
-data ExternalLint
+data Lint
   = RedundantSelect Arg
   | RedundantPlural Arg
   | DuplicateSelectCase Arg Text
   | DuplicatePluralCase Arg Text
-  deriving (Eq, Show, Ord)
-
-data InternalLint
-  = TooManyInterpolations (NonEmpty Arg)
+  | TooManyInterpolations (NonEmpty Arg)
   | InvalidNonAsciiCharacter Char
   deriving (Eq,Show, Ord)
 
 data Status a
   = Success
   | Failure (NonEmpty a)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
 
 statusToMaybe :: Status a -> Maybe (NonEmpty a)
 statusToMaybe Success      = Nothing
@@ -53,16 +53,16 @@ lintWith rules (Message ast) = maybeToStatus . catNEMaybes . flap rules $ ast
   where catNEMaybes :: [Maybe (NonEmpty a)] -> Maybe (NonEmpty a)
         catNEMaybes = nonEmpty . foldMap (foldMap toList)
 
-lintExternal :: Message AnnNode -> Status AnnExternalLint
-lintExternal = lintWith
+externalLints :: [Rule AnnLint]
+externalLints =
   [ redundantSelectRule
   , redundantPluralRule
   , duplicateSelectCasesRule
   , duplicatePluralCasesRule
   ]
 
-lintInternal :: Message AnnNode -> Status AnnInternalLint
-lintInternal = lintWith
+internalLints :: [Rule AnnLint]
+internalLints =
   [ interpolationsRule
   , unsupportedUnicodeRule
   ]
@@ -81,56 +81,47 @@ buildParseErr (i, x) = errFancy i . fancy . ErrorCustom $ x
 buildPosState :: FilePath -> Text -> PosState Text
 buildPosState path content = PosState content 0 (initialPos path) defaultTabWidth mempty
 
--- Get the printable output from linting an entire dataset, if any.
-lintDatasetWith :: ShowErrorComponent a =>
-  (Message AnnNode -> Status (WithAnn a)) -> FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
-lintDatasetWith linter path content = fmap (fmt path content) . foldMap (statusToMaybe . linter . message)
-
-lintDatasetExternal :: FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
-lintDatasetExternal = lintDatasetWith lintExternal
-
-lintDatasetInternal :: FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
-lintDatasetInternal = lintDatasetWith lintInternal
+lintDataset :: LintRuleset -> FilePath -> Text -> Dataset (Translation (Message AnnNode)) -> Maybe Text
+lintDataset lr path content = fmap (fmt path content) . foldMap (statusToMaybe . lint . message)
+  where lint = lintWith $ case lr of
+                 AllLints          -> externalLints <> internalLints
+                 ExternalLintsOnly -> externalLints
 
 wikify :: Text -> Text -> Text
 wikify name content = name <> ": " <> content <> "\n\nLearn more: " <> link
   where link = "https://github.com/unsplash/intlc/wiki/Lint-rules-reference#" <> name
 
-instance ShowErrorComponent ExternalLint where
+instance ShowErrorComponent Lint where
   showErrorComponent = T.unpack . uncurry wikify . (wikiName &&& msg) where
     msg = \case
-      RedundantSelect x       -> "Select named `" <> unArg x <> "` is redundant as it only contains a wildcard."
-      RedundantPlural x       -> "Plural named `" <> unArg x <> "` is redundant as it only contains a wildcard."
-      DuplicateSelectCase x y -> "Select named `" <> unArg x <> "` contains a duplicate case named `" <> y <> "`."
-      DuplicatePluralCase x y -> "Plural named `" <> unArg x <> "` contains a duplicate `" <> y <> "` case."
-    wikiName = \case
-      RedundantSelect {}     -> "redundant-select"
-      RedundantPlural {}     -> "redundant-plural"
-      DuplicateSelectCase {} -> "duplicate-select-case"
-      DuplicatePluralCase {} -> "duplicate-plural-case"
-  errorComponentLen = \case
-    RedundantSelect x       -> T.length (unArg x)
-    RedundantPlural x       -> T.length (unArg x)
-    DuplicateSelectCase _ x -> T.length x
-    DuplicatePluralCase _ x -> T.length x
-
-instance ShowErrorComponent InternalLint where
-  showErrorComponent = T.unpack . uncurry wikify . (wikiName &&& msg) where
-    msg = \case
+      RedundantSelect x          -> "Select named `" <> unArg x <> "` is redundant as it only contains a wildcard."
+      RedundantPlural x          -> "Plural named `" <> unArg x <> "` is redundant as it only contains a wildcard."
+      DuplicateSelectCase x y    -> "Select named `" <> unArg x <> "` contains a duplicate case named `" <> y <> "`."
+      DuplicatePluralCase x y    -> "Plural named `" <> unArg x <> "` contains a duplicate `" <> y <> "` case."
       TooManyInterpolations xs   -> "Multiple \"complex\" non-plural interpolations in the same message are disallowed. Found names: " <> interps
         where interps = T.intercalate ", " (fmap (qts . unArg) . toList $ xs)
               qts x = "`" <> x <> "`"
       InvalidNonAsciiCharacter x -> "Non-ASCII character `" <> T.singleton x <> "` is disallowed."
+
     wikiName = \case
+      RedundantSelect {}          -> "redundant-select"
+      RedundantPlural {}          -> "redundant-plural"
+      DuplicateSelectCase {}      -> "duplicate-select-case"
+      DuplicatePluralCase {}      -> "duplicate-plural-case"
       TooManyInterpolations {}    -> "too-many-interpolations"
       InvalidNonAsciiCharacter {} -> "invalid-non-ascii-char"
+
   errorComponentLen = \case
+    RedundantSelect x           -> T.length (unArg x)
+    RedundantPlural x           -> T.length (unArg x)
+    DuplicateSelectCase _ x     -> T.length x
+    DuplicatePluralCase _ x     -> T.length x
     TooManyInterpolations {}    -> 1
     InvalidNonAsciiCharacter {} -> 1
 
 -- Select interpolations with only wildcards are redundant: they could be
 -- replaced with plain string interpolations.
-redundantSelectRule :: Rule AnnExternalLint
+redundantSelectRule :: Rule AnnLint
 redundantSelectRule = nonEmpty . idents where
   idents = cata $ (maybeToList . mident) <> fold
   mident = \case
@@ -139,7 +130,7 @@ redundantSelectRule = nonEmpty . idents where
 
 -- Plural interpolations with only wildcards are redundant: they could be
 -- replaced with plain number interpolations.
-redundantPluralRule :: Rule AnnExternalLint
+redundantPluralRule :: Rule AnnLint
 redundantPluralRule = nonEmpty . idents where
   idents = cata $ (maybeToList . mident) <> fold
   mident = \case
@@ -149,7 +140,7 @@ redundantPluralRule = nonEmpty . idents where
   f i n = (i + 1, RedundantPlural n)
 
 -- Duplicate case names in select interpolations are redundant.
-duplicateSelectCasesRule :: Rule AnnExternalLint
+duplicateSelectCasesRule :: Rule AnnLint
 duplicateSelectCasesRule = nonEmpty . cases where
   cases = para $ (hereCases . tailF) <> foldMap snd
   hereCases = \case
@@ -163,7 +154,7 @@ duplicateSelectCasesRule = nonEmpty . cases where
   f n i x = (i, DuplicateSelectCase n x)
 
 -- Duplicate cases in plural interpolations are redundant.
-duplicatePluralCasesRule :: Rule AnnExternalLint
+duplicatePluralCasesRule :: Rule AnnLint
 duplicatePluralCasesRule = nonEmpty . cases where
   cases = para $ (hereCases . tailF) <> foldMap snd
   hereCases = \case
@@ -184,7 +175,7 @@ duplicatePluralCasesRule = nonEmpty . cases where
 -- Callbacks and plurals are allowed an unlimited number of times. The former
 -- because the vendor's tool has no issues parsing its syntax and the latter
 -- because it's a special case that we can't rewrite.
-interpolationsRule :: Rule AnnInternalLint
+interpolationsRule :: Rule AnnLint
 interpolationsRule ast = fmap (pure . (start,)) . count . idents $ ast where
   count (x:y:zs) = Just . TooManyInterpolations $ x :| (y:zs)
   count _        = Nothing
@@ -203,7 +194,7 @@ isAcceptedChar :: Char -> Bool
 isAcceptedChar c = isAscii c || c `elem` acceptedChars
   where acceptedChars = ['’','…','é','—','ƒ','“','”','–']
 
-unsupportedUnicodeRule :: Rule AnnInternalLint
+unsupportedUnicodeRule :: Rule AnnLint
 unsupportedUnicodeRule = nonEmpty . nonAscii where
   nonAscii = cata $ (maybeToList . mchar) <> fold
   mchar = \case

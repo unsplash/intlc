@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: cachix/install-nix-action@v18
-      - run: nix develop -c hlint lib cli internal test
+      - run: nix develop -c hlint lib cli test
   fmt:
     name: Formatting
     runs-on: ubuntu-latest
@@ -56,7 +56,7 @@ jobs:
       # stylish-haskell doesn't have a check/dry run option, so we'll run it
       # against files in place and test if there are any diffs with Git.
       - run: |
-          nix develop -c stylish-haskell -ir lib cli internal test
+          nix develop -c stylish-haskell -ir lib cli test
           git diff-index --exit-code HEAD
   typecheck-ts:
     name: Typecheck TypeScript

@@ -1,4 +1,4 @@
-module Intlc.Compiler (compileDataset, compileFlattened, flatten, expandPlurals, expandRules) where
+module Intlc.Compiler (compileDataset, compileToJSON, flatten, expandPlurals, expandRules) where
 
 import           Data.Foldable                     (elem)
 import           Data.Functor.Foldable             (cata, embed, project)
@@ -36,8 +36,8 @@ compileTranslation l k (Translation v be _) = case be of
   TypeScript      -> TS.compileNamedExport TemplateLit l k v
   TypeScriptReact -> TS.compileNamedExport JSX         l k v
 
-compileFlattened :: JSON.Formatting -> Dataset (Translation (ICU.Message ICU.Node)) -> Text
-compileFlattened fo = JSON.compileDataset fo . mapMsgs (fmap flatten)
+compileToJSON :: (ICU.Node -> ICU.Node) -> JSON.Formatting -> Dataset (Translation (ICU.Message ICU.Node)) -> Text
+compileToJSON f fmt = JSON.compileDataset fmt . mapMsgs (fmap f)
 
 mapMsgs :: (ICU.Message ICU.Node -> ICU.Message ICU.Node) -> Dataset (Translation (ICU.Message ICU.Node)) -> Dataset (Translation (ICU.Message ICU.Node))
 mapMsgs f = fmap $ \x -> x { message = f x.message }
@@ -66,8 +66,8 @@ flatten = go mempty
 --
 -- Added plural rules inherit the content of the wildcard. Output order of
 -- rules is unspecified.
-expandPlurals :: ICU.Message ICU.Node -> ICU.Message ICU.Node
-expandPlurals = fmap (cata (embed . f))
+expandPlurals :: ICU.Node -> ICU.Node
+expandPlurals = cata (embed . f)
   where f (ICU.CardinalInexact n exacts rules w y) =
             ICU.CardinalInexact n exacts (toList $ expandRules rules w) w y
         f (ICU.Ordinal n exacts rules w y) =
