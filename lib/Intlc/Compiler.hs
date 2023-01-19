@@ -12,7 +12,6 @@ import           Intlc.Core
 import qualified Intlc.ICU                         as ICU
 import           Prelude                           hiding (elem)
 
--- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve insertion order.
 compileDataset :: Locale -> Dataset (Translation (ICU.Message ICU.Node)) -> Either (NonEmpty Text) Text
 compileDataset l d = validateKeys d $>
   case stmts of
@@ -20,6 +19,8 @@ compileDataset l d = validateKeys d $>
     stmts' -> T.intercalate "\n" stmts'
   where stmts = imports <> exports
         imports = maybeToList $ JS.buildReactImport d
+        -- We'll `foldr` with `mempty`, avoiding `mconcat`, to preserve
+        -- insertion order.
         exports = M.foldrWithKey buildCompiledTranslations mempty d
         buildCompiledTranslations k v acc = compileTranslation l k v : acc
 
