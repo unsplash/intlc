@@ -65,6 +65,7 @@ library
     Intlc.Parser.JSON
     Intlc.Parser.ICU
     Intlc.Prettify
+    Intlc.Printer
     Utils
 
 test-suite test-intlc

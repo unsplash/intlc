@@ -4,6 +4,8 @@ This project adheres to semantic versioning.
 
 ## 0.8.0 (_Unreleased_)
 
+Added `--indent` option to the flatten command. This enables explicit configuration of formatting indentation either as tabs or as a number of spaces. The option is ignored in the presence of `--minify`.
+
 Shifted everything from the "internal" binary into the main binary behind hidden flags.
 
 Improved CI binary naming, clarifying in particular which architecture they're built against.

@@ -7,6 +7,7 @@ import           Intlc.Compiler              (compileDataset, compileToJSON,
 import           Intlc.Core                  (Backend (..), Locale (Locale),
                                               Translation (Translation))
 import           Intlc.ICU
+import           Intlc.Printer               (IndentStyle (..))
 import           Prelude                     hiding (one)
 import           Test.Hspec
 import           Text.RawString.QQ           (r)
@@ -42,11 +43,8 @@ spec = describe "compiler" $ do
 
       it "prettified" $ do
         let toTabs = T.replace "  " "\t"
-
-        f JSON.Pretty mempty `shouldBe` [r|{
-}|]
-
-        f JSON.Pretty xs `shouldBe` toTabs [r|{
+        let toFourSpaces = T.replace "  " "    "
+        let xsOut = [r|{
   "x": {
     "message": "xfoo",
     "backend": "ts",
@@ -63,6 +61,13 @@ spec = describe "compiler" $ do
     "description": "zbar"
   }
 }|]
+
+        f (JSON.Pretty Tabs) mempty `shouldBe` [r|{
+}|]
+
+        f (JSON.Pretty Tabs) xs `shouldBe` toTabs xsOut
+        f (JSON.Pretty (Spaces 2)) xs `shouldBe` xsOut
+        f (JSON.Pretty (Spaces 4)) xs `shouldBe` toFourSpaces xsOut
 
     it "escapes double quotes in JSON" $ do
       f JSON.Minified (fromList [("x\"y", Translation (Message "\"z\"") TypeScript Nothing)])
