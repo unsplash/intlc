@@ -38,6 +38,7 @@ executable intlc
   main-is:                 Main.hs
   build-depends:
       intlc
+    , githash              ^>=0.1
     , optparse-applicative ^>=0.16
   other-modules:
     CLI

@@ -1,5 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module CLI (Opts (..), getOpts, ICUModifiers (..)) where
 
+import           GitHash                     (giTag, tGitInfoCwd)
 import qualified Intlc.Backend.JSON.Compiler as JSON
 import           Intlc.Core                  (Locale (..))
 import           Intlc.Linter                (LintRuleset (..))
@@ -16,8 +19,13 @@ data ICUModifiers
   = ExpandPlurals
 
 getOpts :: IO Opts
-getOpts = execParser (info (opts <**> helper) (progDesc h))
+getOpts = execParser (info (opts <**> helper <**> version) (progDesc h))
   where h = "Compile ICU messages into code."
+
+version :: Parser (a -> a)
+version = infoOption (giTag gi) (long "version" <> help msg)
+  where msg = "Print version information"
+        gi = $$tGitInfoCwd
 
 opts :: Parser Opts
 opts = subparser . mconcat $
