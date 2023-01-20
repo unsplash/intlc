@@ -21,6 +21,7 @@ Usage: intlc COMMAND
 
 Available options:
   -h,--help                Show this help text
+  --version                Print version information
 
 Available commands:
   compile
