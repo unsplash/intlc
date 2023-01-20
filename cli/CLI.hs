@@ -3,7 +3,7 @@ module CLI (Opts (..), getOpts, ICUModifiers (..)) where
 import qualified Intlc.Backend.JSON.Compiler as JSON
 import           Intlc.Core                  (Locale (..))
 import           Intlc.Linter                (LintRuleset (..))
-import           Intlc.Printer               (IndentStyle (..))
+import           Intlc.Printer               (IndentStyle (..), def)
 import           Options.Applicative
 import           Prelude
 
@@ -56,7 +56,7 @@ prettify :: Parser Opts
 prettify = Prettify <$> msgp <*> indentp
 
 indentp :: Parser IndentStyle
-indentp = option (eitherReader parseIndentation) (value Tabs <> long "indent" <> metavar "NAT")
+indentp = option (eitherReader parseIndentation) (value def <> long "indent" <> metavar "NAT")
   where parseIndentation x
           | x == "tab" || x == "tabs" = Right Tabs
           | otherwise = maybe (Left e) (Right . Spaces) (readMaybe x)
