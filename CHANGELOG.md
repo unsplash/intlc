@@ -4,7 +4,7 @@ This project adheres to semantic versioning.
 
 ## 0.8.0 (_Unreleased_)
 
-Added `--indent` option to the flatten command. This enables explicit configuration of formatting indentation either as tabs or as a number of spaces. The option is ignored in the presence of `--minify`.
+Added `--indent` option to the flatten and prettify commands. This enables explicit configuration of formatting indentation either as tabs or as a number of spaces. The option is ignored in the presence of `--minify` where applicable.
 
 Shifted everything from the "internal" binary into the main binary behind hidden flags.
 

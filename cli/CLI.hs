@@ -11,7 +11,7 @@ data Opts
   = Compile FilePath Locale
   | Flatten FilePath JSON.Formatting [ICUModifiers]
   | Lint    FilePath LintRuleset
-  | Prettify Text
+  | Prettify Text IndentStyle
 
 data ICUModifiers
   = ExpandPlurals
@@ -53,7 +53,7 @@ localep :: Parser Locale
 localep = Locale <$> strOption (short 'l' <> long "locale")
 
 prettify :: Parser Opts
-prettify = Prettify <$> msgp
+prettify = Prettify <$> msgp <*> indentp
 
 indentp :: Parser IndentStyle
 indentp = option (eitherReader parseIndentation) (value Tabs <> long "indent" <> metavar "NAT")
