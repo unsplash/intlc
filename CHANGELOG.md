@@ -8,6 +8,8 @@ Shifted everything from the "internal" binary into the main binary behind hidden
 
 Improved CI binary naming, clarifying in particular which architecture they're built against.
 
+Added a `--version` option.
+
 Added a changelog. Everything prior to this release may not be perfectly accurate.
 
 ## 0.7.0 (2023-01-13)
