@@ -38,11 +38,6 @@ flatten = Flatten <$> pathp <*> jsonfmtp <*> expandp
           where f False x = JSON.Pretty x
                 f True  _ = JSON.Minified
         minifyp = flag False True (long "minify")
-        indentp = option (eitherReader parseIndentation) (value Tabs <> long "indent" <> metavar "NAT")
-        parseIndentation x
-          | x == "tab" || x == "tabs" = Right Tabs
-          | otherwise = maybe (Left e) (Right . Spaces) (readMaybe x)
-          where e = "Requires a natural number of spaces or tabs."
 
 lint :: Parser Opts
 lint = Lint <$> pathp <*> internalp
@@ -59,3 +54,10 @@ localep = Locale <$> strOption (short 'l' <> long "locale")
 
 prettify :: Parser Opts
 prettify = Prettify <$> msgp
+
+indentp :: Parser IndentStyle
+indentp = option (eitherReader parseIndentation) (value Tabs <> long "indent" <> metavar "NAT")
+  where parseIndentation x
+          | x == "tab" || x == "tabs" = Right Tabs
+          | otherwise = maybe (Left e) (Right . Spaces) (readMaybe x)
+          where e = "Requires a natural number of spaces or tabs."
