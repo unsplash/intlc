@@ -23,7 +23,7 @@ getOpts = execParser (info (opts <**> helper <**> version) (progDesc h))
   where h = "Compile ICU messages into code."
 
 version :: Parser (a -> a)
-version = infoOption (giTag gi) (long "version" <> help msg)
+version = infoOption (giTag gi) (long "version" <> help msg <> hidden)
   where msg = "Print version information"
         gi = $$tGitInfoCwd
 
