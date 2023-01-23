@@ -10,6 +10,7 @@ import           Intlc.Linter
 import           Intlc.Parser       (parseDataset, parseMessage, printErr)
 import           Intlc.Parser.Error (ParseFailure)
 import           Intlc.Prettify     (prettify)
+import           Intlc.Printer      (IndentStyle)
 import           Prelude
 
 main :: IO ()
@@ -26,7 +27,7 @@ main = getOpts >>= \case
           mods = ms <&> \case
             ExpandPlurals -> expandPlurals
   Lint    path lr    -> lint lr path
-  Prettify msg       -> tryPrettify msg
+  Prettify msg fo    -> tryPrettify fo msg
 
 compile :: MonadIO m => Locale -> Dataset (Translation (Message Node)) -> m ()
 compile loc = compileDataset loc >>> \case
@@ -39,8 +40,8 @@ lint lr path = do
   dataset <- parserDie $ parseDataset path raw
   whenJust (lintDataset lr path raw dataset) $ die . T.unpack
 
-tryPrettify :: MonadIO m => Text -> m ()
-tryPrettify = either (die . printErr) (putTextLn . prettify . fmap sansAnn) . parseMessage "input"
+tryPrettify :: MonadIO m => IndentStyle -> Text -> m ()
+tryPrettify fmt = either (die . printErr) (putTextLn . prettify fmt . fmap sansAnn) . parseMessage "input"
 
 tryGetParsedAtSansAnn :: MonadIO m => FilePath -> m (Dataset (Translation (Message Node)))
 tryGetParsedAtSansAnn = parserDie . fmap datasetSansAnn <=< getParsedAt

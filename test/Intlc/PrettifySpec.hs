@@ -3,12 +3,13 @@ module Intlc.PrettifySpec where
 import qualified Data.Text      as T
 import           Intlc.ICU
 import           Intlc.Prettify (prettify)
+import           Intlc.Printer  (IndentStyle (..))
 import           Prelude
 import           Test.Hspec
 
 spec :: Spec
 spec = describe "prettify" $ do
-  let f = prettify . Message
+  let f x = prettify x . Message
 
   it "compiles to ICU with multiline formatting" $ do
     let ast = mconcat
@@ -54,4 +55,4 @@ spec = describe "prettify" $ do
           , "}"
           ]
     -- Some trailing spaces are expected with the current implementation.
-    f ast `shouldBe` toTabs expected
+    f Tabs ast `shouldBe` toTabs expected

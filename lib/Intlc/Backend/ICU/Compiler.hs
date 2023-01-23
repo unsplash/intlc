@@ -11,6 +11,7 @@ module Intlc.Backend.ICU.Compiler (compileMsg, Formatting (..), pluralExact, plu
 import           Data.Functor.Foldable (cata)
 import qualified Data.Text             as T
 import           Intlc.ICU             hiding (selectCases, wildcard)
+import           Intlc.Printer         (IndentStyle, indenter)
 import           Prelude
 import           Utils                 ((<>^))
 
@@ -19,13 +20,13 @@ compileMsg x y = node x (unMessage y)
 
 data Formatting
   = SingleLine
-  | MultiLine
+  | MultiLine IndentStyle
 
 data Config = Config
   -- Expected to be potentially supplied externally.
   { fmt          :: Formatting
   -- Expected to be supplied internally.
-  , indentLevels :: Int
+  , indentLevels :: Nat
   }
 
 type Compiler = Reader Config
@@ -120,14 +121,14 @@ type Case = (Text, Text)
 -- hence taking a monadic input.
 cases :: Compiler [Case] -> Compiler Text
 cases mcs = asks fmt >>= \case
-  SingleLine -> unwords . fmap (uncurry case') <$> mcs
-  MultiLine  -> do
+  SingleLine      -> unwords . fmap (uncurry case') <$> mcs
+  MultiLine style -> do
     i <- asks indentLevels
     let indentedCase = (indentBy (i + 1) <>) . uncurry case'
     cs <- fmap indentedCase <$> increment mcs
     pure $ newline <> T.intercalate newline cs <> newline <> indentBy i
     where newline = "\n"
-          indentBy = flip T.replicate "\t"
+          indentBy = indenter style
 
 case' :: Text -> Text -> Text
 case' n x = n <> " {" <> x <> "}"

@@ -6,6 +6,7 @@ import qualified Data.Text                  as T
 import qualified Intlc.Backend.ICU.Compiler as ICU
 import           Intlc.Core
 import           Intlc.ICU                  (Message, Node)
+import           Intlc.Printer              (IndentStyle, indenter)
 import           Prelude
 
 type Compiler = Reader Config
@@ -14,13 +15,13 @@ data Config = Config
   -- Expected to be potentially supplied externally.
   { fmt          :: Formatting
   -- Expected to be supplied internally.
-  , indentLevels :: Int
+  , indentLevels :: Nat
   }
 
 -- | For prettified formatting we simply indent and inject newlines at objects.
 data Formatting
   = Minified
-  | Pretty
+  | Pretty IndentStyle
 
 increment :: Compiler a -> Compiler a
 increment = local $ \x -> x { indentLevels = x.indentLevels + 1 }
@@ -47,13 +48,13 @@ obj xs = asks fmt >>= \case
     let objPair k v = objKey k <> ":" <> v
     contents <- T.intercalate "," . fmap (uncurry objPair) <$> xs
     pure $ "{" <> contents <> "}"
-  Pretty   -> do
+  Pretty style -> do
     i <- asks indentLevels
     let objPair k v = newline <> indentBy (i + 1) <> objKey k <> ": " <> v
     contents <- fmap (T.intercalate "," . fmap (uncurry objPair)) . increment $ xs
     pure $ "{" <> contents <> newline <> indentBy i <> "}"
     where newline = "\n"
-          indentBy = flip T.replicate "\t"
+          indentBy = indenter style
 
 compileDataset :: Formatting -> Dataset (Translation (Message Node)) -> Text
 compileDataset fo ds = runReader (dataset ds) (Config fo 0)
