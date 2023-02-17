@@ -57,7 +57,7 @@
           haskPkgs = pkgs.haskell.packages."ghc${ghcVer}";
       in {
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
+          nativeBuildInputs = with pkgs; [
             git
 
             cabal-install
