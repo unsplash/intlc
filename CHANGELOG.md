@@ -2,6 +2,10 @@
 
 This project adheres to semantic versioning.
 
+## 0.8.1 (2023-02-20)
+
+Fixed flattening in the presence of callback tags.
+
 ## 0.8.0 (2023-01-23)
 
 Added `--indent` option to the flatten and prettify commands. This enables explicit configuration of formatting indentation either as tabs or as a number of spaces. The option is ignored in the presence of `--minify` where applicable.
