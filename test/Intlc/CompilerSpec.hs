@@ -133,6 +133,61 @@ spec = describe "compiler" $ do
 
       flatten x `shouldBe` y
 
+    it "flattens callbacks" $ do
+      let x = mconcat
+            [ "Today is "
+            , Callback' "bold" (mconcat
+                [ ">"
+                , SelectNamedWild'
+                    "day"
+                    (fromList
+                      [ ("Saturday", "the weekend")
+                      , ("Sunday", "the weekend, barely")
+                      ]
+                    )
+                    "a weekday"
+                , "<"
+                ]
+              )
+            , "."
+            ]
+
+      let y =
+            SelectNamedWild'
+              "day"
+              (fromList
+                [ ("Saturday", mconcat
+                    [ "Today is "
+                    , Callback' "bold" (mconcat
+                        [ ">the weekend<"
+                        ]
+                      )
+                    , "."
+                    ]
+                )
+                , ("Sunday", mconcat
+                    [ "Today is "
+                    , Callback' "bold" (mconcat
+                        [ ">the weekend, barely<"
+                        ]
+                      )
+                    , "."
+                    ]
+                )
+                ]
+              )
+              (mconcat
+                [ "Today is "
+                , Callback' "bold" (mconcat
+                    [ ">a weekday<"
+                    ]
+                  )
+                , "."
+                ]
+              )
+
+      flatten x `shouldBe` y
+
   describe "expanding rules" $ do
     let f = expandRules
 

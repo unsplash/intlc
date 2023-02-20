@@ -43,13 +43,34 @@ compileToJSON f fmt = JSON.compileDataset fmt . mapMsgs (fmap f)
 mapMsgs :: (ICU.Message ICU.Node -> ICU.Message ICU.Node) -> Dataset (Translation (ICU.Message ICU.Node)) -> Dataset (Translation (ICU.Message ICU.Node))
 mapMsgs f = fmap $ \x -> x { message = f x.message }
 
+
+-- | Recursively push a @Callback@ inside interpolations.
+--
+-- __Example:__
+--
+-- @
+-- pushCallbackInInterp n (SelectNamedWild' n' b c) = SelectNamedWild' n' (Callback' n b) (Callback' n c)
+-- @
+pushCallbackInInterp :: ICU.Arg -> ICU.Node -> ICU.Node
+pushCallbackInInterp n body =
+  let rec = pushCallbackInInterp n in
+  case project body of
+    ICU.Bool n' x y _                -> ICU.Bool' n' (rec x) (rec y)
+    ICU.CardinalExact n' xs _        -> ICU.CardinalExact' n' (mapPluralCase rec <$> xs)
+    ICU.CardinalInexact n' xs ys w _ -> ICU.CardinalInexact' n' (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
+    ICU.Ordinal n' xs ys w _         -> ICU.Ordinal' n' (mapPluralCase rec <$> xs) (mapPluralCase rec <$> ys) (rec w)
+    ICU.SelectNamed n' xs _          -> ICU.SelectNamed' n' (mapPluralCase rec <$> xs)
+    ICU.SelectWild n' w _            -> ICU.SelectWild' n' (rec w)
+    ICU.SelectNamedWild n' xs w _    -> ICU.SelectNamedWild' n' (mapPluralCase rec <$> xs)  (rec w)
+    _                                -> ICU.Callback' n body
+
 flatten :: ICU.Node -> ICU.Node
-flatten = go mempty
-  where go :: ICU.Node -> ICU.Node -> ICU.Node
-        go prev rest =
+flatten = go True mempty
+  where go :: Bool -> ICU.Node -> ICU.Node -> ICU.Node
+        go shouldFlattenCallback prev rest =
           let (curr, mnext) = ICU.sever rest
               next = fold mnext
-              rec mid = go (embed ICU.Fin) (prev <> mid <> next)
+              rec mid = go shouldFlattenCallback (embed ICU.Fin) (prev <> mid <> next)
            in case project curr of
             ICU.Fin                         -> prev
             ICU.Bool n x y _                -> ICU.Bool' n (rec x) (rec y)
@@ -59,7 +80,17 @@ flatten = go mempty
             ICU.SelectNamed n xs _          -> ICU.SelectNamed' n (mapSelectCase rec <$> xs)
             ICU.SelectWild n w _            -> ICU.SelectWild' n (rec w)
             ICU.SelectNamedWild n xs w _    -> ICU.SelectNamedWild' n (mapSelectCase rec <$> xs) (rec w)
-            _                               -> go (prev <> curr) next
+            ICU.Callback n body _ | shouldFlattenCallback ->
+              -- We flatten the body of the callback before calling `pushCallbackInInterp`
+              -- so that interpolations have been hoisted and thus easy to extract.
+              -- Once extracted, we call `go` on the resulting node in order for the
+              -- extracted interpolations to be correctly flattened. We must temporarily
+              -- disable callback flattening because the next callback that would be
+              -- flattened is the already flattened callback that's been pushed into the
+              -- extracted interpolations.
+              go False prev (pushCallbackInInterp n (flatten body) <> next)
+            _                               -> go True (prev <> curr) next
+
 
 -- Expands any plural with a rule to contain every rule. This makes ICU plural
 -- syntax usable on platforms which don't support ICU; translators can reuse
