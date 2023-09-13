@@ -45,16 +45,15 @@
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system};
 
-          ghcVer = "924";
+          ghcVer = "ghc924";
+          haskPkgs = pkgs.haskell.packages."${ghcVer}";
 
           hask = if system == flake-utils.lib.system.aarch64-darwin
             then [ ]
-            else with pkgs; [
-              haskell.compiler."ghc${ghcVer}"
-              (haskell-language-server.override { supportedGhcVersions = [ ghcVer ];})
+            else [
+              pkgs.haskell.compiler."${ghcVer}"
+              haskPkgs.haskell-language-server
             ];
-
-          haskPkgs = pkgs.haskell.packages."ghc${ghcVer}";
       in {
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
