@@ -19,16 +19,12 @@
 # This means we're effectively stuck with whichever version of GHC is both the
 # default for nixpkgs at some point in time - in the past is okay, as nixpkgs
 # is pinned and the cache is long-lived - and which has the requisite support
-# in ghcup as well. At time of writing that version is 9.2.4.
+# in ghcup as well. At time of writing that version is 9.4.6.
 #
 # Further complicating matters, GHC and HLS need to be sourced from the same
 # place to ensure that HLS was compiled against that same version of GHC, lest
 # we see "ABIs don't match" errors. Therefore aarch64-darwin contributors must
 # not only source HLS externally but also GHC.
-#
-# But that's not all! A subset of Apple silicon contributors have reported being
-# unable to run compiled 9.2.4 code. 9.2.5 fixes it. These users are encouraged
-# to use 9.2.5 for the timebeing irrespective of the configuration here.
 #
 # In short, don't upgrade GHC until it's the default in nixpkgs, and available
 # in ghcup and supported by HLS there as well.
@@ -45,7 +41,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system};
 
-          ghcVer = "ghc924";
+          ghcVer = "ghc946";
           haskPkgs = pkgs.haskell.packages."${ghcVer}";
 
           hask = if system == flake-utils.lib.system.aarch64-darwin
