@@ -23,7 +23,7 @@ jobs:
       # would be substantially better.)
       - uses: haskell/actions/setup@v2
         with:
-          ghc-version: 9.2.4
+          ghc-version: 9.4.6
       - run: cabal freeze
       - uses: actions/cache@v3
         with:
