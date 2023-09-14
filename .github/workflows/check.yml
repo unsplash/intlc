@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
+      - uses: cachix/install-nix-action@v22
       - run: nix flake check
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
+      - uses: cachix/install-nix-action@v22
       - run: nix develop -c cabal update
       - run: nix develop -c cabal freeze
       - uses: actions/cache@v3
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
+      - uses: cachix/install-nix-action@v22
       - run: nix develop -c cabal update
       - run: nix develop -c cabal freeze
       - uses: actions/cache@v3
@@ -45,14 +45,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
+      - uses: cachix/install-nix-action@v22
       - run: nix develop -c hlint lib cli test
   fmt:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
+      - uses: cachix/install-nix-action@v22
       # stylish-haskell doesn't have a check/dry run option, so we'll run it
       # against files in place and test if there are any diffs with Git.
       - run: |
@@ -66,7 +66,7 @@ jobs:
         working-directory: .golden/ts/
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v18
+      - uses: cachix/install-nix-action@v22
       - uses: actions/cache@v3
         with:
           path: ~/.cache/yarn/v6

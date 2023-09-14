@@ -14,7 +14,7 @@ common common
   ghc-options:
     -Wall
   build-depends:
-      base                 ^>=4.16
+      base                 ^>=4.17
     , bytestring           ^>=0.11
     , comonad              ^>=5.0
     , containers           ^>=0.6
@@ -24,8 +24,8 @@ common common
     , free                 ^>=5.1
     , mtl                  ^>=2.2
     , recursion-schemes    ^>=5.2
-    , relude               ^>=1.1
-    , text                 ^>=1.2
+    , relude               ^>=1.2
+    , text                 ^>=2.0
     , validation           ^>=1.1
   mixins:
       base hiding (Prelude)
@@ -48,7 +48,7 @@ library
   hs-source-dirs:          lib/
   build-depends:
       parser-combinators   ^>=1.2
-    , megaparsec           ^>=9.0
+    , megaparsec           ^>=9.5
   exposed-modules:
     Intlc.Compiler
     Intlc.Backend.JavaScript.Language
@@ -79,10 +79,10 @@ test-suite test-intlc
   build-depends:
       intlc
     , filepath              ^>=1.4
-    , hspec                 ^>=2.7
+    , hspec                 ^>=2.11
     , hspec-golden          ^>=0.2
     , hspec-megaparsec      ^>=2.2
-    , megaparsec            ^>=9.0
+    , megaparsec            ^>=9.5
     , raw-strings-qq        ^>=1.1
   build-tool-depends:
       hspec-discover:hspec-discover
