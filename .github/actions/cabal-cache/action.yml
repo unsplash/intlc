@@ -1,0 +1,11 @@
+name: Cabal dependency cache
+runs:
+  using: composite
+  steps:
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cabal/store
+        key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+        restore-keys: |
+          cabal-${{ runner.os }}

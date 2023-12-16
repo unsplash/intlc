@@ -25,12 +25,7 @@ jobs:
         with:
           ghc-version: 9.4.6
       - run: cabal freeze
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cabal/store
-          key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
-          restore-keys: |
-            cabal-${{ runner.os }}
+      - uses: ./.github/actions/cabal-cache
       - name: Build
         run: |
           # Unlike `cabal build`, `cabal install` appears to build in a
