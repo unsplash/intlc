@@ -67,5 +67,5 @@ jobs:
           key: yarn-${{ runner.os }}-${{ hashFiles('.golden/ts/yarn.lock') }}
           restore-keys: |
             yarn-${{ runner.os }}
-      - run: nix develop -c yarn install --frozen-lockfile
-      - run: nix develop -c yarn typecheck
+      - run: nix develop .#golden -c yarn install --frozen-lockfile
+      - run: nix develop .#golden -c yarn typecheck
