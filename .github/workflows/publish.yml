@@ -29,6 +29,8 @@ jobs:
         with:
           path: ~/.cabal/store
           key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+          restore-keys: |
+            cabal-${{ runner.os }}
       - name: Build
         run: |
           # Unlike `cabal build`, `cabal install` appears to build in a
