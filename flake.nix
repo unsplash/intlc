@@ -15,19 +15,24 @@
 
           haskPkgs = pkgs.haskell.packages."${ghcVer}";
       in {
-        devShells.default = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [
-            cabal-install
-            haskell.compiler."${ghcVer}"
-            haskPkgs.haskell-language-server
-            hlint
-            haskPkgs.hspec-golden
-            stylish-haskell
+        devShells = {
+          default = pkgs.mkShell {
+            nativeBuildInputs = with pkgs; [
+              cabal-install
+              haskell.compiler."${ghcVer}"
+              haskPkgs.haskell-language-server
+              hlint
+              haskPkgs.hspec-golden
+              stylish-haskell
+            ];
+          };
 
-            # For typechecking golden output
-            nodejs
-            yarn
-          ];
+          golden = pkgs.mkShell {
+            nativeBuildInputs = with pkgs; [
+              nodejs
+              yarn
+            ];
+          };
         };
       });
 }

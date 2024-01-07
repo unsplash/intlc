@@ -22,10 +22,7 @@ jobs:
       - uses: cachix/install-nix-action@v22
       - run: nix develop -c cabal update
       - run: nix develop -c cabal freeze
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cabal/store
-          key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+      - uses: ./.github/actions/cabal-cache
       - run: nix develop -c cabal build
   test:
     name: Test
@@ -35,10 +32,7 @@ jobs:
       - uses: cachix/install-nix-action@v22
       - run: nix develop -c cabal update
       - run: nix develop -c cabal freeze
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cabal/store
-          key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+      - uses: ./.github/actions/cabal-cache
       - run: nix develop -c cabal test
   lint:
     name: Lint
@@ -71,5 +65,7 @@ jobs:
         with:
           path: ~/.cache/yarn/v6
           key: yarn-${{ runner.os }}-${{ hashFiles('.golden/ts/yarn.lock') }}
-      - run: nix develop -c yarn install --frozen-lockfile
-      - run: nix develop -c yarn typecheck
+          restore-keys: |
+            yarn-${{ runner.os }}
+      - run: nix develop .#golden -c yarn install --frozen-lockfile
+      - run: nix develop .#golden -c yarn typecheck
