@@ -175,7 +175,7 @@ interpolationsRule ast = fmap (pure . (start,)) . count . idents $ ast where
 -- we've established are safe for use with our vendor's tool.
 isAcceptedChar :: Char -> Bool
 isAcceptedChar c = isAscii c || c `elem` acceptedChars
-  where acceptedChars = ['’','…','é','—','ƒ','“','”','–']
+  where acceptedChars = ['’','…','é','—','ƒ','“','”','–','✓']
 
 unsupportedUnicodeRule :: Rule AnnLint
 unsupportedUnicodeRule = nonEmpty . nonAscii where
