@@ -16,6 +16,8 @@ jobs:
             { name: "macos", runner: "macos-latest" },
           ]
     runs-on: ${{ matrix.os.runner }}
+    permissions: 
+      contents: write
     steps:
       - uses: actions/checkout@v3
       # Using Nix causes dynamic linking issues on macOS. It's easier to

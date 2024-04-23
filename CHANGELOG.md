@@ -2,6 +2,10 @@
 
 This project adheres to semantic versioning.
 
+## 0.8.2 (2024-04-23)
+
+Enable support for "✓" character
+
 ## 0.8.1 (2023-02-20)
 
 Fixed flattening in the presence of callback tags.
