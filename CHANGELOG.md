@@ -2,9 +2,13 @@
 
 This project adheres to semantic versioning.
 
+## 0.8.3 (2024-04-24)
+
+Fixed dynamic linking in macos-aarch64 binary.
+
 ## 0.8.2 (2024-04-23)
 
-Enable support for "✓" character
+Allowed "✓" character in internal linter.
 
 ## 0.8.1 (2023-02-20)
 
