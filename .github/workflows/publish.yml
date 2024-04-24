@@ -12,8 +12,9 @@ jobs:
       matrix:
         os:
           [
-            { name: "linux", runner: "ubuntu-latest" },
-            { name: "macos", runner: "macos-latest" },
+            { name: "linux-x86_64", runner: "ubuntu-latest" },
+            { name: "macos-x86_64", runner: "macos-latest" },
+            { name: "macos-aarch64", runner: "macos-latest-xlarge" },
           ]
     runs-on: ${{ matrix.os.runner }}
     permissions: 
@@ -35,9 +36,9 @@ jobs:
           # can't access Git at compile time. Related:
           #   https://github.com/snoyberg/githash/issues/9
           cabal build
-          mv $(find ./dist-newstyle/ -name intlc -type f) dist-newstyle/intlc-${{ github.ref_name }}-${{ matrix.os.name }}-x86_64
+          mv $(find ./dist-newstyle/ -name intlc -type f) dist-newstyle/intlc-${{ github.ref_name }}-${{ matrix.os.name }}
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist-newstyle/intlc-${{ github.ref_name }}-${{ matrix.os.name }}-x86_64
+            dist-newstyle/intlc-${{ github.ref_name }}-${{ matrix.os.name }}
