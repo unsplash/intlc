@@ -3,14 +3,14 @@ runs:
   using: composite
   steps:
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.local/state/cabal/store/
         key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
         restore-keys: |
           cabal-${{ runner.os }}
     - name: Cache incremental build
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ./dist-newstyle/
         key: dist-${{ runner.os }}-${{ github.sha }}

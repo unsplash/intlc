@@ -11,15 +11,15 @@ jobs:
     name: Validate Nix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
       - run: nix flake check
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
       - run: nix develop -c cabal update
       - run: nix develop -c cabal freeze
       - uses: ./.github/actions/cabal-cache
@@ -28,8 +28,8 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
       - run: nix develop -c cabal update
       - run: nix develop -c cabal freeze
       - uses: ./.github/actions/cabal-cache
@@ -38,15 +38,15 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
       - run: nix develop -c hlint lib cli test
   fmt:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
       # stylish-haskell doesn't have a check/dry run option, so we'll run it
       # against files in place and test if there are any diffs with Git.
       - run: |
@@ -59,9 +59,9 @@ jobs:
       run:
         working-directory: .golden/ts/
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v22
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/yarn/v6
           key: yarn-${{ runner.os }}-${{ hashFiles('.golden/ts/yarn.lock') }}

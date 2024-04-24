@@ -20,11 +20,11 @@ jobs:
     permissions: 
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # Using Nix causes dynamic linking issues on macOS. It's easier to
       # workaround on Linux with patchelf at least. (Yes, building statically
       # would be substantially better.)
-      - uses: haskell/actions/setup@v2
+      - uses: haskell-actions/setup@v2
         with:
           ghc-version: 9.4.6
       - run: cabal freeze
@@ -38,7 +38,7 @@ jobs:
           cabal build
           mv $(find ./dist-newstyle/ -name intlc -type f) dist-newstyle/intlc-${{ github.ref_name }}-${{ matrix.os.name }}
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             dist-newstyle/intlc-${{ github.ref_name }}-${{ matrix.os.name }}
