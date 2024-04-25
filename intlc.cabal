@@ -14,7 +14,7 @@ common common
   ghc-options:
     -Wall
   build-depends:
-      base                 ^>=4.17
+      base                 ^>=4.18
     , bytestring           ^>=0.11
     , comonad              ^>=5.0
     , containers           ^>=0.6
@@ -22,7 +22,7 @@ common common
     , deriving-compat      ^>=0.6
     , extra                ^>=1.7
     , free                 ^>=5.1
-    , mtl                  ^>=2.2
+    , mtl                  ^>=2.3
     , recursion-schemes    ^>=5.2
     , relude               ^>=1.2
     , text                 ^>=2.0
@@ -39,7 +39,7 @@ executable intlc
   build-depends:
       intlc
     , githash              ^>=0.1
-    , optparse-applicative ^>=0.16
+    , optparse-applicative ^>=0.18
   other-modules:
     CLI
 

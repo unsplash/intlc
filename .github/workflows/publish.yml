@@ -26,7 +26,7 @@ jobs:
       # would be substantially better.)
       - uses: haskell-actions/setup@v2
         with:
-          ghc-version: 9.4.6
+          ghc-version: 9.6.4
       - run: cabal freeze
       - uses: ./.github/actions/cabal-cache
       - name: Build

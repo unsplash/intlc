@@ -10,6 +10,9 @@ import           Intlc.Printer               (IndentStyle (..), def)
 import           Options.Applicative
 import           Prelude
 
+-- False positive possibly fixed in v3.8.
+{-# ANN module ("HLint: ignore Unused LANGUAGE pragma" :: String) #-}
+
 data Opts
   = Compile FilePath Locale
   | Flatten FilePath JSON.Formatting [ICUModifiers]

@@ -120,4 +120,4 @@ The description is optional and ignored by intlc. It can be used documentatively
 
 Check out `ARCHITECTURE.md`.
 
-Currently building against GHC 9.4.6. A Nix flake is included with all necessary dependencies.
+Currently building against GHC 9.6.4. A Nix flake is included with all necessary dependencies.

@@ -11,7 +11,7 @@
           # We'll stick with the "default" version of GHC in nixpkgs to benefit
           # from the binary cache:
           #   https://github.com/NixOS/nixpkgs/blob/master/doc/languages-frameworks/haskell.section.md#available-packages-haskell-available-packages
-          ghcVer = "ghc946";
+          ghcVer = "ghc964";
 
           haskPkgs = pkgs.haskell.packages."${ghcVer}";
       in {
