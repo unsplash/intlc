@@ -6,13 +6,13 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.local/state/cabal/store/
-        key: cabal-${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+        key: cabal-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('cabal.project.freeze') }}
         restore-keys: |
-          cabal-${{ runner.os }}
+          cabal-${{ runner.os }}-${{ runner.arch }}
     - name: Cache incremental build
       uses: actions/cache@v4
       with:
         path: ./dist-newstyle/
-        key: dist-${{ runner.os }}-${{ github.sha }}
+        key: dist-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
         restore-keys: |
-          dist-${{ runner.os }}
+          dist-${{ runner.os }}-${{ runner.arch }}

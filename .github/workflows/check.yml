@@ -64,8 +64,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/yarn/v6
-          key: yarn-${{ runner.os }}-${{ hashFiles('.golden/ts/yarn.lock') }}
+          key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.golden/ts/yarn.lock') }}
           restore-keys: |
-            yarn-${{ runner.os }}
+            yarn-${{ runner.os }}-${{ runner.arch }}
       - run: nix develop .#golden -c yarn install --frozen-lockfile
       - run: nix develop .#golden -c yarn typecheck
