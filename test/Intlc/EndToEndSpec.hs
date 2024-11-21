@@ -39,7 +39,7 @@ spec :: Spec
 spec = describe "end-to-end" $ do
   describe "compilation" $ do
     let x =*= y = parseAndCompileDataset x `shouldBe` Right y
-    let withReactImport = ("import { ReactElement } from 'react'\n" <>)
+    let withReactImport = ("import type { ReactElement } from 'react'\n" <>)
 
     it "compiles to golden output" $ do
       golden "example" [r|{ "title": { "message": "Unsplash" }, "greeting": { "message": "Hello <bold>{name}</bold>, {age, number}!", "backend": "ts" } }|]

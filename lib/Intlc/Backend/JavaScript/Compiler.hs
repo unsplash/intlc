@@ -155,7 +155,7 @@ emptyModule = "export {}"
 
 buildReactImport :: Dataset (Translation a) -> Maybe Text
 buildReactImport = flip pureIf text . any ((TypeScriptReact ==) . backend)
-  where text = "import { ReactElement } from 'react'"
+  where text = "import type { ReactElement } from 'react'"
 
 validateKey :: Text -> Either Text ()
 validateKey k
