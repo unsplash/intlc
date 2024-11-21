@@ -2,6 +2,10 @@
 
 This project adheres to semantic versioning.
 
+## 0.8.4 (2024-11-21)
+
+Make TypeScript output compatible with `verbatimModuleSyntax`.
+
 ## 0.8.3 (2024-04-24)
 
 Fixed dynamic linking in macos-aarch64 binary.
