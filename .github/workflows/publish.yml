@@ -12,11 +12,12 @@ jobs:
       matrix:
         os:
           [
+            { name: "linux-aarch64", runner: "ubuntu-latest-arm" },
             { name: "linux-x86_64", runner: "ubuntu-latest" },
             { name: "macos-aarch64", runner: "macos-latest" },
           ]
     runs-on: ${{ matrix.os.runner }}
-    permissions: 
+    permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
