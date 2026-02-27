@@ -2,6 +2,14 @@
 
 This project adheres to semantic versioning.
 
+## 0.8.6 (2026-01-19)
+
+Fix Linux ARM64 builds.
+
+## 0.8.5 (2026-01-19)
+
+Add Linux ARM64 builds.
+
 ## 0.8.4 (2024-11-21)
 
 Make TypeScript output compatible with `verbatimModuleSyntax`.
