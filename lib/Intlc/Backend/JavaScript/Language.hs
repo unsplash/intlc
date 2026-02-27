@@ -80,9 +80,9 @@ fromNode = cataA $ \case
   (ICU.SelectNamed n cs x)       -> (pure . TMatch . Match n LitCond . LitMatchRet <$> ret) <>^ x
     where ret = fromSelectCase `mapM` cs
   (ICU.SelectWild n w x)         -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
-    where ret = NonLitMatchRet mempty <$> (Wildcard <$> w)
+    where ret = NonLitMatchRet mempty . Wildcard <$> w
   (ICU.SelectNamedWild n cs w x) -> (pure . TMatch . Match n LitCond <$> ret) <>^ x
-    where ret = NonLitMatchRet <$> (toList <$> fromSelectCase `mapM` cs) <*> (Wildcard <$> w)
+    where ret = (NonLitMatchRet . toList <$> (fromSelectCase `mapM` cs)) <*> (Wildcard <$> w)
   (ICU.Callback n x y) -> (pure . TApply n <$> x) <>^ y
 
 fromExactPluralCase :: ICU.PluralCaseF ICU.PluralExact (ASTCompiler [Expr]) -> ASTCompiler Branch

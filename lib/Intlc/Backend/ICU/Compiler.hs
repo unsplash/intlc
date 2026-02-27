@@ -77,16 +77,16 @@ node fo ast = runReader (cata go ast) (Config fo 0) where
     (Callback n xs next) -> (callback n <$> xs) <>^ next
 
 cardinal :: Arg -> Compiler [Case] -> Compiler Text
-cardinal n x = typedInterp "plural" n <$> (pure <$> cases x)
+cardinal n x = typedInterp "plural" n . pure <$> cases x
 
 ordinal :: Arg -> Compiler [Case] -> Compiler Text
-ordinal n x = typedInterp "selectordinal" n <$> (pure <$> cases x)
+ordinal n x = typedInterp "selectordinal" n . pure <$> cases x
 
 select :: Arg -> Compiler [Case] -> Compiler Text
-select n x = typedInterp "select" n <$> (pure <$> cases x)
+select n x = typedInterp "select" n . pure <$> cases x
 
 boolean :: Arg -> Compiler [Case] -> Compiler Text
-boolean n x = typedInterp "boolean" n <$> (pure <$> cases x)
+boolean n x = typedInterp "boolean" n . pure <$> cases x
 
 datetime :: Text -> Arg -> DateTimeFmt -> Text
 datetime t n f = typedInterp t n (pure . dateTimeFmt $ f)
