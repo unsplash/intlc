@@ -5,9 +5,8 @@ license:                   MIT
 build-type:                Simple
 
 common common
-  default-language:        GHC2021
+  default-language:        GHC2024
   default-extensions:
-    LambdaCase
     NoImplicitPrelude
     OverloadedRecordDot
     OverloadedStrings
